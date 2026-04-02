@@ -9,6 +9,13 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 media_source:
 
+switch:
+  - platform: group
+    name: All Dashboard Lights
+    entities:
+      - switch.pendant_lights
+      - switch.laundry_light
+
 http:
   use_x_forwarded_for: true
   trusted_proxies:
