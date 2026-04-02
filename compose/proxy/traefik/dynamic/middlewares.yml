@@ -22,3 +22,9 @@ http:
         customRequestHeaders:
           Connection: "Upgrade"
           Upgrade: "websocket"
+
+
+    ma-strip: 
+      stripPrefix:
+        prefixes:
+          - /music-assistant

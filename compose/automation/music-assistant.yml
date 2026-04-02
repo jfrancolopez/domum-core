@@ -13,12 +13,26 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy
+
+  # direct access
       - traefik.http.routers.ma.rule=Host(`ma.${DOMUM_DOMAIN}`)
       - traefik.http.routers.ma.entrypoints=websecure
       - traefik.http.routers.ma.tls=true
       - traefik.http.routers.ma.tls.certresolver=cf
-      - traefik.http.routers.ma.middlewares=securityHeaders@file,forwardedHeaders@file
-      - traefik.http.services.ma.loadbalancer.server.port=8095
+      - traefik.http.routers.ma.middlewares=forwardedHeaders@file
+      - traefik.http.routers.ma.service=ma-svc
+
+  # same-origin access through Home Assistant domain
+      - traefik.http.routers.ma-ha.rule=Host(`ha.${DOMUM_DOMAIN}`) && PathPrefix(`/music-assistant`)
+      - traefik.http.routers.ma-ha.entrypoints=websecure
+      - traefik.http.routers.ma-ha.tls=true
+      - traefik.http.routers.ma-ha.tls.certresolver=cf
+      - traefik.http.routers.ma-ha.middlewares=ma-strip@file,forwardedHeaders@file
+      - traefik.http.routers.ma-ha.service=ma-svc
+
+  # shared backend service
+      - traefik.http.services.ma-svc.loadbalancer.server.port=8095
+      - traefik.http.services.ma-svc.loadbalancer.server.scheme=http
     profiles:
       - core
 
