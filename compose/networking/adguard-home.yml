@@ -10,8 +10,8 @@ services:
       - "53:53/udp"
       - "3000:3000/tcp"
     volumes:
-      - adguard-work:/opt/adguardhome/work
-      - adguard-conf:/opt/adguardhome/conf
+      - adguard-work:/opt/domum-core/compose/networking/adguard/work
+      - adguard-conf:/opt/domum-core/compose/networking/adguard/conf
     labels:
       - traefik.enable=true
       - traefik.http.routers.dns.rule=Host(`dns.${DOMUM_DOMAIN}`)
