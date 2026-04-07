@@ -14,12 +14,13 @@ services:
       - /opt/domum-core/compose/network/adguard/conf:/opt/adguardhome/conf
     labels:
       - traefik.enable=true
+      - traefik.docker.network=domum-proxy
       - traefik.http.routers.dns.rule=Host(`dns.${DOMUM_DOMAIN}`)
       - traefik.http.routers.dns.entrypoints=websecure
       - traefik.http.routers.dns.tls=true
       - traefik.http.routers.dns.tls.certresolver=cf
-      - traefik.http.services.dns.loadbalancer.server.port=3000
-      - traefik.http.routers.dns.middlewares=securityHeaders@file
+      - traefik.http.routers.dns.middlewares=forwardedHeaders@file
+      - traefik.http.services.dns.loadbalancer.server.port=80
     profiles:
       - core
 
