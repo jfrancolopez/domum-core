@@ -1,0 +1,30 @@
+services:
+  actual-budget:
+    image: docker.io/actualbudget/actual-server:latest
+    container_name: actual-budget
+    restart: unless-stopped
+    networks:
+      - domum-data
+      - domum-proxy
+    environment:
+      - TZ=America/New_York
+      - ACTUAL_DATA_DIR=/data
+    volumes:
+      - /opt/domum-core/compose/productivity/actual-budget/data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.actual.rule=Host(`budget.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.actual.entrypoints=websecure
+      - traefik.http.routers.actual.tls=true
+      - traefik.http.routers.actual.tls.certresolver=cf
+      - traefik.http.routers.actual.middlewares=forwardedHeaders@file
+      - traefik.http.services.actual.loadbalancer.server.port=5006
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
+  domum-data:
+    external: true
