@@ -131,6 +131,10 @@ compose_files_for_enabled_services() {
   if [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]; then
     files+=("$DOMUM_DIR/compose/networking/adguard-home.yml")
   fi
+  # Productivity
+  if [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]; then
+    files+=("$DOMUM_DIR/compose/productivity/actual-budget.yml")
+  fi
 
   # Security
   if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]; then
