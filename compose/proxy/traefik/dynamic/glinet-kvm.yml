@@ -1,0 +1,40 @@
+http:
+  routers:
+    glinet-kvm-xi:
+      rule: "Host(`kvm-xi.ladomum.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cf
+      service: glinet-kvm-xi-svc
+      middlewares:
+        - forwardedHeaders@file
+
+    glinet-kvm-xii:
+      rule: "Host(`kvm-xii.ladomum.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cf
+      service: glinet-kvm-xii-svc
+      middlewares:
+        - forwardedHeaders@file
+
+  services:
+    glinet-kvm-xi-svc:
+      loadBalancer:
+        passHostHeader: true
+        serversTransport: glinet-kvm-transport
+        servers:
+          - url: "https://10.0.10.21"
+
+    glinet-kvm-xii-svc:
+      loadBalancer:
+        passHostHeader: true
+        serversTransport: glinet-kvm-transport
+        servers:
+          - url: "https://10.0.10.22"
+
+  serversTransports:
+    glinet-kvm-transport:
+      insecureSkipVerify: true
