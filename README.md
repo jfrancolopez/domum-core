@@ -4,7 +4,7 @@ Self-updating home core services platform for Raspberry Pi (or any Debian/Ubuntu
 
 This project is designed to be fully managed using one command:
 
-    curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+    curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 
 Curl command:
 
@@ -58,7 +58,7 @@ Required Cloudflare permissions:
 
 3. Run:
 
-    curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+    curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 
 
 Re-running the same command updates everything.
