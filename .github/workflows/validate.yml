@@ -1,0 +1,63 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: pip install yamllint
+      - run: yamllint -c .yamllint.yml .
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "."
+          additional_files: "bin/domum"
+          ignore_paths: "nimbalyst-local .claude backups"
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  compose-validate:
+    name: compose-validate
+    runs-on: ubuntu-latest
+    env:
+      DOMUM_DOMAIN: example.com
+      DOMUM_EMAIL: ci@example.com
+      DOMUM_LAN_IP: 127.0.0.1
+      DOMUM_TS_IP: 127.0.0.1
+      CF_DNS_API_TOKEN: ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render with all services enabled
+        run: |
+          set -euo pipefail
+          files=(-f compose/base.yml)
+          while IFS= read -r -d '' f; do
+            files+=(-f "$f")
+          done < <(find compose -mindepth 2 -name '*.yml' -print0 | sort -z)
+          echo "Validating: ${files[*]}"
+          docker compose "${files[@]}" --profile core --profile night --profile media --profile ai config -q

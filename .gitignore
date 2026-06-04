@@ -3,3 +3,4 @@
 secrets/
 **/data/
 **/*.log
+compose/automation/zigbee2mqtt/secret.yaml

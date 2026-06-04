@@ -13,23 +13,7 @@ serial:
   adapter: zstack
 
 advanced:
-  network_key:
-    - 55
-    - 135
-    - 55
-    - 132
-    - 122
-    - 79
-    - 19
-    - 176
-    - 218
-    - 150
-    - 186
-    - 191
-    - 105
-    - 68
-    - 86
-    - 131
+  network_key: !secret network_key
 
 permit_join: false
 version: 5

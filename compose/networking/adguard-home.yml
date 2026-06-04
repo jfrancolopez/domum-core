@@ -9,8 +9,8 @@ services:
       - "53:53/tcp"
       - "53:53/udp"
     volumes:
-      - /opt/domum-core/compose/network/adguard/work:/opt/adguardhome/work
-      - /opt/domum-core/compose/network/adguard/conf:/opt/adguardhome/conf
+      - /opt/domum-core/compose/networking/adguard/work:/opt/adguardhome/work
+      - /opt/domum-core/compose/networking/adguard/conf:/opt/adguardhome/conf
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy

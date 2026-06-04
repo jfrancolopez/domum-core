@@ -6,6 +6,7 @@ services:
     networks:
       - domum-proxy
       - domum-data
+      - domum-internal
     privileged: true
     environment:
       - TZ=America/New_York
@@ -39,3 +40,5 @@ networks:
   domum-data:
     name: domum-data
     driver: bridge
+  domum-internal:
+    external: true

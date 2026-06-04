@@ -182,7 +182,7 @@ export_env_for_compose() {
 }
 ensure_networks() {
   # Networks declared as external in compose must exist before compose runs.
-  local nets=("domum-internal" "domum-proxy" "iot_vlan50")
+  local nets=("domum-internal" "domum-proxy" "domum-data" "iot_vlan50")
   for n in "${nets[@]}"; do
     if ! docker network inspect "$n" >/dev/null 2>&1; then
       echo "[domum] Creating docker network: $n"

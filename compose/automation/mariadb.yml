@@ -36,5 +36,4 @@ services:
 
 networks:
   domum-data:
-    name: domum-data
-    driver: bridge
+    external: true

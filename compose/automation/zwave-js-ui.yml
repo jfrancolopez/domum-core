@@ -17,7 +17,6 @@ services:
       - /opt/domum-core/compose/automation/zwave-js-ui/store:/usr/src/app/store
     ports:
       - "8091:8091"
-      - "3000:3000"
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy
@@ -34,5 +33,4 @@ networks:
   domum-proxy:
     external: true
   domum-data:
-    name: domum-data
-    driver: bridge
+    external: true
