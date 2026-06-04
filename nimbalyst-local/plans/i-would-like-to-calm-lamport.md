@@ -128,6 +128,14 @@ Add a top-level `yamllint` config `.yamllint.yml` and a minimal `.gitleaks.toml`
 
 ---
 
+### 11. 🟢 `.gitignore` does not exclude `.claude/`
+
+**File:** `.gitignore`
+
+The editor creates a local `.claude/` directory (Claude Code session/tooling state) that currently shows as untracked. Add a single line `.claude/` to `.gitignore` so it stays local and never gets accidentally committed. Zero runtime impact.
+
+---
+
 ## Critical files to modify
 
 - `compose/automation/home-assistant.yml` — add `domum-internal` (fix #1)
@@ -139,6 +147,7 @@ Add a top-level `yamllint` config `.yamllint.yml` and a minimal `.gitleaks.toml`
 - `compose/automation/zigbee2mqtt/configuration.yaml` + new `secret.yaml` + `.gitignore` (fix #5)
 - `compose/automation/zwave-js-ui.yml` — drop or bind-local the `3000:3000` publish (fix #6)
 - **NEW** `.github/workflows/validate.yml`, `.yamllint.yml`, `.gitleaks.toml` (fix #10)
+- `.gitignore` — add `.claude/` line (fix #11)
 
 ## Reusable utilities found
 
