@@ -32,4 +32,3 @@ networks:
     external: true
   iot_vlan50:
     external: true
-

@@ -24,7 +24,7 @@ http:
           Upgrade: "websocket"
 
 
-    ma-strip: 
+    ma-strip:
       stripPrefix:
         prefixes:
           - /music-assistant

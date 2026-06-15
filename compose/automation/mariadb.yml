@@ -11,7 +11,7 @@ services:
 
     # Credentials live outside the repo (matches your pattern).
     env_file:
-      - /etc/domum-core/secrets/mariadb/mariadb.env
+      - ${DOMUM_MARIADB_ENV_FILE:-/etc/domum-core/secrets/mariadb/mariadb.env}
 
     command:
       - --transaction-isolation=READ-COMMITTED

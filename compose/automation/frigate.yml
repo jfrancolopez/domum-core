@@ -12,9 +12,9 @@ services:
       - domum-proxy
 
     volumes:
-      #sudo mkdir -p /etc/domum-core/secrets/frigate
-      #sudo nano /etc/domum-core/secrets/frigate/config.yml
-      #sudo mkdir -p /mnt/domum/frigate
+      # sudo mkdir -p /etc/domum-core/secrets/frigate
+      # sudo nano /etc/domum-core/secrets/frigate/config.yml
+      # sudo mkdir -p /mnt/domum/frigate
       - /etc/domum-core/secrets/frigate/config.yml:/config/config.yml
       - /mnt/domum/frigate:/media/frigate
       - /etc/localtime:/etc/localtime:ro

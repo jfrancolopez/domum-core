@@ -32,7 +32,7 @@ services:
       mariadb:
         condition: service_healthy
     profiles:
-          - core
+      - core
 
 networks:
   domum-proxy:

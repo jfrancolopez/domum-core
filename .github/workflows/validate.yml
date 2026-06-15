@@ -50,14 +50,19 @@ jobs:
       DOMUM_LAN_IP: 127.0.0.1
       DOMUM_TS_IP: 127.0.0.1
       CF_DNS_API_TOKEN: ci-dummy
+      TS_AUTHKEY: ci-dummy
+      DOMUM_MARIADB_ENV_FILE: ${{ github.workspace }}/.ci/mariadb.env
     steps:
       - uses: actions/checkout@v4
       - name: Render with all services enabled
         run: |
           set -euo pipefail
+          mkdir -p .ci
+          touch "$DOMUM_MARIADB_ENV_FILE"
+
           files=(-f compose/base.yml)
           while IFS= read -r -d '' f; do
             files+=(-f "$f")
-          done < <(find compose -mindepth 2 -name '*.yml' -print0 | sort -z)
+          done < <(find compose -mindepth 2 -name '*.yml' ! -path 'compose/proxy/traefik/*' -print0 | sort -z)
           echo "Validating: ${files[*]}"
           docker compose "${files[@]}" --profile core --profile night --profile media --profile ai config -q

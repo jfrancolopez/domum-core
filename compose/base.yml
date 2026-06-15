@@ -15,3 +15,5 @@ volumes:
   traefik-letsencrypt:
   uptime-kuma-data:
   portainer-data:
+  jellyfin-config:
+  jellyfin-cache:
