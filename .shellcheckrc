@@ -1,0 +1,4 @@
+# Config files and /etc/os-release are sourced at runtime and cannot be
+# followed during static analysis.
+disable=SC1091
+external-sources=true

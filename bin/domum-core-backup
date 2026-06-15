@@ -1,0 +1,409 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# domum-core-backup — restic wrapper invoked by the CLI and systemd timers.
+#
+# Backups are driven by BACKUP_TARGET_* entries in config/domum-backup.conf.
+# Each enabled target is a restic repository (local path, rest:, sftp:, or any
+# restic repository string). ALL targets ship DISABLED by default — nothing
+# runs until the user fills in real repos/passwords and sets _ENABLED=1.
+
+DOMUM_DIR="${DOMUM_DIR:-/opt/domum-core}"
+CFG_FILE="${CFG_FILE:-$DOMUM_DIR/config/domum.conf}"
+BACKUP_CFG_FILE="${BACKUP_CFG_FILE:-$DOMUM_DIR/config/domum-backup.conf}"
+SECRETS_DIR="${SECRETS_DIR:-/etc/domum-core/secrets}"
+STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
+LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+REPO_META_DIR="${REPO_META_DIR:-$STATE_ROOT/backups}"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+log() { echo "[$(date -Iseconds)] $*" | tee -a "${LOG_FILE:-/dev/null}" >&2; }
+need_root() { [[ "${EUID}" -eq 0 ]] || die "Run as root (use sudo)."; }
+cmd_exists() { command -v "$1" >/dev/null 2>&1; }
+
+uppercase_token() {
+  printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
+}
+
+load_cfg() {
+  [[ -f "$CFG_FILE" ]] || die "Missing config: $CFG_FILE"
+  # shellcheck disable=SC1090
+  source "$CFG_FILE"
+  if [[ -f "$BACKUP_CFG_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$BACKUP_CFG_FILE"
+  fi
+  STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
+  LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+  RESTIC_KEEP_DAILY="${RESTIC_KEEP_DAILY:-7}"
+  RESTIC_KEEP_WEEKLY="${RESTIC_KEEP_WEEKLY:-5}"
+  RESTIC_KEEP_MONTHLY="${RESTIC_KEEP_MONTHLY:-12}"
+  RESTIC_KEEP_YEARLY="${RESTIC_KEEP_YEARLY:-3}"
+  BACKUP_TARGETS="${BACKUP_TARGETS:-local hetzner}"
+  # Default source set: critical bind mounts + compose + config + service
+  # backup staging + rendered volume exports. Overridable per-target.
+  BACKUP_PATHS="${BACKUP_PATHS:-\
+$DOMUM_DIR/compose/automation/home-assistant \
+$DOMUM_DIR/compose/automation/mariadb/data \
+$DOMUM_DIR/compose/automation/mqtt \
+$DOMUM_DIR/compose/automation/zigbee2mqtt \
+$DOMUM_DIR/compose/automation/zwave-js-ui/store \
+$DOMUM_DIR/compose/automation/esphome \
+$DOMUM_DIR/compose/automation/music-assistant \
+$DOMUM_DIR/compose/networking/adguard \
+$DOMUM_DIR/compose/productivity/actual-budget/data \
+$DOMUM_DIR/compose/proxy/traefik \
+$DOMUM_DIR/compose \
+$DOMUM_DIR/config \
+$STATE_ROOT/service-backups \
+$STATE_ROOT/recovery-pack}"
+  # Named volumes exported (tar) into staging so they ride along in restic.
+  BACKUP_VOLUMES="${BACKUP_VOLUMES:-nodered-data portainer-data uptime-kuma-data traefik-letsencrypt}"
+  # Excludes: large disposable / regenerable data.
+  BACKUP_EXCLUDES="${BACKUP_EXCLUDES:-\
+$DOMUM_DIR/compose/media \
+/mnt/domum/frigate \
+*/tts/* \
+*.db-wal \
+*.db-shm}"
+}
+
+ensure_dirs() {
+  install -d -m 0750 "$LOG_DIR"
+  install -d -m 0750 "$REPO_META_DIR"
+  install -d -m 0750 "$STATE_ROOT/service-backups/volumes"
+  LOG_FILE="$LOG_DIR/backup.log"
+  HEARTBEAT_FILE="$STATE_ROOT/backups/last-success"
+  install -d -m 0750 "$STATE_ROOT/backups"
+  touch "$LOG_FILE"
+}
+
+require_files() {
+  local missing=() f
+  for f in "$@"; do
+    [[ -f "$f" ]] || missing+=("$f")
+  done
+  (( ${#missing[@]} == 0 )) || die "Missing required files: ${missing[*]}"
+}
+
+backup_target_names() {
+  local name
+  for name in ${BACKUP_TARGETS:-}; do
+    [[ -n "$name" ]] && echo "$name"
+  done
+}
+
+backup_target_value() {
+  local target="$1" field="$2" fallback="${3:-}" key
+  key="BACKUP_TARGET_$(uppercase_token "$target")_${field}"
+  if [[ -n "${!key:-}" ]]; then printf '%s' "${!key}"; else printf '%s' "$fallback"; fi
+}
+
+backup_target_enabled() {
+  [[ "$(backup_target_value "$1" ENABLED 0)" == "1" ]]
+}
+
+backup_target_password_file() {
+  backup_target_value "$1" PASSWORD_FILE "$SECRETS_DIR/restic_password_$1"
+}
+
+enabled_backup_targets() {
+  local target
+  while IFS= read -r target; do
+    backup_target_enabled "$target" || continue
+    echo "$target"
+  done < <(backup_target_names)
+}
+
+backup_target_include_paths() {
+  local target="$1" paths
+  paths="$(backup_target_value "$target" INCLUDE_PATHS)"
+  printf '%s' "${paths:-$BACKUP_PATHS}"
+}
+
+shell_join_quoted() {
+  local joined=""
+  printf -v joined '%q ' "$@"
+  printf '%s' "${joined% }"
+}
+
+sftp_repo_user_host() {
+  local repo="$1" spec
+  [[ "$repo" == sftp:* ]] || return 1
+  spec="${repo#sftp:}"; spec="${spec%%:*}"
+  [[ "$spec" == *@* ]] || return 1
+  printf '%s\n%s\n' "${spec%%@*}" "${spec#*@}"
+}
+
+sftp_command_option_for_target() {
+  local target="$1" sftp_key sftp_known_hosts sftp_port repo
+  local -a ssh_cmd=() sftp_parts=()
+  sftp_key="$(backup_target_value "$target" SFTP_KEY_FILE)"
+  sftp_known_hosts="$(backup_target_value "$target" SFTP_KNOWN_HOSTS_FILE)"
+  sftp_port="$(backup_target_value "$target" SFTP_PORT)"
+  [[ -n "$sftp_key" ]] || die "SFTP target '$target' missing BACKUP_TARGET_$(uppercase_token "$target")_SFTP_KEY_FILE."
+  require_files "$sftp_key"
+  repo="$(backup_target_value "$target" REPOSITORY)"
+  mapfile -t sftp_parts < <(sftp_repo_user_host "$repo") \
+    || die "SFTP target '$target' has an unparseable repository: $repo"
+  [[ -n "${sftp_parts[0]:-}" && -n "${sftp_parts[1]:-}" ]] \
+    || die "SFTP target '$target' has an unparseable repository: $repo"
+  ssh_cmd=(ssh -F /dev/null -i "$sftp_key")
+  ssh_cmd+=(-o IdentitiesOnly=yes -o PreferredAuthentications=publickey)
+  ssh_cmd+=(-o PasswordAuthentication=no -o StrictHostKeyChecking=yes)
+  [[ -n "$sftp_known_hosts" ]] && { require_files "$sftp_known_hosts"; ssh_cmd+=(-o UserKnownHostsFile="$sftp_known_hosts"); }
+  [[ -n "$sftp_port" ]] && ssh_cmd+=(-p "$sftp_port")
+  ssh_cmd+=("${sftp_parts[0]}@${sftp_parts[1]}" -s sftp)
+  printf 'sftp.command=%s' "$(shell_join_quoted "${ssh_cmd[@]}")"
+}
+
+restic_for_target() {
+  local target="$1"; shift
+  local pw_file repository env_file sftp_command_opt
+  pw_file="$(backup_target_password_file "$target")"
+  repository="$(backup_target_value "$target" REPOSITORY)"
+  env_file="$(backup_target_value "$target" ENV_FILE)"
+  [[ -n "$repository" ]] || die "No BACKUP_TARGET_$(uppercase_token "$target")_REPOSITORY configured."
+  require_files "$pw_file"
+  cmd_exists restic || die "restic is not installed (apt-get install -y restic)."
+
+  (
+    if [[ -n "$env_file" && -f "$env_file" ]]; then
+      set +u
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set -u
+    fi
+    export RESTIC_PASSWORD_FILE="$pw_file"
+    export RESTIC_REPOSITORY="$repository"
+    local -a restic_cmd=(restic)
+    if [[ "$repository" == sftp:* ]]; then
+      sftp_command_opt="$(sftp_command_option_for_target "$target")"
+      restic_cmd+=(-o "$sftp_command_opt")
+    fi
+    restic_cmd+=("$@")
+    "${restic_cmd[@]}"
+  )
+}
+
+# ---- named-volume exports --------------------------------------------------
+
+export_named_volumes() {
+  local dry="${1:-0}"
+  local vol_stage="$STATE_ROOT/service-backups/volumes" vol
+  for vol in ${BACKUP_VOLUMES:-}; do
+    [[ -n "$vol" ]] || continue
+    docker volume inspect "$vol" >/dev/null 2>&1 || { log "volume $vol not present — skipping"; continue; }
+    local out="$vol_stage/${vol}.tar.gz"
+    if (( dry == 1 )); then
+      log "[dry-run] would export volume $vol -> $out"
+      continue
+    fi
+    log "exporting named volume $vol -> $out"
+    docker run --rm -v "$vol":/from:ro -v "$vol_stage":/to alpine \
+      sh -c "cd /from && tar -czf /to/${vol}.tar.gz ." \
+      || log "WARNING: failed to export volume $vol"
+  done
+}
+
+# ---- repo metadata ---------------------------------------------------------
+
+repo_meta_file() { printf '%s/%s-repo.env' "$REPO_META_DIR" "$1"; }
+
+get_repo_id() {
+  restic_for_target "$1" cat config 2>/dev/null \
+    | grep -oE '"id"[[:space:]]*:[[:space:]]*"[0-9a-f]+"' \
+    | grep -oE '[0-9a-f]{8,}' | head -1
+}
+
+# ---- backup paths ----------------------------------------------------------
+
+restic_backup_to() {
+  local target="$1" dry="${2:-0}"
+  local -a paths=() excludes=()
+  local p
+  for p in $(backup_target_include_paths "$target"); do
+    [[ -e "$p" ]] || continue
+    paths+=("$p")
+  done
+  (( ${#paths[@]} > 0 )) || { log "No existing backup paths for $target — skipping"; return 0; }
+  for p in ${BACKUP_EXCLUDES:-}; do
+    excludes+=(--exclude "$p")
+  done
+
+  log "restic backup -> $target (${#paths[@]} paths)"
+  local -a opts=(backup --tag "$(date +%Y-%m-%d)" "${excludes[@]}")
+  (( dry == 1 )) && opts+=(--dry-run)
+  restic_for_target "$target" "${opts[@]}" "${paths[@]}"
+}
+
+restic_forget_for() {
+  local target="$1" dry="${2:-0}"
+  local -a opts=(forget --prune
+    --keep-daily   "$RESTIC_KEEP_DAILY"
+    --keep-weekly  "$RESTIC_KEEP_WEEKLY"
+    --keep-monthly "$RESTIC_KEEP_MONTHLY"
+    --keep-yearly  "$RESTIC_KEEP_YEARLY")
+  (( dry == 1 )) && opts+=(--dry-run)
+  log "restic forget on $target"
+  restic_for_target "$target" "${opts[@]}"
+}
+
+heartbeat() {
+  date -Iseconds > "$HEARTBEAT_FILE"
+  [[ -n "${BACKUP_HEARTBEAT_URL:-}" ]] && curl -fsS --max-time 10 -o /dev/null "$BACKUP_HEARTBEAT_URL" || true
+}
+
+no_targets_notice() {
+  cat <<EOF
+[domum-core-backup] No backup targets are enabled.
+
+Nothing was backed up. To configure restic backups:
+  1. Edit $BACKUP_CFG_FILE
+  2. Set a real BACKUP_TARGET_<NAME>_REPOSITORY + create its password file
+  3. Set BACKUP_TARGET_<NAME>_ENABLED=1
+  4. sudo domum-core backups init <name>
+See docs/SETUP-BACKUPS.md.
+EOF
+}
+
+do_daily_backup() {
+  local dry="${1:-0}" ran_any=0 target
+  log "=== backup run start (dry=$dry) ==="
+  export_named_volumes "$dry"
+
+  if ! enabled_backup_targets | grep -q .; then
+    no_targets_notice
+    return 0
+  fi
+
+  while IFS= read -r target; do
+    ran_any=1
+    restic_backup_to "$target" "$dry"
+  done < <(enabled_backup_targets)
+
+  if (( dry == 0 )); then
+    while IFS= read -r target; do
+      [[ "$(backup_target_value "$target" RETENTION daily)" == "none" ]] && continue
+      restic_forget_for "$target" 0
+    done < <(enabled_backup_targets)
+    heartbeat
+  fi
+
+  if (( ran_any == 1 )); then log "=== backup run ok ==="; else log "=== no targets ran ==="; fi
+}
+
+do_check() {
+  local target ran=0
+  if ! enabled_backup_targets | grep -q .; then no_targets_notice; return 0; fi
+  while IFS= read -r target; do
+    ran=1
+    log "restic check on $target"
+    restic_for_target "$target" check
+  done < <(enabled_backup_targets)
+  (( ran == 1 )) || no_targets_notice
+}
+
+do_prune() {
+  local dry="${1:-0}" target ran=0
+  if ! enabled_backup_targets | grep -q .; then no_targets_notice; return 0; fi
+  while IFS= read -r target; do
+    ran=1
+    restic_forget_for "$target" "$dry"
+  done < <(enabled_backup_targets)
+  (( ran == 1 )) || no_targets_notice
+}
+
+list_snapshots() {
+  local target any=0 out rc
+  while IFS= read -r target; do
+    any=1
+    echo "-- $target --"
+    rc=0
+    out="$(restic_for_target "$target" snapshots --latest 5 2>&1)" || rc=$?
+    if (( rc == 0 )); then
+      printf '%s\n' "$out"
+    elif printf '%s' "$out" | grep -qiE 'does not exist|unable to open|no such'; then
+      echo "($target: repository not initialized — run: sudo domum-core backups init $target)"
+    else
+      echo "(failed to query snapshots for $target)"; printf '%s\n' "$out"
+    fi
+  done < <(enabled_backup_targets)
+  (( any == 1 )) || no_targets_notice
+}
+
+do_init_repo() {
+  local target="${1:-}"
+  [[ -n "$target" ]] || die "Usage: domum-core-backup init <target>"
+  local repository repo_id meta_file
+  repository="$(backup_target_value "$target" REPOSITORY)"
+  [[ -n "$repository" ]] || die "No BACKUP_TARGET_$(uppercase_token "$target")_REPOSITORY configured."
+  meta_file="$(repo_meta_file "$target")"
+
+  log "Initializing $target repository: $repository"
+  if restic_for_target "$target" snapshots >/dev/null 2>&1; then
+    log "Repository already initialized."
+  else
+    restic_for_target "$target" init || die "restic init failed."
+  fi
+  repo_id="$(get_repo_id "$target")"
+  cat > "$meta_file" <<EOF
+TARGET="$target"
+REPOSITORY="$repository"
+REPOSITORY_ID="$repo_id"
+INIT_TS="$(date -Iseconds)"
+EOF
+  chmod 600 "$meta_file"
+  log "Repository ready (id ${repo_id:0:12}). Metadata: $meta_file"
+}
+
+do_restore() {
+  local snap="${1:-}" target_dir="${2:-}" repo="${3:-}"
+  [[ -n "$snap" && -n "$target_dir" ]] || die "Usage: domum-core-backup --restore <snapshot> <target-dir> [repo-name]"
+  if [[ -z "$repo" ]]; then
+    repo="$(enabled_backup_targets | head -n1)"
+    [[ -n "$repo" ]] || die "No enabled backup targets."
+  fi
+  mkdir -p "$target_dir"
+  log "restic restore $snap -> $target_dir (from $repo)"
+  restic_for_target "$repo" restore "$snap" --target "$target_dir"
+}
+
+main() {
+  case "${1:-}" in
+    -h|--help)
+      cat <<EOF
+domum-core-backup — restic wrapper
+
+Usage:
+  domum-core-backup                  Run backup for all enabled targets
+  domum-core-backup --dry-run        Plan + restic backup --dry-run
+  domum-core-backup --check          restic check on all enabled targets
+  domum-core-backup --prune          restic forget --prune (retention)
+  domum-core-backup --prune-dry-run  Preview retention
+  domum-core-backup --snapshots      List latest snapshots per target
+  domum-core-backup --restore <snap> <dir> [repo]
+  domum-core-backup init <target>    Initialize a restic repository
+EOF
+      return 0
+      ;;
+  esac
+
+  need_root
+  load_cfg
+  ensure_dirs
+
+  case "${1:-}" in
+    "")                do_daily_backup 0 ;;
+    --dry-run)         do_daily_backup 1 ;;
+    --check)           do_check ;;
+    --prune)           do_prune 0 ;;
+    --prune-dry-run)   do_prune 1 ;;
+    --snapshots)       list_snapshots ;;
+    --restore)         shift; do_restore "$@" ;;
+    init)              shift; do_init_repo "$@" ;;
+    *) die "Unknown command: $1 (try --help)" ;;
+  esac
+}
+
+main "$@"

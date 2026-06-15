@@ -10,9 +10,11 @@ source "$CFG_FILE"
 export DOMUM_DOMAIN="${DOMUM_DOMAIN:-ladomum.com}"
 export DOMUM_EMAIL="${DOMUM_EMAIL:-admin@ladomum.com}"
 
-# Cloudflare token
-if [[ -z "${CF_DNS_API_TOKEN:-}" && -f "$DOMUM_DIR/secrets/cloudflare_api_token" ]]; then
-  CF_DNS_API_TOKEN="$(cat "$DOMUM_DIR/secrets/cloudflare_api_token")"
+# Cloudflare token. Secrets live at /etc/domum-core/secrets (standardized;
+# the old $DOMUM_DIR/secrets path was drift and is no longer used).
+SECRETS_DIR="${SECRETS_DIR:-/etc/domum-core/secrets}"
+if [[ -z "${CF_DNS_API_TOKEN:-}" && -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
+  CF_DNS_API_TOKEN="$(cat "$SECRETS_DIR/cloudflare_api_token")"
   export CF_DNS_API_TOKEN
 fi
 

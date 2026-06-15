@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule weekly cleanup report
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=domum-core-cleanup-report.service
+
+[Install]
+WantedBy=timers.target

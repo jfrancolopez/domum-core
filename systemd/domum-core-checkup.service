@@ -1,0 +1,15 @@
+[Unit]
+Description=domum-core: daily health checkup
+Documentation=file:///opt/domum-core/docs/CLI-CHEATSHEET.md
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=/usr/local/bin/domum-core
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/local/bin/domum-core checkup
+TimeoutStartSec=6h

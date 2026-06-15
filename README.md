@@ -89,6 +89,42 @@ Night scheduling:
     NIGHT_UP_TIME="23:00"
     NIGHT_DOWN_TIME="07:00"
 
+Backup / recovery / update settings live in the overlay file
+`config/domum-backup.conf` (copied from `.example` on `init`).
+
+---
+
+# Management CLI (`domum-core`)
+
+The CLI was consolidated into a single command, `domum-core`
+(`/usr/local/bin/domum-core`). `domum` is kept as a back-compat shim.
+
+    sudo domum-core init          # install Docker, dirs, configs
+    sudo domum-core apply         # converge compose state
+    sudo domum-core status --counts
+    sudo domum-core checkup       # health report (CRITICAL/WARNING/HEALTHY/ACTION)
+    sudo domum-core backups run   # restic backup (targets disabled by default)
+    sudo domum-core recovery-pack create
+    sudo domum-core updates check
+
+Production operating model — backups, per-service backups, AGE-encrypted
+recovery packs, a cautious class-based update model, and systemd maintenance
+timers — is documented here:
+
+- `docs/CLI-CHEATSHEET.md` — every command at a glance
+- `docs/CHECKUP.md` — health checks
+- `docs/SETUP-BACKUPS.md` — restic multi-target backups
+- `docs/ACTUAL-BUDGET-BACKUP.md`, `docs/HOME-ASSISTANT-BACKUP.md`
+- `docs/UPDATES.md` — the update model
+- `docs/DISASTER-RECOVERY.md` — full rebuild runbook
+- `docs/SECRETS.md` — secrets + AGE keypair
+- `docs/AUDIT.md` — repo audit + bugs fixed
+
+Backups, timers, the AGE keypair, and email are all **off until you set them
+up** — see the docs above. Install (but do not enable) the maintenance timers:
+
+    sudo domum-core schedule install-maintenance
+
 ---
 
 # DNS Setup
@@ -137,9 +173,10 @@ Now internal names resolve both locally and remotely.
 # Notes
 
 - Never edit files inside /opt/domum-core directly.
-- Keep host config in /etc/domum.
-- Keep secrets in /etc/domum/secrets.
+- Keep host config in /opt/domum-core/config/domum.conf.
+- Keep secrets in /etc/domum-core/secrets/.
 - Use git for all service changes.
 - Re-run curl anytime to converge state.
+- See `docs/CLI-CHEATSHEET.md` for the full `domum-core` command surface.
 
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule Actual Budget backup
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=domum-core-actual-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,1725 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# domum-core — consolidated host CLI for the domum-core home-automation server.
+#
+# Supersedes the original bin/domum. Folds the deployment commands
+# (init/apply/update/status/schedule) together with a production operating
+# model ported from domum-core-media: comprehensive checkup/doctor, restic
+# multi-target backups, per-service backups (Actual Budget, Home Assistant,
+# MariaDB), AGE-encrypted recovery packs, a cautious update model, and
+# systemd maintenance timers.
+#
+# Guiding rules: audit before change; backup before update; dry-run before
+# destructive action; never stop HA/MQTT/Zigbee2MQTT/Node-RED/Traefik/Actual/
+# AdGuard unless the command is explicit and config-gated; never delete
+# existing files; never rotate secrets automatically.
+
+DOMUM_DIR="${DOMUM_DIR:-/opt/domum-core}"
+CFG_FILE="${CFG_FILE:-$DOMUM_DIR/config/domum.conf}"
+BACKUP_CFG_FILE="${BACKUP_CFG_FILE:-$DOMUM_DIR/config/domum-backup.conf}"
+SECRETS_DIR="${SECRETS_DIR:-/etc/domum-core/secrets}"
+STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
+LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+
+# ---- output helpers --------------------------------------------------------
+
+log()  { echo "[domum-core] $*"; }
+warn() { echo "[domum-core] WARN: $*" >&2; }
+die()  { echo "ERROR: $*" >&2; exit 1; }
+
+DRY_RUN=0
+
+# run() executes a command, or echoes it when DRY_RUN=1.
+run() {
+  if (( DRY_RUN == 1 )); then
+    echo "[dry-run] $*"
+    return 0
+  fi
+  "$@"
+}
+
+need_root() {
+  [[ "${EUID}" -eq 0 ]] || die "Run as root (use sudo)."
+}
+
+cmd_exists() { command -v "$1" >/dev/null 2>&1; }
+
+uppercase_token() {
+  printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
+}
+
+# ---- config ----------------------------------------------------------------
+
+load_cfg() {
+  [[ -f "$CFG_FILE" ]] || die "Missing config: $CFG_FILE"
+  # shellcheck disable=SC1090
+  source "$CFG_FILE"
+  # Optional backup/recovery overlay keeps the main domum.conf clean.
+  if [[ -f "$BACKUP_CFG_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$BACKUP_CFG_FILE"
+  fi
+
+  # Production defaults (safe; everything off by default).
+  STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
+  LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+
+  BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-48}"
+  ACTUAL_QUIESCE="${ACTUAL_QUIESCE:-0}"
+  ACTUAL_KEEP="${ACTUAL_KEEP:-7}"
+  HA_KEEP="${HA_KEEP:-7}"
+  MARIADB_KEEP="${MARIADB_KEEP:-7}"
+
+  RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
+  RECOVERY_PACK_AGE_PUBKEY_FILE="${RECOVERY_PACK_AGE_PUBKEY_FILE:-$SECRETS_DIR/recovery-age.pub}"
+  RECOVERY_PACK_DEST="${RECOVERY_PACK_DEST:-$STATE_ROOT/recovery-pack}"
+  RECOVERY_PACK_REMINDER_DAYS="${RECOVERY_PACK_REMINDER_DAYS:-30}"
+  RECOVERY_PACK_EMAIL_ENABLED="${RECOVERY_PACK_EMAIL_ENABLED:-0}"
+  RECOVERY_PACK_EMAIL_TO="${RECOVERY_PACK_EMAIL_TO:-${DOMUM_EMAIL:-}}"
+  RECOVERY_PACK_EMAIL_FROM="${RECOVERY_PACK_EMAIL_FROM:-${DOMUM_EMAIL:-}}"
+  RECOVERY_PACK_SMTP_HOST="${RECOVERY_PACK_SMTP_HOST:-}"
+  RECOVERY_PACK_SMTP_PORT="${RECOVERY_PACK_SMTP_PORT:-465}"
+  RECOVERY_PACK_SMTP_USERNAME_FILE="${RECOVERY_PACK_SMTP_USERNAME_FILE:-$SECRETS_DIR/recovery_pack_smtp_username}"
+  RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}"
+
+  # Update classes — declared here so the user can override in domum.conf.
+  UPDATE_CLASS_A="${UPDATE_CLASS_A:-traefik adguard-home uptime-kuma portainer tailscale}"
+  UPDATE_CLASS_B="${UPDATE_CLASS_B:-home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome}"
+  UPDATE_CLASS_C="${UPDATE_CLASS_C:-actual-budget music-assistant jellyfin}"
+}
+
+ensure_state_dirs() {
+  install -d -m 0750 "$STATE_ROOT"
+  install -d -m 0750 "$STATE_ROOT/backups"
+  install -d -m 0750 "$STATE_ROOT/service-backups"
+  install -d -m 0750 "$STATE_ROOT/service-backups/actual"
+  install -d -m 0750 "$STATE_ROOT/service-backups/homeassistant"
+  install -d -m 0750 "$STATE_ROOT/service-backups/mariadb"
+  install -d -m 0750 "$STATE_ROOT/service-backups/volumes"
+  install -d -m 0750 "$STATE_ROOT/recovery-pack"
+  install -d -m 0750 "$STATE_ROOT/update-history"
+  install -d -m 0750 "$STATE_ROOT/rollback"
+  install -d -m 0750 "$LOG_DIR"
+}
+
+# ---- small utilities -------------------------------------------------------
+
+epoch_to_iso() { date -d "@$1" +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date -r "$1" +%Y-%m-%dT%H:%M:%S%z; }
+
+human_age_from_epoch() {
+  local then="$1" now delta
+  now="$(date +%s)"
+  delta=$(( now - then ))
+  if (( delta < 60 )); then printf '%ss' "$delta"
+  elif (( delta < 3600 )); then printf '%sm' $(( delta / 60 ))
+  elif (( delta < 86400 )); then printf '%sh' $(( delta / 3600 ))
+  else printf '%sd' $(( delta / 86400 )); fi
+}
+
+sha256_of_file() {
+  local path="$1"
+  [[ -f "$path" ]] || return 1
+  if cmd_exists sha256sum; then sha256sum "$path" | awk '{print $1}'
+  elif cmd_exists shasum; then shasum -a 256 "$path" | awk '{print $1}'
+  elif cmd_exists openssl; then openssl dgst -sha256 "$path" | awk '{print $NF}'
+  else die "No sha256 utility available (need sha256sum, shasum, or openssl)."; fi
+}
+
+file_size() { stat -c %s "$1" 2>/dev/null || stat -f %z "$1"; }
+
+write_env_kv() {
+  local path="$1"; shift
+  : > "$path"
+  while (( $# >= 2 )); do
+    printf "%s=%q\n" "$1" "$2" >> "$path"
+    shift 2
+  done
+  chmod 600 "$path"
+}
+
+read_secret_file_value() {
+  local path="$1" value=""
+  [[ -f "$path" ]] || return 1
+  IFS= read -r -d '' value < "$path" || true
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+confirm() {
+  # confirm "<prompt>" — refuses unless the user types yes, or --yes was passed.
+  local prompt="$1"
+  if [[ "${ASSUME_YES:-0}" == "1" ]]; then
+    return 0
+  fi
+  local reply
+  read -r -p "$prompt [type 'yes' to proceed]: " reply
+  [[ "$reply" == "yes" ]]
+}
+
+# ---- service / container resolution (no hardcoding) ------------------------
+
+# Map a logical service name to its compose service name.
+compose_service_for() {
+  case "$1" in
+    home-assistant|homeassistant) echo "homeassistant" ;;
+    music-assistant|musicassistant) echo "music-assistant" ;;
+    zwave-js-ui) echo "zwave-js-ui" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# Resolve the running container ID for a compose service, via compose itself.
+container_for() {
+  local svc
+  svc="$(compose_service_for "$1")"
+  compose_cmd ps -q "$svc" 2>/dev/null | head -n1
+}
+
+# Resolve the container name for a compose service.
+container_name_for() {
+  local cid
+  cid="$(container_for "$1")"
+  [[ -n "$cid" ]] || return 1
+  docker inspect --format '{{.Name}}' "$cid" 2>/dev/null | sed 's#^/##'
+}
+
+service_running() {
+  local cid
+  cid="$(container_for "$1")" || return 1
+  [[ -n "$cid" ]] || return 1
+  [[ "$(docker inspect --format '{{.State.Status}}' "$cid" 2>/dev/null || true)" == "running" ]]
+}
+
+# ===========================================================================
+#  Section 1: original deployment commands (ported verbatim where they work)
+# ===========================================================================
+
+install_docker() {
+  log "Ensuring Docker + Compose plugin..."
+  if cmd_exists docker && docker compose version >/dev/null 2>&1; then
+    log "Docker already present."
+    return 0
+  fi
+
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release
+
+  install -m 0755 -d /etc/apt/keyrings
+  if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+  fi
+
+  local arch codename
+  arch="$(dpkg --print-architecture)"
+  codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
+
+  echo \
+    "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian ${codename} stable" \
+    >/etc/apt/sources.list.d/docker.list
+
+  apt-get update -y
+  apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+  systemctl enable --now docker
+  log "Docker installed."
+}
+
+ensure_dirs() {
+  mkdir -p "$DOMUM_DIR/data" "$DOMUM_DIR/logs"
+}
+
+repo_update() {
+  need_root
+  log "Updating repo in $DOMUM_DIR..."
+  [[ -d "$DOMUM_DIR/.git" ]] || die "$DOMUM_DIR is not a git repo. Reinstall using install.sh"
+  git -C "$DOMUM_DIR" fetch --all --prune
+  # Soften the original `git reset --hard`: warn loudly about local drift
+  # instead of silently destroying it.
+  if ! git -C "$DOMUM_DIR" diff --quiet || ! git -C "$DOMUM_DIR" diff --cached --quiet; then
+    warn "Local uncommitted changes detected in $DOMUM_DIR."
+    warn "A hard reset to origin/main would DISCARD them."
+    if ! confirm "Discard local changes and reset to origin/main?"; then
+      die "Aborted to preserve local changes. Commit or stash them, then re-run."
+    fi
+  fi
+  git -C "$DOMUM_DIR" reset --hard origin/main
+  log "Repo updated."
+}
+
+compose_files_for_enabled_services() {
+  local files=()
+  files+=("$DOMUM_DIR/compose/base.yml")
+
+  [[ "${ENABLE_TRAEFIK:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/proxy/traefik.yml")
+  [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] && files+=("$DOMUM_DIR/compose/automation/home-assistant.yml")
+  [[ "${ENABLE_MARIADB:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/mariadb.yml")
+  [[ "${ENABLE_GO2RTC:-0}" == "1" ]]         && files+=("$DOMUM_DIR/compose/automation/go2rtc.yml")
+  [[ "${ENABLE_FRIGATE:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/frigate.yml")
+  [[ "${ENABLE_MQTT:-0}" == "1" ]]           && files+=("$DOMUM_DIR/compose/automation/mqtt.yml")
+  [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]    && files+=("$DOMUM_DIR/compose/automation/zigbee2mqtt.yml")
+  [[ "${ENABLE_ZWAVE:-0}" == "1" ]]          && files+=("$DOMUM_DIR/compose/automation/zwave-js-ui.yml")
+  [[ "${ENABLE_NODERED:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/nodered.yml")
+  [[ "${ENABLE_ESP_HOME:-0}" == "1" ]]       && files+=("$DOMUM_DIR/compose/automation/esphome.yml")
+  [[ "${ENABLE_MA:-0}" == "1" ]]             && files+=("$DOMUM_DIR/compose/automation/music-assistant.yml")
+  [[ "${ENABLE_UPTIME_KUMA:-0}" == "1" ]]    && files+=("$DOMUM_DIR/compose/monitoring/uptime-kuma.yml")
+  [[ "${ENABLE_PORTAINER:-0}" == "1" ]]      && files+=("$DOMUM_DIR/compose/monitoring/portainer.yml")
+  [[ "${ENABLE_JELLYFIN:-0}" == "1" ]]       && files+=("$DOMUM_DIR/compose/media/jellyfin.yml")
+  [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]   && files+=("$DOMUM_DIR/compose/networking/adguard-home.yml")
+  [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]  && files+=("$DOMUM_DIR/compose/productivity/actual-budget.yml")
+  [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]      && files+=("$DOMUM_DIR/compose/security/tailscale.yml")
+
+  for f in "${files[@]}"; do
+    [[ -f "$f" ]] || die "Missing compose file: $f"
+    echo "-f"
+    echo "$f"
+  done
+}
+
+# Enabled services in (logical-name|enable-var|category) form. The single
+# source of truth for status counts, checkup, and update classing.
+service_catalog() {
+  cat <<'EOF'
+traefik|ENABLE_TRAEFIK|proxy
+home-assistant|ENABLE_HOME_ASSISTANT|automation
+mariadb|ENABLE_MARIADB|automation
+go2rtc|ENABLE_GO2RTC|automation
+frigate|ENABLE_FRIGATE|automation
+mqtt|ENABLE_MQTT|automation
+zigbee2mqtt|ENABLE_ZIGBEE2MQTT|automation
+zwave-js-ui|ENABLE_ZWAVE|automation
+nodered|ENABLE_NODERED|automation
+esphome|ENABLE_ESP_HOME|automation
+music-assistant|ENABLE_MA|automation
+uptime-kuma|ENABLE_UPTIME_KUMA|monitoring
+portainer|ENABLE_PORTAINER|monitoring
+jellyfin|ENABLE_JELLYFIN|media
+adguard-home|ENABLE_ADGUARD_HOME|networking
+actual-budget|ENABLE_ACTUAL_BUDGET|productivity
+tailscale|ENABLE_TAILSCALE|security
+EOF
+}
+
+enabled_services() {
+  local name enable_var _cat
+  while IFS='|' read -r name enable_var _cat; do
+    [[ "${!enable_var:-0}" == "1" ]] && echo "$name"
+  done < <(service_catalog)
+}
+
+profiles_for_apply() {
+  local profiles=("core")
+  [[ "${ENABLE_NIGHT_PROFILE:-0}" == "1" ]] && profiles+=("night")
+  [[ "${ENABLE_MEDIA_PROFILE:-0}" == "1" ]] && profiles+=("media")
+  [[ "${ENABLE_AI_PROFILE:-0}" == "1" ]]    && profiles+=("ai")
+  printf "%s\n" "${profiles[@]}"
+}
+
+export_env_for_compose() {
+  export DOMUM_DOMAIN="${DOMUM_DOMAIN:-ladomum.com}"
+  export DOMUM_EMAIL="${DOMUM_EMAIL:-admin@ladomum.com}"
+  export DOMUM_LAN_IP="${DOMUM_LAN_IP:-}"
+  export DOMUM_TS_IP="${DOMUM_TS_IP:-}"
+
+  if [[ -z "${CF_DNS_API_TOKEN:-}" && -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
+    CF_DNS_API_TOKEN="$(cat "$SECRETS_DIR/cloudflare_api_token")"
+    export CF_DNS_API_TOKEN
+  fi
+}
+
+ensure_networks() {
+  local nets=("domum-internal" "domum-proxy" "domum-data" "iot_vlan50")
+  for n in "${nets[@]}"; do
+    if ! docker network inspect "$n" >/dev/null 2>&1; then
+      log "Creating docker network: $n"
+      docker network create "$n" >/dev/null
+    fi
+  done
+}
+
+compose_cmd() {
+  local -a args
+  mapfile -t args < <(compose_files_for_enabled_services)
+  cd "$DOMUM_DIR"
+  docker compose "${args[@]}" "$@"
+}
+
+init_host() {
+  need_root
+  load_cfg
+  install_docker
+  ensure_dirs
+  ensure_state_dirs
+  install -d -m 0700 "$SECRETS_DIR"
+
+  # Copy *.conf.example -> *.conf if missing (never overwrite a live config).
+  if [[ ! -f "$BACKUP_CFG_FILE" && -f "${BACKUP_CFG_FILE}.example" ]]; then
+    log "Creating $BACKUP_CFG_FILE from example."
+    install -m 0640 "${BACKUP_CFG_FILE}.example" "$BACKUP_CFG_FILE"
+  fi
+
+  if [[ ! -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
+    log "NOTE: $SECRETS_DIR/cloudflare_api_token not found."
+    log "      Create it for real TLS certs via Cloudflare DNS-01."
+  fi
+
+  if [[ ! -f "$DOMUM_DIR/.env" ]]; then
+    cat >"$DOMUM_DIR/.env" <<EOF
+# Optional per-host env file (not required for most services)
+EOF
+    chmod 0600 "$DOMUM_DIR/.env"
+  fi
+
+  log "Init complete."
+}
+
+apply() {
+  need_root
+  load_cfg
+  ensure_networks
+  export_env_for_compose
+  install_docker
+  ensure_dirs
+  ensure_state_dirs
+
+  local -a profile_flags=()
+  while IFS= read -r p; do
+    profile_flags+=("--profile" "$p")
+  done < <(profiles_for_apply)
+
+  log "Applying desired state..."
+  compose_cmd "${profile_flags[@]}" up -d --remove-orphans
+
+  if [[ "${ENABLE_NIGHT_PROFILE:-0}" == "1" && "${NIGHT_AUTOSTOP_OUTSIDE_WINDOW:-1}" == "1" ]]; then
+    domum_night_autostop
+  fi
+
+  log "Apply done."
+}
+
+domum_night_autostop() {
+  local up="${NIGHT_UP_TIME:-23:00}" down="${NIGHT_DOWN_TIME:-07:00}" now
+  now="$(date +%H:%M)"
+  if [[ "$up" < "$down" ]]; then
+    if [[ "$now" < "$up" || "$now" > "$down" ]]; then
+      log "Outside night window, stopping night profile."
+      compose_cmd --profile night stop || true
+    fi
+  else
+    if [[ "$now" < "$up" && "$now" > "$down" ]]; then
+      log "Outside night window, stopping night profile."
+      compose_cmd --profile night stop || true
+    fi
+  fi
+}
+
+# ===========================================================================
+#  Section: status (+ --counts)
+# ===========================================================================
+
+status_counts() {
+  echo "=== service counts ==="
+  local total=0 running=0 name
+  declare -A cat_total cat_running
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    local cat
+    cat="$(service_catalog | awk -F'|' -v n="$name" '$1==n {print $3}')"
+    total=$(( total + 1 ))
+    cat_total["$cat"]=$(( ${cat_total["$cat"]:-0} + 1 ))
+    if service_running "$name"; then
+      running=$(( running + 1 ))
+      cat_running["$cat"]=$(( ${cat_running["$cat"]:-0} + 1 ))
+    fi
+  done < <(enabled_services)
+  printf 'Containers running: %d / %d enabled\n' "$running" "$total"
+  echo "Per category:"
+  local c
+  for c in $(printf '%s\n' "${!cat_total[@]}" | sort); do
+    printf '  %-12s %d / %d\n' "$c" "${cat_running[$c]:-0}" "${cat_total[$c]}"
+  done
+}
+
+status_storage() {
+  echo "=== storage ==="
+  printf '%-22s %-8s %-8s %-8s %-6s\n' "PATH" "SIZE" "USED" "AVAIL" "USE%"
+  local path
+  for path in / /opt "$STATE_ROOT"; do
+    [[ -e "$path" ]] || continue
+    df -P "$path" 2>/dev/null | awk 'NR==2 {printf "%-22s %-8s %-8s %-8s %-6s\n", "'"$path"'", $2, $3, $4, $5}'
+  done
+}
+
+status() {
+  need_root
+  load_cfg
+  ensure_networks
+  export_env_for_compose
+  local show_counts=0
+  [[ "${1:-}" == "--counts" ]] && show_counts=1
+
+  echo "=== compose ps ==="
+  compose_cmd ps || true
+
+  if (( show_counts == 1 )); then
+    echo
+    status_counts
+  fi
+
+  echo
+  status_storage
+
+  echo
+  echo "=== backup heartbeat ==="
+  local hb="$STATE_ROOT/backups/last-success"
+  if [[ -f "$hb" ]]; then
+    echo "  last successful backup: $(cat "$hb") ($(human_age_from_epoch "$(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb")") ago)"
+  else
+    echo "  no successful backup recorded yet"
+  fi
+}
+
+# ===========================================================================
+#  Section: per-service backups (Actual, Home Assistant, MariaDB)
+# ===========================================================================
+
+prune_staging() {
+  # prune_staging <dir> <glob> <keep>
+  local dir="$1" glob="$2" keep="$3" count
+  count="$(find "$dir" -maxdepth 1 -name "$glob" -type f 2>/dev/null | wc -l | tr -d ' ')"
+  if (( count > keep )); then
+    # shellcheck disable=SC2012,SC2086
+    ls -1t "$dir"/$glob 2>/dev/null | tail -n +$(( keep + 1 )) | while IFS= read -r old; do
+      run rm -f "$old"
+    done
+  fi
+}
+
+actual_data_dir() { echo "$DOMUM_DIR/compose/productivity/actual-budget/data"; }
+
+actual_backup() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]] || { log "Actual Budget not enabled — nothing to back up."; return 0; }
+
+  local data_dir stage ts archive
+  data_dir="$(actual_data_dir)"
+  stage="$STATE_ROOT/service-backups/actual"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  archive="$stage/actual-${ts}.tar.gz"
+
+  [[ -d "$data_dir" ]] || { warn "Actual data dir not found: $data_dir"; return 0; }
+
+  log "Actual Budget backup -> $archive"
+  local paused=0
+  if [[ "${ACTUAL_QUIESCE:-0}" == "1" ]] && service_running actual-budget; then
+    local cn
+    cn="$(container_name_for actual-budget || true)"
+    if [[ -n "$cn" ]]; then
+      log "Quiescing (docker pause) $cn for a consistent SQLite copy."
+      run docker pause "$cn" || true
+      paused=1
+    fi
+  fi
+
+  run tar -C "$(dirname "$data_dir")" -czf "$archive" "$(basename "$data_dir")"
+  local rc=$?
+
+  if (( paused == 1 )); then
+    local cn
+    cn="$(container_name_for actual-budget || true)"
+    [[ -n "$cn" ]] && run docker unpause "$cn" || true
+  fi
+  (( rc == 0 )) || die "Actual backup tar failed."
+
+  (( DRY_RUN == 1 )) || prune_staging "$stage" 'actual-*.tar.gz' "${ACTUAL_KEEP:-7}"
+  log "Actual Budget backup done."
+}
+
+actual_restore_plan() {
+  load_cfg
+  local data_dir stage
+  data_dir="$(actual_data_dir)"
+  stage="$STATE_ROOT/service-backups/actual"
+  cat <<EOF
+Actual Budget — non-destructive restore plan
+=============================================
+Archives live in: $stage
+Live data dir:     $data_dir
+
+1. Pick an archive:
+     ls -1t $stage/actual-*.tar.gz
+2. Stop the container (Actual uses SQLite — copy must be quiescent):
+     docker compose ... stop actual-budget
+     # or: sudo domum-core apply  (after disabling) — but simplest is compose stop
+3. Move the current data aside (NEVER overwrite in place):
+     mv $data_dir ${data_dir}.bak-\$(date +%Y%m%d-%H%M%S)
+4. Extract the chosen archive:
+     mkdir -p $(dirname "$data_dir")
+     tar -C $(dirname "$data_dir") -xzf $stage/actual-YYYYMMDD-HHMMSS.tar.gz
+5. Start the container and verify in the Actual web UI:
+     sudo domum-core apply
+6. If something is wrong, stop, restore ${data_dir}.bak-*, start again.
+EOF
+}
+
+ha_config_dir() { echo "$DOMUM_DIR/compose/automation/home-assistant"; }
+
+mariadb_dump() {
+  # Dumps all DBs from the mariadb container (HA recorder history lives here).
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  [[ "${ENABLE_MARIADB:-0}" == "1" ]] || { log "MariaDB not enabled — skipping DB dump."; return 0; }
+  service_running mariadb || { warn "MariaDB container not running — skipping DB dump."; return 0; }
+
+  local cn stage ts dump
+  cn="$(container_name_for mariadb)" || { warn "Could not resolve mariadb container."; return 0; }
+  stage="$STATE_ROOT/service-backups/mariadb"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  dump="$stage/mariadb-all-${ts}.sql.gz"
+
+  log "MariaDB dump -> $dump"
+  if (( DRY_RUN == 1 )); then
+    echo "[dry-run] docker exec $cn sh -c 'mariadb-dump --all-databases ...' | gzip > $dump"
+  else
+    # Credentials come from the container's own env (MARIADB_ROOT_PASSWORD).
+    docker exec "$cn" sh -c 'exec mariadb-dump --all-databases --single-transaction --quick -uroot -p"$MARIADB_ROOT_PASSWORD"' \
+      | gzip -9 > "$dump" \
+      || { warn "mariadb-dump failed (check MARIADB_ROOT_PASSWORD in the container env)."; rm -f "$dump"; return 1; }
+    prune_staging "$stage" 'mariadb-all-*.sql.gz' "${MARIADB_KEEP:-7}"
+  fi
+  log "MariaDB dump done."
+}
+
+homeassistant_backup() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] || { log "Home Assistant not enabled — nothing to back up."; return 0; }
+
+  local cfg_dir stage ts archive
+  cfg_dir="$(ha_config_dir)"
+  stage="$STATE_ROOT/service-backups/homeassistant"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  archive="$stage/ha-${ts}.tar.gz"
+
+  [[ -d "$cfg_dir" ]] || { warn "HA config dir not found: $cfg_dir"; return 0; }
+
+  # Container image install — never restart HA. Filesystem-level tar of the
+  # config dir, excluding regenerable / volatile data.
+  log "Home Assistant config backup -> $archive"
+  run tar -C "$(dirname "$cfg_dir")" \
+    --exclude='home-assistant/*.db-wal' \
+    --exclude='home-assistant/*.db-shm' \
+    --exclude='home-assistant/tts' \
+    --exclude='home-assistant/deps' \
+    --exclude='home-assistant/.cloud' \
+    -czf "$archive" "$(basename "$cfg_dir")" \
+    || die "HA config tar failed."
+
+  (( DRY_RUN == 1 )) || prune_staging "$stage" 'ha-*.tar.gz' "${HA_KEEP:-7}"
+
+  # HA history lives in MariaDB (recorder), not the config dir. Dump it too;
+  # this doubles as the MariaDB backup.
+  mariadb_dump || warn "MariaDB recorder dump failed — HA history not captured this run."
+
+  log "Home Assistant backup done."
+}
+
+homeassistant_restore_plan() {
+  load_cfg
+  local cfg_dir stage mstage
+  cfg_dir="$(ha_config_dir)"
+  stage="$STATE_ROOT/service-backups/homeassistant"
+  mstage="$STATE_ROOT/service-backups/mariadb"
+  cat <<EOF
+Home Assistant — manual restore plan (never auto-applied)
+=========================================================
+Config archives:   $stage/ha-*.tar.gz
+Recorder DB dumps: $mstage/mariadb-all-*.sql.gz
+Live config dir:   $cfg_dir
+
+1. Stop HA and MariaDB:
+     docker compose ... stop homeassistant mariadb
+2. Restore config (non-destructive — move current aside first):
+     mv $cfg_dir ${cfg_dir}.bak-\$(date +%Y%m%d-%H%M%S)
+     tar -C $(dirname "$cfg_dir") -xzf $stage/ha-YYYYMMDD-HHMMSS.tar.gz
+3. Restore MariaDB (recorder history):
+     sudo domum-core apply        # bring MariaDB up first
+     gunzip -c $mstage/mariadb-all-YYYYMMDD-HHMMSS.sql.gz | \\
+       docker exec -i \$(sudo docker ps -qf name=mariadb) \\
+       sh -c 'mariadb -uroot -p"\$MARIADB_ROOT_PASSWORD"'
+4. Start HA:
+     sudo domum-core apply
+5. Verify the HA UI at https://ha.${DOMUM_DOMAIN:-<domain>} (or :8123).
+EOF
+}
+
+# ===========================================================================
+#  Section: restic backups (delegates to bin/domum-core-backup)
+# ===========================================================================
+
+BACKUP_BIN_CANDIDATES=(/usr/local/bin/domum-core-backup "$DOMUM_DIR/bin/domum-core-backup")
+
+backup_bin() {
+  local b
+  for b in "${BACKUP_BIN_CANDIDATES[@]}"; do
+    [[ -x "$b" ]] && { echo "$b"; return 0; }
+  done
+  echo "$DOMUM_DIR/bin/domum-core-backup"
+}
+
+backups_cmd() {
+  need_root
+  load_cfg
+  local sub="${1:-}"; shift || true
+  local bin
+  bin="$(backup_bin)"
+  case "$sub" in
+    run)
+      local dry=0
+      [[ "${1:-}" == "--dry-run" ]] && dry=1
+      # Refresh service-level backups first so they ride along in restic.
+      log "Refreshing service-level backups before restic run..."
+      DRY_RUN="$dry" actual_backup || warn "Actual backup step failed."
+      DRY_RUN="$dry" homeassistant_backup || warn "HA backup step failed."
+      if (( dry == 1 )); then
+        "$bin" --dry-run
+      else
+        "$bin"
+      fi
+      ;;
+    verify)    "$bin" --check ;;
+    snapshots) "$bin" --snapshots ;;
+    prune)
+      if [[ "${1:-}" == "--dry-run" ]]; then
+        "$bin" --prune-dry-run
+      else
+        "$bin" --prune
+      fi
+      ;;
+    init)      "$bin" init "$@" ;;
+    *) die "Usage: domum-core backups {run [--dry-run]|verify|snapshots|prune [--dry-run]|init <target>}" ;;
+  esac
+}
+
+# ===========================================================================
+#  Section: recovery pack (AGE-encrypted)
+# ===========================================================================
+
+recovery_pack_state_file() { printf '%s/last.env' "$RECOVERY_PACK_DEST"; }
+
+recovery_pack_manifest() {
+  local stage_dir="$1"
+  local manifest="$stage_dir/MANIFEST.txt"
+  : > "$manifest"
+  find "$stage_dir" -type f ! -name MANIFEST.txt | sort | while IFS= read -r path; do
+    printf '%s  %s\n' "$(sha256_of_file "$path")" "${path#"$stage_dir"/}" >> "$manifest"
+  done
+}
+
+recovery_pack_restore_md() {
+  local stage_dir="$1"
+  cat > "$stage_dir/RESTORE.md" <<EOF
+# domum-core recovery pack — restore notes
+
+This encrypted archive contains everything needed to rebuild the server's
+identity and configuration. Service *data* is restored separately from restic
+(see docs/DISASTER-RECOVERY.md).
+
+## Decrypt
+
+    age -d -i /path/to/recovery-age.key recovery-pack-<ts>.tar.age | tar -xzf -
+
+## Contents
+
+- config/domum.conf            — host config (sanitized of cleartext secrets)
+- config/domum-backup.conf     — backup target metadata
+- secrets/                     — copies of $SECRETS_DIR/* (sensitive!)
+- meta/git-revision.txt        — repo commit the server was running
+- meta/rendered-compose.yml    — fully rendered compose manifest
+- meta/service-inventory.txt   — enabled services + container image digests
+- meta/backup-targets.txt      — restic repo URLs (NOT passwords)
+
+## Rebuild order
+
+1. Install OS + Docker, clone repo, run install.sh.
+2. Restore secrets/* to $SECRETS_DIR (mode 0600, owner root).
+3. Restore config/* to $DOMUM_DIR/config/.
+4. Fill restic credentials, then: restic restore ... (per-target).
+5. Restore Actual + Home Assistant per their restore-plan output.
+6. Bring services up in safe order — see docs/DISASTER-RECOVERY.md.
+7. Validate: sudo domum-core checkup
+EOF
+}
+
+send_recovery_pack_email() {
+  local archive="$1" smtp_user smtp_pass message
+  [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || return 0
+  [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || die "RECOVERY_PACK_SMTP_HOST required when email delivery is enabled."
+  [[ -f "$RECOVERY_PACK_SMTP_USERNAME_FILE" && -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || die "SMTP credential files are missing."
+  smtp_user="$(read_secret_file_value "$RECOVERY_PACK_SMTP_USERNAME_FILE")"
+  smtp_pass="$(read_secret_file_value "$RECOVERY_PACK_SMTP_PASSWORD_FILE")"
+  message="$(mktemp)"
+  {
+    printf 'From: %s\n' "${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}"
+    printf 'To: %s\n' "${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}"
+    printf 'Subject: domum-core recovery pack %s\n' "$(basename "$archive")"
+    printf 'MIME-Version: 1.0\n'
+    printf 'Content-Type: multipart/mixed; boundary="domum-boundary"\n\n'
+    printf -- '--domum-boundary\n'
+    printf 'Content-Type: text/plain; charset="utf-8"\n\n'
+    printf 'Encrypted recovery pack attached: %s\n\n' "$(basename "$archive")"
+    printf -- '--domum-boundary\n'
+    printf 'Content-Type: application/octet-stream; name="%s"\n' "$(basename "$archive")"
+    printf 'Content-Transfer-Encoding: base64\n'
+    printf 'Content-Disposition: attachment; filename="%s"\n\n' "$(basename "$archive")"
+    base64 < "$archive"
+    printf '\n--domum-boundary--\n'
+  } > "$message"
+  curl --silent --show-error --ssl-reqd \
+    --url "smtps://${RECOVERY_PACK_SMTP_HOST}:${RECOVERY_PACK_SMTP_PORT}" \
+    --user "${smtp_user}:${smtp_pass}" \
+    --mail-from "${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}" \
+    --mail-rcpt "${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}" \
+    --upload-file "$message"
+  rm -f "$message"
+}
+
+recovery_pack_create() {
+  [[ "${RECOVERY_PACK_ENABLED:-1}" == "1" ]] || die "Recovery pack generation disabled (RECOVERY_PACK_ENABLED=0)."
+
+  if [[ ! -f "$RECOVERY_PACK_AGE_PUBKEY_FILE" ]]; then
+    cat >&2 <<EOF
+ERROR: Missing recovery-pack age public key: $RECOVERY_PACK_AGE_PUBKEY_FILE
+
+Generate an AGE keypair (keep the PRIVATE key offline, NOT on this Pi):
+
+    age-keygen -o recovery-age.key            # do this on a trusted machine
+    grep 'public key' recovery-age.key        # copy the age1... line
+    # put ONLY the public key on the Pi:
+    sudo install -m 0644 -o root recovery-age.pub $RECOVERY_PACK_AGE_PUBKEY_FILE
+
+This tool will NEVER auto-generate or rotate keys.
+EOF
+    exit 1
+  fi
+
+  local no_email="${1:-0}"
+  local stage_dir archive_plain archive_enc pubkey recipient ts sha size
+
+  if (( DRY_RUN == 1 )); then
+    echo "[dry-run] Would stage: config/domum.conf, config/domum-backup.conf,"
+    echo "          secrets/* (small files), rendered compose, git revision,"
+    echo "          service inventory + image digests, RESTORE.md, MANIFEST.txt"
+    echo "[dry-run] Would encrypt with age -> $RECOVERY_PACK_DEST/recovery-pack-<ts>.tar.age"
+    [[ "$no_email" == "0" && "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] && echo "[dry-run] Would email the .age file."
+    return 0
+  fi
+
+  if ! cmd_exists age; then
+    log "age not found — installing via apt..."
+    apt-get install -y --no-install-recommends age \
+      || die "age is not installed and apt-get install age failed. Install: apt-get install -y age"
+  fi
+
+  stage_dir="$(mktemp -d)"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  archive_plain="$(mktemp "/tmp/recovery-pack-${ts}.XXXXXX")"
+  archive_enc="$RECOVERY_PACK_DEST/recovery-pack-${ts}.tar.age"
+  pubkey="$(read_secret_file_value "$RECOVERY_PACK_AGE_PUBKEY_FILE")"
+  recipient="$(printf '%s' "$pubkey" | awk '/age1/ {for(i=1;i<=NF;i++) if($i ~ /^age1/){print $i; exit}}')"
+  [[ -n "$recipient" ]] || die "Could not parse age recipient from $RECOVERY_PACK_AGE_PUBKEY_FILE"
+
+  mkdir -p "$stage_dir/config" "$stage_dir/secrets" "$stage_dir/meta"
+  [[ -f "$CFG_FILE" ]] && install -m 0600 "$CFG_FILE" "$stage_dir/config/domum.conf"
+  [[ -f "$BACKUP_CFG_FILE" ]] && install -m 0600 "$BACKUP_CFG_FILE" "$stage_dir/config/domum-backup.conf"
+
+  # Copy only small secret files (avoid bundling large keyrings/blobs).
+  find "$SECRETS_DIR" -maxdepth 2 -type f -size -64k 2>/dev/null | while IFS= read -r file; do
+    local rel
+    rel="${file#"$SECRETS_DIR"/}"
+    install -D -m 0600 "$file" "$stage_dir/secrets/$rel"
+  done
+
+  git -C "$DOMUM_DIR" rev-parse HEAD > "$stage_dir/meta/git-revision.txt" 2>/dev/null || true
+  export_env_for_compose
+  compose_cmd config > "$stage_dir/meta/rendered-compose.yml" 2>/dev/null || true
+
+  # Service inventory + last container image digests.
+  {
+    echo "# enabled services + running image digest"
+    local svc cid
+    while IFS= read -r svc; do
+      cid="$(container_for "$svc" || true)"
+      if [[ -n "$cid" ]]; then
+        printf '%s\t%s\n' "$svc" "$(docker inspect --format '{{range .RepoDigests}}{{.}} {{end}}{{.Image}}' "$cid" 2>/dev/null || echo unknown)"
+      else
+        printf '%s\t(not running)\n' "$svc"
+      fi
+    done < <(enabled_services)
+  } > "$stage_dir/meta/service-inventory.txt"
+
+  # Backup target URLs (NOT passwords).
+  {
+    echo "# restic repository URLs (passwords are NOT included)"
+    grep -E '^BACKUP_TARGET_[A-Z]+_(REPOSITORY|ENABLED|TYPE)=' "$BACKUP_CFG_FILE" 2>/dev/null || true
+  } > "$stage_dir/meta/backup-targets.txt"
+
+  recovery_pack_restore_md "$stage_dir"
+  recovery_pack_manifest "$stage_dir"
+
+  tar -C "$stage_dir" -czf "$archive_plain" .
+  age -r "$recipient" -o "$archive_enc" "$archive_plain"
+  chmod 600 "$archive_enc"
+  sha="$(sha256_of_file "$archive_enc")"
+  size="$(file_size "$archive_enc")"
+  write_env_kv "$(recovery_pack_state_file)" \
+    ARCHIVE_PATH "$archive_enc" \
+    SHA256 "$sha" \
+    SIZE "$size" \
+    TS "$(date +%s)"
+  rm -rf "$stage_dir"
+  rm -f "$archive_plain"
+
+  if (( no_email == 0 )); then
+    send_recovery_pack_email "$archive_enc" || warn "Recovery-pack email delivery failed."
+  fi
+
+  log "Recovery pack written to $archive_enc"
+}
+
+recovery_pack_status() {
+  local state_file
+  state_file="$(recovery_pack_state_file)"
+  if [[ ! -f "$state_file" ]]; then
+    echo "[domum-core] No recovery pack has been created yet."
+    return 1
+  fi
+  unset ARCHIVE_PATH SHA256 SIZE TS
+  # shellcheck disable=SC1090
+  source "$state_file"
+  echo "Recovery pack:"
+  echo "  path:    ${ARCHIVE_PATH:-missing}"
+  echo "  age:     $(human_age_from_epoch "${TS:-0}")"
+  echo "  size:    ${SIZE:-0} bytes"
+  echo "  sha256:  ${SHA256:-unknown}"
+}
+
+recovery_pack_inspect() {
+  local state_file
+  state_file="$(recovery_pack_state_file)"
+  [[ -f "$state_file" ]] || die "No recovery pack recorded."
+  unset ARCHIVE_PATH
+  # shellcheck disable=SC1090
+  source "$state_file"
+  [[ -f "${ARCHIVE_PATH:-}" ]] || die "Recovery pack archive missing: ${ARCHIVE_PATH:-}"
+  cat <<EOF
+Recovery pack: $ARCHIVE_PATH
+
+This archive is AGE-encrypted; its contents cannot be listed without the
+private key. To inspect the manifest:
+
+    age -d -i /path/to/recovery-age.key "$ARCHIVE_PATH" | tar -tzf -
+
+The MANIFEST.txt inside lists every file with its SHA-256.
+EOF
+}
+
+recovery_pack_cmd() {
+  need_root
+  load_cfg
+  ensure_state_dirs
+  local sub="${1:-create}"; shift || true
+  case "$sub" in
+    create)
+      local no_email=0
+      while (( $# )); do
+        case "$1" in
+          --no-email) no_email=1 ;;
+          --dry-run) DRY_RUN=1 ;;
+          *) die "Usage: domum-core recovery-pack create [--dry-run] [--no-email]" ;;
+        esac
+        shift
+      done
+      recovery_pack_create "$no_email"
+      ;;
+    status)  recovery_pack_status ;;
+    inspect) recovery_pack_inspect ;;
+    *) die "Usage: domum-core recovery-pack {create [--dry-run] [--no-email]|status|inspect}" ;;
+  esac
+}
+
+# ===========================================================================
+#  Section: cautious update model
+# ===========================================================================
+
+update_class_of() {
+  local svc="$1"
+  [[ " $UPDATE_CLASS_A " == *" $svc "* ]] && { echo A; return; }
+  [[ " $UPDATE_CLASS_B " == *" $svc "* ]] && { echo B; return; }
+  [[ " $UPDATE_CLASS_C " == *" $svc "* ]] && { echo C; return; }
+  echo "?"
+}
+
+updates_check() {
+  load_cfg
+  export_env_for_compose
+  log "Checking for newer container images (read-only)..."
+  printf '%-16s %-5s %-9s %s\n' "SERVICE" "CLASS" "UPDATE?" "RUNNING IMAGE"
+  local svc cid running_digest image_ref
+  while IFS= read -r svc; do
+    cid="$(container_for "$svc" || true)"
+    if [[ -z "$cid" ]]; then
+      printf '%-16s %-5s %-9s %s\n' "$svc" "$(update_class_of "$svc")" "n/a" "(not running)"
+      continue
+    fi
+    image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
+    running_digest="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
+    # Read-only pull to compare digests.
+    local newest update="no"
+    if docker pull --quiet "$image_ref" >/dev/null 2>&1; then
+      newest="$(docker image inspect "$image_ref" --format '{{.Id}}' 2>/dev/null || true)"
+      [[ -n "$newest" && "$newest" != "$running_digest" ]] && update="YES"
+    else
+      update="?"
+    fi
+    printf '%-16s %-5s %-9s %s\n' "$svc" "$(update_class_of "$svc")" "$update" "$image_ref"
+  done < <(enabled_services)
+
+  echo
+  if cmd_exists apt-get; then
+    local upg
+    upg="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+    echo "Host (Class D): ${upg} apt package(s) upgradable."
+  fi
+  echo
+  echo "To apply: sudo domum-core updates apply --class A|B|C|D [--dry-run]"
+}
+
+update_history_dir() { echo "$STATE_ROOT/update-history"; }
+
+record_update_history() {
+  local class="$1" svc="$2" from="$3" to="$4" result="$5" note="${6:-}"
+  local ts stamp file
+  ts="$(date +%s)"; stamp="$(date +%Y%m%d-%H%M%S)"
+  file="$(update_history_dir)/${svc}-${stamp}.env"
+  write_env_kv "$file" \
+    CLASS "$class" SERVICE "$svc" FROM_IMAGE "$from" TO_IMAGE "$to" \
+    RESULT "$result" NOTE "$note" TS "$ts"
+  echo "$(epoch_to_iso "$ts") [$class] $svc: $result ${note}" >> "$(update_history_dir)/history.log"
+}
+
+backup_is_fresh() {
+  local hb="$STATE_ROOT/backups/last-success" svc_recent
+  # Accept either a restic heartbeat or a fresh service-level backup.
+  if [[ -f "$hb" ]]; then
+    local age_h
+    age_h=$(( ( $(date +%s) - $(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb") ) / 3600 ))
+    (( age_h <= BACKUP_MAX_AGE_HOURS )) && return 0
+  fi
+  svc_recent="$(find "$STATE_ROOT/service-backups" -type f -mmin -$(( BACKUP_MAX_AGE_HOURS * 60 )) 2>/dev/null | head -n1)"
+  [[ -n "$svc_recent" ]]
+}
+
+updates_apply() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+
+  local class="" force=0
+  while (( $# )); do
+    case "$1" in
+      --class) class="$2"; shift ;;
+      --dry-run) DRY_RUN=1 ;;
+      --force) force=1 ;;
+      *) die "Usage: domum-core updates apply --class A|B|C|D [--dry-run] [--force]" ;;
+    esac
+    shift
+  done
+  [[ -n "$class" ]] || die "Specify --class A|B|C|D"
+  class="${class^^}"
+
+  if [[ "$class" == "D" ]]; then
+    log "Applying host (Class D) package upgrades..."
+    if (( DRY_RUN == 1 )); then
+      run apt-get -s upgrade
+    else
+      export DEBIAN_FRONTEND=noninteractive
+      run apt-get update -y
+      run apt-get upgrade -y
+      record_update_history D host "" "" success "apt upgrade"
+    fi
+    return 0
+  fi
+
+  local -a targets=()
+  local svc
+  while IFS= read -r svc; do
+    [[ "$(update_class_of "$svc")" == "$class" ]] && targets+=("$svc")
+  done < <(enabled_services)
+
+  (( ${#targets[@]} > 0 )) || { log "No enabled services in class $class."; return 0; }
+
+  # Class B/C are stateful — require a fresh backup unless --force.
+  if [[ "$class" == "B" || "$class" == "C" ]]; then
+    if ! backup_is_fresh; then
+      if (( force == 0 )); then
+        die "Refusing to update Class $class (stateful) without a fresh backup (<= ${BACKUP_MAX_AGE_HOURS}h). Run 'sudo domum-core backups run' or pass --force."
+      fi
+      warn "No fresh backup found, but --force given. Proceeding."
+    fi
+  fi
+
+  log "Updating Class $class services: ${targets[*]}"
+  for svc in "${targets[@]}"; do
+    local cid before after cs
+    cs="$(compose_service_for "$svc")"
+    cid="$(container_for "$svc" || true)"
+    before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+    log "Pulling $svc..."
+    run compose_cmd pull "$cs"
+    run compose_cmd up -d "$cs"
+    if (( DRY_RUN == 0 )); then
+      cid="$(container_for "$svc" || true)"
+      after="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+      record_update_history "$class" "$svc" "$before" "$after" success "compose pull + up"
+    fi
+  done
+  log "Class $class update complete."
+}
+
+updates_history() {
+  load_cfg
+  local logf
+  logf="$(update_history_dir)/history.log"
+  if [[ -f "$logf" ]]; then
+    cat "$logf"
+  else
+    echo "No update history yet."
+  fi
+}
+
+updates_cmd() {
+  need_root
+  local sub="${1:-check}"; shift || true
+  case "$sub" in
+    check)   updates_check ;;
+    apply)   updates_apply "$@" ;;
+    history) updates_history ;;
+    *) die "Usage: domum-core updates {check|apply --class A|B|C|D [--dry-run]|history}" ;;
+  esac
+}
+
+# ===========================================================================
+#  Section: cleanup
+# ===========================================================================
+
+images_in_use() {
+  docker ps -aq 2>/dev/null | while IFS= read -r cid; do
+    [[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null
+  done | sort -u
+}
+
+cleanup_images() {
+  need_root
+  load_cfg
+  export_env_for_compose
+  local dry=1
+  while (( $# )); do
+    case "$1" in
+      --dry-run) dry=1 ;;
+      --confirm) dry=0 ;;
+      *) die "Usage: domum-core cleanup images [--dry-run|--confirm]" ;;
+    esac
+    shift
+  done
+
+  local -a candidates=() inuse_tmp
+  inuse_tmp="$(mktemp)"
+  images_in_use > "$inuse_tmp"
+
+  local id
+  while IFS= read -r id; do
+    [[ -n "$id" ]] || continue
+    grep -Fxq "$id" "$inuse_tmp" && continue
+    candidates+=("$id")
+  done < <(docker images --filter dangling=true -q 2>/dev/null | sort -u)
+  rm -f "$inuse_tmp"
+
+  if (( ${#candidates[@]} == 0 )); then
+    log "No pruneable (dangling, unused) images found."
+    return 0
+  fi
+
+  echo "Dangling images not referenced by any container:"
+  local total=0 size
+  for id in "${candidates[@]}"; do
+    size="$(docker image inspect "$id" --format '{{.Size}}' 2>/dev/null || echo 0)"
+    total=$(( total + size ))
+    printf '  %s %s\n' "$id" "$(docker image inspect "$id" --format '{{.RepoTags}}' 2>/dev/null || echo '[]')"
+  done
+  printf 'Total: %d image(s), ~%d MiB\n' "${#candidates[@]}" "$(( total / 1024 / 1024 ))"
+
+  if (( dry == 1 )); then
+    echo "(dry-run — re-run with --confirm to delete)"
+    return 0
+  fi
+  docker image rm "${candidates[@]}"
+}
+
+# ===========================================================================
+#  Section: checkup / doctor
+# ===========================================================================
+
+CHECKUP_CRITICAL=(); CHECKUP_WARNINGS=(); CHECKUP_HEALTHY=(); CHECKUP_ACTIONS=()
+
+checkup_add() {
+  local level="$1"; shift
+  case "$level" in
+    critical) CHECKUP_CRITICAL+=("$*") ;;
+    warning)  CHECKUP_WARNINGS+=("$*") ;;
+    healthy)  CHECKUP_HEALTHY+=("$*") ;;
+    action)   CHECKUP_ACTIONS+=("$*") ;;
+  esac
+}
+
+json_array_from_items() {
+  if (( $# == 0 )); then printf '[]'
+  elif cmd_exists jq; then printf '%s\n' "$@" | jq -R . | jq -s .
+  else
+    local out="[" first=1 item
+    for item in "$@"; do
+      item="${item//\\/\\\\}"; item="${item//\"/\\\"}"
+      (( first == 0 )) && out+=","
+      out+="\"$item\""; first=0
+    done
+    out+="]"; printf '%s' "$out"
+  fi
+}
+
+pi_temp_check() {
+  cmd_exists vcgencmd || return 0
+  local temp throttled
+  temp="$(vcgencmd measure_temp 2>/dev/null | grep -oE '[0-9.]+' | head -n1 || true)"
+  if [[ -n "$temp" ]]; then
+    local t_int="${temp%.*}"
+    if (( t_int >= 80 )); then
+      checkup_add warning "Pi temperature is ${temp}°C (>=80)."
+    else
+      checkup_add healthy "Pi temperature ${temp}°C."
+    fi
+  fi
+  throttled="$(vcgencmd get_throttled 2>/dev/null | sed 's/throttled=//' || true)"
+  if [[ -n "$throttled" && "$throttled" != "0x0" ]]; then
+    checkup_add warning "Pi throttling flags set: $throttled (under-voltage / overheat history)."
+  fi
+}
+
+run_checkup() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+
+  CHECKUP_CRITICAL=(); CHECKUP_WARNINGS=(); CHECKUP_HEALTHY=(); CHECKUP_ACTIONS=()
+
+  # --- config sanity ---
+  [[ -n "${DOMUM_DOMAIN:-}" ]] || checkup_add critical "DOMUM_DOMAIN is empty."
+
+  # --- docker daemon ---
+  if docker info >/dev/null 2>&1; then
+    checkup_add healthy "Docker daemon is responsive."
+  else
+    checkup_add critical "Docker daemon is not responding."
+  fi
+
+  # --- networks ---
+  local n
+  for n in domum-proxy domum-internal domum-data; do
+    if docker network inspect "$n" >/dev/null 2>&1; then
+      checkup_add healthy "Network $n exists."
+    else
+      checkup_add warning "Network $n is missing (run: sudo domum-core apply)."
+    fi
+  done
+
+  # --- services up vs expected + restart loops + health ---
+  local svc cid
+  while IFS= read -r svc; do
+    cid="$(container_for "$svc" || true)"
+    if [[ -z "$cid" ]]; then
+      checkup_add warning "$svc is enabled but no container is running."
+      continue
+    fi
+    local st rc health
+    st="$(docker inspect --format '{{.State.Status}}' "$cid" 2>/dev/null || echo unknown)"
+    rc="$(docker inspect --format '{{.RestartCount}}' "$cid" 2>/dev/null || echo 0)"
+    health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$cid" 2>/dev/null || true)"
+    if [[ "$st" != "running" ]]; then
+      checkup_add critical "$svc container is $st."
+    elif [[ "$health" == "unhealthy" ]]; then
+      checkup_add critical "$svc is unhealthy."
+    elif (( rc > 5 )); then
+      checkup_add warning "$svc has restarted ${rc} times (possible restart loop)."
+    else
+      checkup_add healthy "$svc is running${health:+ ($health)}."
+    fi
+  done < <(enabled_services)
+
+  # --- HTTP / port probes (best-effort) ---
+  if cmd_exists curl; then
+    if [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]]; then
+      if curl -fsS --max-time 5 http://127.0.0.1:8123 >/dev/null 2>&1; then
+        checkup_add healthy "Home Assistant HTTP :8123 responding."
+      else
+        checkup_add warning "Home Assistant HTTP :8123 not responding locally."
+      fi
+    fi
+    if [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]; then
+      if curl -fsS --max-time 5 http://127.0.0.1:5006 >/dev/null 2>&1; then
+        checkup_add healthy "Actual HTTP :5006 responding."
+      else
+        checkup_add warning "Actual HTTP :5006 not responding locally."
+      fi
+    fi
+  fi
+  if [[ "${ENABLE_MQTT:-0}" == "1" ]] && cmd_exists bash; then
+    if (echo > /dev/tcp/127.0.0.1/1883) >/dev/null 2>&1; then
+      checkup_add healthy "MQTT port 1883 is listening."
+    else
+      checkup_add warning "MQTT port 1883 not reachable on localhost."
+    fi
+  fi
+
+  # --- disk usage ---
+  local path pcent
+  for path in / /opt "$STATE_ROOT"; do
+    [[ -e "$path" ]] || continue
+    pcent="$(df -P "$path" | awk 'NR==2 {gsub("%","",$5); print $5}')"
+    if (( pcent >= 90 )); then
+      checkup_add critical "$path is ${pcent}% full."
+    elif (( pcent >= 80 )); then
+      checkup_add warning "$path is ${pcent}% full."
+    fi
+  done
+
+  # --- memory / load ---
+  if [[ -r /proc/meminfo ]]; then
+    local mt ma
+    mt="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+    ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+    if [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]]; then
+      local used_pct=$(( (mt - ma) * 100 / mt ))
+      if (( used_pct >= 90 )); then
+        checkup_add warning "Memory ${used_pct}% used."
+      else
+        checkup_add healthy "Memory ${used_pct}% used."
+      fi
+    fi
+  fi
+
+  # --- Pi temperature / throttling ---
+  pi_temp_check
+
+  # --- time sync ---
+  if cmd_exists timedatectl; then
+    if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -qi yes; then
+      checkup_add healthy "Time is NTP-synchronized."
+    else
+      checkup_add warning "Clock is not NTP-synchronized."
+    fi
+  fi
+
+  # --- secrets dir perms ---
+  if [[ -d "$SECRETS_DIR" ]]; then
+    local mode owner
+    mode="$(stat -c %a "$SECRETS_DIR" 2>/dev/null || echo '?')"
+    owner="$(stat -c %U "$SECRETS_DIR" 2>/dev/null || echo '?')"
+    [[ "$mode" == "700" ]] || checkup_add warning "$SECRETS_DIR mode is $mode (expected 700)."
+    [[ "$owner" == "root" ]] || checkup_add warning "$SECRETS_DIR owner is $owner (expected root)."
+  else
+    checkup_add warning "$SECRETS_DIR does not exist."
+  fi
+
+  # --- backup targets configured ---
+  local enabled_targets
+  enabled_targets="$(grep -cE '^BACKUP_TARGET_[A-Z]+_ENABLED=1' "$BACKUP_CFG_FILE" 2>/dev/null || echo 0)"
+  if (( enabled_targets == 0 )); then
+    checkup_add warning "No restic backup targets are enabled (see docs/SETUP-BACKUPS.md)."
+    checkup_add action "Configure + enable a backup target in $BACKUP_CFG_FILE"
+  else
+    checkup_add healthy "${enabled_targets} restic backup target(s) enabled."
+  fi
+
+  # --- backup freshness ---
+  local hb="$STATE_ROOT/backups/last-success"
+  if [[ -f "$hb" ]]; then
+    local age_h
+    age_h=$(( ( $(date +%s) - $(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb") ) / 3600 ))
+    if (( age_h > BACKUP_MAX_AGE_HOURS )); then
+      checkup_add critical "Last successful backup is ${age_h}h old (limit ${BACKUP_MAX_AGE_HOURS}h)."
+    else
+      checkup_add healthy "Last backup completed ${age_h}h ago."
+    fi
+  else
+    checkup_add warning "No successful restic backup recorded yet."
+  fi
+
+  # --- service-level backups present ---
+  local sb
+  for sb in actual:ENABLE_ACTUAL_BUDGET homeassistant:ENABLE_HOME_ASSISTANT mariadb:ENABLE_MARIADB; do
+    local d="${sb%%:*}" ev="${sb##*:}"
+    [[ "${!ev:-0}" == "1" ]] || continue
+    if find "$STATE_ROOT/service-backups/$d" -type f 2>/dev/null | grep -q .; then
+      checkup_add healthy "$d service backup present."
+    else
+      checkup_add warning "$d is enabled but has no service backup yet."
+    fi
+  done
+
+  # --- recovery pack age ---
+  if [[ "${RECOVERY_PACK_ENABLED:-1}" == "1" ]]; then
+    if recovery_pack_status >/dev/null 2>&1; then
+      unset TS
+      # shellcheck disable=SC1090
+      source "$(recovery_pack_state_file)"
+      if (( $(date +%s) - ${TS:-0} > RECOVERY_PACK_REMINDER_DAYS * 86400 )); then
+        checkup_add warning "Recovery pack is older than ${RECOVERY_PACK_REMINDER_DAYS} days."
+        checkup_add action "sudo domum-core recovery-pack create"
+      else
+        checkup_add healthy "Recovery pack age is within policy."
+      fi
+    else
+      checkup_add warning "No recovery pack has been created."
+      checkup_add action "Generate AGE keypair, then: sudo domum-core recovery-pack create"
+    fi
+  fi
+
+  # --- age binary for recovery packs ---
+  cmd_exists age || checkup_add warning "age binary missing — recovery-pack create will need it (apt-get install -y age)."
+
+  # --- Tailscale (if enabled) ---
+  if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]] && cmd_exists tailscale; then
+    if tailscale status >/dev/null 2>&1; then
+      checkup_add healthy "Tailscale is up."
+    else
+      checkup_add warning "Tailscale is enabled but not connected."
+    fi
+  fi
+
+  # --- dangling images ---
+  local dangling
+  dangling="$(docker images --filter dangling=true -q 2>/dev/null | wc -l | tr -d ' ')"
+  (( dangling > 0 )) && { checkup_add warning "${dangling} dangling Docker images can be pruned."; checkup_add action "sudo domum-core cleanup images --dry-run"; }
+
+  # --- pending apt updates ---
+  if cmd_exists apt-get; then
+    local sec gen
+    sec="$(apt-get -s upgrade 2>/dev/null | grep '^Inst ' | grep -ci security || true)"
+    gen="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+    (( sec > 0 )) && checkup_add warning "${sec} security update(s) available."
+    (( gen > 0 )) && checkup_add warning "${gen} package update(s) available."
+  fi
+  [[ -f /var/run/reboot-required ]] && checkup_add warning "Reboot required by a package update."
+
+  # --- ACTION: image update reminder ---
+  checkup_add action "Review image updates: sudo domum-core updates check"
+}
+
+print_checkup() {
+  local json="$1"
+  if (( json == 1 )); then
+    printf '{\n'
+    printf '  "critical": %s,\n' "$(json_array_from_items "${CHECKUP_CRITICAL[@]}")"
+    printf '  "warnings": %s,\n' "$(json_array_from_items "${CHECKUP_WARNINGS[@]}")"
+    printf '  "healthy": %s,\n' "$(json_array_from_items "${CHECKUP_HEALTHY[@]}")"
+    printf '  "suggested_actions": %s\n' "$(json_array_from_items "${CHECKUP_ACTIONS[@]}")"
+    printf '}\n'
+    return
+  fi
+  echo "domum-core checkup"
+  echo
+  echo "Critical:"
+  (( ${#CHECKUP_CRITICAL[@]} == 0 )) && echo "  [ok] none" || printf '  [!] %s\n' "${CHECKUP_CRITICAL[@]}"
+  echo
+  echo "Warnings:"
+  (( ${#CHECKUP_WARNINGS[@]} == 0 )) && echo "  [ok] none" || printf '  [~] %s\n' "${CHECKUP_WARNINGS[@]}"
+  echo
+  echo "Healthy:"
+  (( ${#CHECKUP_HEALTHY[@]} == 0 )) && echo "  (none recorded)" || printf '  [ok] %s\n' "${CHECKUP_HEALTHY[@]}"
+  echo
+  echo "Suggested actions:"
+  if (( ${#CHECKUP_ACTIONS[@]} == 0 )); then
+    echo "  1. No immediate action required."
+  else
+    local i=1 action
+    for action in "${CHECKUP_ACTIONS[@]}"; do
+      printf '  %d. %s\n' "$i" "$action"; i=$(( i + 1 ))
+    done
+  fi
+}
+
+checkup_cmd() {
+  need_root
+  local json=0 quiet=0
+  while (( $# )); do
+    case "$1" in
+      --json) json=1 ;;
+      --quiet) quiet=1 ;;
+      *) die "Usage: domum-core checkup [--json|--quiet]" ;;
+    esac
+    shift
+  done
+  run_checkup
+  if (( quiet == 1 )); then
+    (( ${#CHECKUP_CRITICAL[@]} == 0 )) || printf '%s\n' "${CHECKUP_CRITICAL[@]}"
+  else
+    print_checkup "$json"
+  fi
+  (( ${#CHECKUP_CRITICAL[@]} == 0 ))
+}
+
+doctor_cmd() {
+  need_root
+  run_checkup
+  print_checkup 0
+  echo
+  echo "=== deeper diagnostics ==="
+
+  echo "-- compose config validity --"
+  if compose_cmd config >/dev/null 2>&1; then
+    echo "  compose config: valid"
+  else
+    echo "  compose config: INVALID — run 'sudo domum-core apply' output to debug"
+  fi
+
+  echo "-- enabled services / containers --"
+  local svc cid
+  while IFS= read -r svc; do
+    cid="$(container_for "$svc" || true)"
+    printf '  %-16s %s\n' "$svc" "${cid:-(not running)}"
+  done < <(enabled_services)
+
+  echo "-- disk SMART (if available) --"
+  if cmd_exists smartctl; then
+    local dev
+    for dev in /dev/sd? /dev/nvme?n? /dev/mmcblk?; do
+      [[ -e "$dev" ]] || continue
+      printf '  %s: %s\n' "$dev" "$(smartctl -H "$dev" 2>/dev/null | grep -i 'overall-health' | sed 's/.*: //' || echo 'n/a')"
+    done
+  else
+    echo "  smartctl not installed (apt-get install -y smartmontools)"
+  fi
+
+  echo "-- required binaries --"
+  local b
+  for b in docker restic age curl jq; do
+    cmd_exists "$b" && echo "  $b: $(command -v "$b")" || echo "  $b: MISSING"
+  done
+
+  (( ${#CHECKUP_CRITICAL[@]} == 0 ))
+}
+
+# ===========================================================================
+#  Section: schedule (night profile) + maintenance timers
+# ===========================================================================
+
+schedule_install() {
+  need_root
+  load_cfg
+  local script="$DOMUM_DIR/bin/night-profile.sh"
+  install -m 0755 "$script" /usr/local/bin/domum-night-profile
+
+  local up="${NIGHT_UP_TIME:-23:00}" down="${NIGHT_DOWN_TIME:-07:00}"
+
+  cat >/etc/systemd/system/domum-night-up.service <<EOF
+[Unit]
+Description=Start domum night profile
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/domum-night-profile up
+EOF
+
+  cat >/etc/systemd/system/domum-night-down.service <<EOF
+[Unit]
+Description=Stop domum night profile
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/domum-night-profile down
+EOF
+
+  local up_h="${up%:*}" up_m="${up#*:}" down_h="${down%:*}" down_m="${down#*:}"
+
+  cat >/etc/systemd/system/domum-night-up.timer <<EOF
+[Unit]
+Description=Timer to start domum night profile
+
+[Timer]
+OnCalendar=*-*-* ${up_h}:${up_m}:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  cat >/etc/systemd/system/domum-night-down.timer <<EOF
+[Unit]
+Description=Timer to stop domum night profile
+
+[Timer]
+OnCalendar=*-*-* ${down_h}:${down_m}:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now domum-night-up.timer domum-night-down.timer
+
+  log "Night profile scheduling installed. Up: $up  Down: $down"
+}
+
+schedule_remove() {
+  need_root
+  systemctl disable --now domum-night-up.timer domum-night-down.timer || true
+  rm -f /etc/systemd/system/domum-night-up.timer /etc/systemd/system/domum-night-down.timer
+  rm -f /etc/systemd/system/domum-night-up.service /etc/systemd/system/domum-night-down.service
+  rm -f /usr/local/bin/domum-night-profile
+  systemctl daemon-reload
+  log "Night profile scheduling removed."
+}
+
+schedule_install_maintenance() {
+  need_root
+  load_cfg
+  ensure_state_dirs
+
+  [[ -d "$DOMUM_DIR/systemd" ]] || die "Missing $DOMUM_DIR/systemd"
+  log "Installing maintenance unit/timer files (NOT enabling them)..."
+  local f
+  for f in "$DOMUM_DIR"/systemd/domum-core-*.service "$DOMUM_DIR"/systemd/domum-core-*.timer; do
+    [[ -f "$f" ]] || continue
+    install -m 0644 "$f" "/etc/systemd/system/$(basename "$f")"
+    echo "  installed $(basename "$f")"
+  done
+  systemctl daemon-reload
+
+  cat <<EOF
+
+Units installed but DISABLED. Enable the ones you want with:
+
+  sudo systemctl enable --now domum-core-checkup.timer
+  sudo systemctl enable --now domum-core-actual-backup.timer
+  sudo systemctl enable --now domum-core-homeassistant-backup.timer
+  sudo systemctl enable --now domum-core-backup.timer
+  sudo systemctl enable --now domum-core-recovery-pack.timer
+  sudo systemctl enable --now domum-core-backup-verify.timer
+  sudo systemctl enable --now domum-core-cleanup-report.timer
+
+Review timing first: systemctl cat domum-core-backup.timer
+EOF
+}
+
+schedule_cmd() {
+  case "${1:-}" in
+    install)               shift; schedule_install "$@" ;;
+    remove)                shift; schedule_remove "$@" ;;
+    install-maintenance)   shift; schedule_install_maintenance "$@" ;;
+    *) die "Usage: domum-core schedule {install|remove|install-maintenance}" ;;
+  esac
+}
+
+# ===========================================================================
+#  dispatch
+# ===========================================================================
+
+usage() {
+  cat <<EOF
+domum-core — home-automation server management CLI
+
+Deployment:
+  domum-core init
+  domum-core apply
+  domum-core update                       git pull (warns on local drift)
+  domum-core status [--counts]
+  domum-core schedule install|remove      night-profile timers
+  domum-core schedule install-maintenance maintenance timers (install only)
+
+Health:
+  domum-core checkup [--json|--quiet]
+  domum-core doctor
+
+Backups:
+  domum-core backups run [--dry-run]
+  domum-core backups verify | snapshots | prune [--dry-run]
+  domum-core backups init <target>
+  domum-core actual backup [--dry-run] | restore-plan
+  domum-core homeassistant backup [--dry-run] | restore-plan
+
+Recovery & updates:
+  domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
+  domum-core updates check | apply --class A|B|C|D [--dry-run] | history
+
+Maintenance:
+  domum-core cleanup images [--dry-run]
+
+Config: $CFG_FILE  (+ $BACKUP_CFG_FILE)
+State:  $STATE_ROOT   Logs: $LOG_DIR
+EOF
+}
+
+main() {
+  local cmd="${1:-}"; shift || true
+  case "$cmd" in
+    init)     init_host "$@" ;;
+    apply)    apply "$@" ;;
+    update)   repo_update "$@" ;;
+    status)   status "$@" ;;
+    checkup)  checkup_cmd "$@" ;;
+    doctor)   doctor_cmd "$@" ;;
+    schedule) schedule_cmd "$@" ;;
+    backups)  backups_cmd "$@" ;;
+    actual)
+      need_root
+      case "${1:-}" in
+        backup) shift; [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1; actual_backup ;;
+        restore-plan) actual_restore_plan ;;
+        *) die "Usage: domum-core actual {backup [--dry-run]|restore-plan}" ;;
+      esac
+      ;;
+    homeassistant|ha)
+      need_root
+      case "${1:-}" in
+        backup) shift; [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1; homeassistant_backup ;;
+        restore-plan) homeassistant_restore_plan ;;
+        *) die "Usage: domum-core homeassistant {backup [--dry-run]|restore-plan}" ;;
+      esac
+      ;;
+    recovery-pack) recovery_pack_cmd "$@" ;;
+    updates)  updates_cmd "$@" ;;
+    cleanup)
+      case "${1:-}" in
+        images) shift; cleanup_images "$@" ;;
+        *) die "Usage: domum-core cleanup images [--dry-run]" ;;
+      esac
+      ;;
+    ""|-h|--help|help) usage ;;
+    *) usage; exit 1 ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule daily restic backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=domum-core-backup.service
+
+[Install]
+WantedBy=timers.target

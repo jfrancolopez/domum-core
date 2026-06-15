@@ -4,3 +4,6 @@ secrets/
 **/data/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
+
+# Live backup/recovery config — only the .example is committed.
+config/domum-backup.conf

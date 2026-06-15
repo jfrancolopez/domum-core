@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule weekly restic check
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=domum-core-backup-verify.service
+
+[Install]
+WantedBy=timers.target

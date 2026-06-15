@@ -1,0 +1,108 @@
+# domum-core backup / recovery configuration (overlay for domum.conf)
+#
+# Copy to config/domum-backup.conf (init does this for you) and edit. The CLI
+# sources this with bash, so keep it shell-clean (no spaces around `=`).
+#
+# Never commit the live config/domum-backup.conf — only this .example.
+#
+# EVERYTHING here ships DISABLED by default. No backup runs, no email is sent,
+# and no timer errors on a fresh install until you fill in real values and set
+# the relevant *_ENABLED=1.
+
+# ============================================================
+# SECTION: restic retention (applied on every prune)
+# ============================================================
+RESTIC_KEEP_DAILY=7
+RESTIC_KEEP_WEEKLY=5
+RESTIC_KEEP_MONTHLY=12
+RESTIC_KEEP_YEARLY=3
+
+# Heartbeat URL (e.g. Uptime Kuma push). Optional; blank to skip.
+BACKUP_HEARTBEAT_URL=''
+
+# Max age (hours) before checkup flags backups as stale / updates refuse.
+BACKUP_MAX_AGE_HOURS=48
+
+# ============================================================
+# SECTION: backup source set
+# ============================================================
+# These usually need no editing — the defaults in bin/domum-core-backup cover
+# all critical bind mounts + compose + config + service-backup staging +
+# rendered named-volume exports. Uncomment to override.
+#
+# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups /var/lib/domum-core/recovery-pack"
+#
+# Named docker volumes exported (tar) into staging so they ride along.
+# BACKUP_VOLUMES="nodered-data portainer-data uptime-kuma-data traefik-letsencrypt"
+#
+# Excludes (large / disposable). Frigate media and Jellyfin caches excluded.
+# BACKUP_EXCLUDES="/opt/domum-core/compose/media /mnt/domum/frigate */tts/* *.db-wal *.db-shm"
+
+# ============================================================
+# SECTION: backup targets (ALL DISABLED by default)
+# ============================================================
+# Which target names exist. The CLI looks up BACKUP_TARGET_<UPPER>_* for each.
+BACKUP_TARGETS="local hetzner"
+
+# ---- Target: LOCAL (NAS mount / external disk) ----
+BACKUP_TARGET_LOCAL_ENABLED=0
+BACKUP_TARGET_LOCAL_REPOSITORY="/mnt/backup/domum-core"
+BACKUP_TARGET_LOCAL_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_local"
+BACKUP_TARGET_LOCAL_RETENTION="daily"     # daily | none
+# BACKUP_TARGET_LOCAL_INCLUDE_PATHS=""    # override source set for this target
+
+# ---- Target: HETZNER (Storage Box B11, via SFTP) ----
+# Repo form: sftp:<user>@<host>:<path>   e.g. sftp:u123456@u123456.your-storagebox.de:domum-core
+BACKUP_TARGET_HETZNER_ENABLED=0
+BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:domum-core"
+BACKUP_TARGET_HETZNER_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_hetzner"
+BACKUP_TARGET_HETZNER_RETENTION="daily"
+# Hetzner Storage Box uses SFTP on port 23. SSH key auth is required for
+# unattended backups.
+BACKUP_TARGET_HETZNER_SFTP_KEY_FILE="/etc/domum-core/secrets/hetzner_storagebox_ed25519"
+BACKUP_TARGET_HETZNER_SFTP_KNOWN_HOSTS_FILE="/etc/domum-core/secrets/hetzner_storagebox_known_hosts"
+BACKUP_TARGET_HETZNER_SFTP_PORT="23"
+
+# ---- Target: CLOUD (Backblaze B2 / S3) — placeholder, commented ----
+# Add "cloud" to BACKUP_TARGETS above to enable this slot.
+# BACKUP_TARGET_CLOUD_ENABLED=0
+# BACKUP_TARGET_CLOUD_REPOSITORY="b2:your-bucket:/domum-core"
+# BACKUP_TARGET_CLOUD_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_cloud"
+# BACKUP_TARGET_CLOUD_ENV_FILE="/etc/domum-core/secrets/restic_cloud_env"  # B2_ACCOUNT_ID=... etc
+# BACKUP_TARGET_CLOUD_RETENTION="weekly"
+
+# ============================================================
+# SECTION: per-service backup tuning
+# ============================================================
+# Actual Budget: optional short `docker pause` around the tar for a consistent
+# SQLite copy. Default OFF (no downtime). Set to 1 to opt in.
+ACTUAL_QUIESCE=0
+ACTUAL_KEEP=7
+HA_KEEP=7
+MARIADB_KEEP=7
+
+# ============================================================
+# SECTION: recovery pack (AGE-encrypted)
+# ============================================================
+RECOVERY_PACK_ENABLED=1
+RECOVERY_PACK_AGE_PUBKEY_FILE="/etc/domum-core/secrets/recovery-age.pub"
+RECOVERY_PACK_DEST="/var/lib/domum-core/recovery-pack"
+RECOVERY_PACK_REMINDER_DAYS=30
+
+# Optional SMTP delivery of the .age file. DISABLED by default. Only the
+# encrypted pack is ever emailed.
+RECOVERY_PACK_EMAIL_ENABLED=0
+RECOVERY_PACK_EMAIL_TO=""
+RECOVERY_PACK_EMAIL_FROM=""
+RECOVERY_PACK_SMTP_HOST=""
+RECOVERY_PACK_SMTP_PORT="465"
+RECOVERY_PACK_SMTP_USERNAME_FILE="/etc/domum-core/secrets/recovery_pack_smtp_username"
+RECOVERY_PACK_SMTP_PASSWORD_FILE="/etc/domum-core/secrets/recovery_pack_smtp_password"
+
+# ============================================================
+# SECTION: update classes (used by `domum-core updates`)
+# ============================================================
+# Adjust which services fall in each risk class. Class D is the host OS (apt).
+UPDATE_CLASS_A="traefik adguard-home uptime-kuma portainer tailscale"
+UPDATE_CLASS_B="home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome"
+UPDATE_CLASS_C="actual-budget music-assistant jellyfin"

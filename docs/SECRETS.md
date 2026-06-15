@@ -1,0 +1,55 @@
+# Secrets
+
+All secrets live **outside the git repo** at `/etc/domum-core/secrets/`
+(mode `0700`, owner root). This path is standardized — older drafts of
+`install.sh` / `night-profile.sh` referenced `/opt/domum-core/secrets`; that
+drift is fixed.
+
+`domum-core checkup` warns if the directory is not `0700` / owner root.
+
+## Inventory
+
+| File | Used by |
+|---|---|
+| `cloudflare_api_token` | Traefik DNS-01 ACME |
+| `mariadb/mariadb.env` | MariaDB container env (`MARIADB_ROOT_PASSWORD`, etc.) |
+| `traefik_dashboard_users` | Traefik dashboard basic-auth |
+| `tailscale_authkey` | Tailscale (if enabled) |
+| `restic_password_local` | restic key for the LOCAL backup target |
+| `restic_password_hetzner` | restic key for the HETZNER backup target |
+| `hetzner_storagebox_ed25519` | SSH key for the Hetzner Storage Box |
+| `hetzner_storagebox_known_hosts` | pinned host key for the Storage Box |
+| `recovery-age.pub` | **public** AGE key — encrypts the recovery pack |
+| `recovery_pack_smtp_username` / `_password` | optional recovery-pack email |
+
+Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
+`secret.yaml`.
+
+## AGE keypair for the recovery pack
+
+The recovery pack is encrypted to an AGE recipient. **Generate the keypair on a
+trusted machine, NOT on the Pi**, and keep the private key offline:
+
+```bash
+age-keygen -o recovery-age.key          # private key — store offline (password manager / USB)
+grep 'public key' recovery-age.key      # copy the age1... line
+```
+
+Put **only the public key** on the Pi:
+
+```bash
+echo 'age1xxxx...' | sudo tee /etc/domum-core/secrets/recovery-age.pub
+sudo chmod 644 /etc/domum-core/secrets/recovery-age.pub
+```
+
+`domum-core recovery-pack create` refuses (with instructions) if the public key
+is missing, and **never auto-generates or rotates** keys. The private key is the
+only way to decrypt a recovery pack — losing it makes every pack unreadable.
+
+## Rules
+
+- Secrets are **never** rotated automatically.
+- The recovery pack bundles copies of small secret files (encrypted). Treat the
+  `.age` archive as sensitive even though it's encrypted.
+- Backup-target metadata in the recovery pack contains repo URLs but **not**
+  cleartext restic passwords beyond the secret-file copies themselves.
