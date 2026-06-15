@@ -5,5 +5,12 @@ secrets/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 
+# Local editor and AI agent workspace state
+nimbalyst-local/
+.nimbalyst/
+.claude/
+.codex/
+codex/
+
 # Live backup/recovery config — only the .example is committed.
 config/domum-backup.conf
