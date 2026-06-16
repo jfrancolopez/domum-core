@@ -1,0 +1,129 @@
+# domum-core main configuration example
+#
+# Copy to config/domum.conf and edit on the host. The live file is intentionally
+# ignored by git because it contains local domains, addresses, enabled services,
+# and future site-specific settings.
+#
+# The CLI sources this with bash, so keep it shell-clean:
+#   KEY="value"
+#   FLAG=1
+
+# ============================================================
+# Identity
+# ============================================================
+DOMUM_DOMAIN="example.com"
+DOMUM_EMAIL="admin@example.com"
+DOMUM_LAN_IP="10.0.10.2"
+DOMUM_TS_IP=""
+
+# ============================================================
+# Core
+# ============================================================
+ENABLE_TRAEFIK=1
+ENABLE_TAILSCALE=0
+
+# ============================================================
+# Home Assistant core automation stack
+# ============================================================
+ENABLE_HOME_ASSISTANT=1
+ENABLE_MARIADB=1
+ENABLE_MQTT=1
+ENABLE_ZIGBEE2MQTT=1
+ENABLE_ZWAVE=1
+ENABLE_NODERED=1
+ENABLE_ESP_HOME=1
+ENABLE_MA=1
+
+# ============================================================
+# DNS role: only for Tailscale split DNS
+# ============================================================
+ENABLE_ADGUARD_HOME=1
+ADGUARD_ROLE="tailscale-split-dns"
+
+# ============================================================
+# Productivity / optional
+# ============================================================
+ENABLE_ACTUAL_BUDGET=1
+ENABLE_VAULTWARDEN=1
+ENABLE_OBSIDIAN_SYNC=0
+
+# Removed / intentionally not part of domum-core:
+# go2rtc, frigate, jellyfin, and portainer belong outside this Pi profile.
+
+# ============================================================
+# State/logs
+# ============================================================
+STATE_ROOT="/var/lib/domum-core"
+LOG_DIR="/var/log/domum-core"
+
+# ============================================================
+# Backup freshness
+# ============================================================
+BACKUP_MAX_AGE_HOURS=48
+
+# ============================================================
+# Recovery
+# ============================================================
+RECOVERY_PACK_ENABLED=1
+RECOVERY_PACK_REMINDER_DAYS=30
+ENABLE_RECOVERY_EMAIL=0
+RECOVERY_EMAIL_PROVIDER="gmail"
+RECOVERY_EMAIL_TO=""
+RECOVERY_EMAIL_FROM=""
+GMAIL_APP_PASSWORD_FILE="/etc/domum-core/secrets/gmail-app-password"
+
+# ============================================================
+# Health checks
+# ============================================================
+# HA and Actual normally sit behind Traefik. Do not probe localhost ports unless
+# you explicitly expose or configure a health URL.
+HEALTHCHECK_HOMEASSISTANT_HTTP=0
+HOMEASSISTANT_HEALTH_URL=""
+HEALTHCHECK_ACTUAL_HTTP=0
+ACTUAL_HEALTH_URL=""
+
+# ============================================================
+# Per-app container update policy
+# ============================================================
+# Each app can have its own update policy.
+#
+# *_AUTO_UPDATE:
+#   1 = this app can be auto-updated by domum-core updates apply-auto
+#   0 = check only; manual apply required
+#
+# *_UPDATE_DELAY_DAYS:
+#   Number of stable days required before applying a discovered image update.
+#   If a newer image appears during the delay window, the timer resets.
+TRAEFIK_AUTO_UPDATE=1
+TRAEFIK_UPDATE_DELAY_DAYS=1
+ADGUARD_AUTO_UPDATE=1
+ADGUARD_UPDATE_DELAY_DAYS=3
+HOMEASSISTANT_AUTO_UPDATE=0
+HOMEASSISTANT_UPDATE_DELAY_DAYS=14
+MARIADB_AUTO_UPDATE=0
+MARIADB_UPDATE_DELAY_DAYS=14
+MQTT_AUTO_UPDATE=0
+MQTT_UPDATE_DELAY_DAYS=7
+ZIGBEE2MQTT_AUTO_UPDATE=0
+ZIGBEE2MQTT_UPDATE_DELAY_DAYS=7
+ZWAVE_AUTO_UPDATE=0
+ZWAVE_UPDATE_DELAY_DAYS=7
+NODERED_AUTO_UPDATE=0
+NODERED_UPDATE_DELAY_DAYS=7
+ESPHOME_AUTO_UPDATE=0
+ESPHOME_UPDATE_DELAY_DAYS=7
+MUSICASSISTANT_AUTO_UPDATE=0
+MUSICASSISTANT_UPDATE_DELAY_DAYS=7
+ACTUAL_BUDGET_AUTO_UPDATE=0
+ACTUAL_BUDGET_UPDATE_DELAY_DAYS=7
+VAULTWARDEN_AUTO_UPDATE=0
+VAULTWARDEN_UPDATE_DELAY_DAYS=14
+OBSIDIAN_SYNC_AUTO_UPDATE=0
+OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
+
+# ============================================================
+# Host OS timers / patching
+# ============================================================
+ENABLE_SECURITY_PATCHES=1
+ENABLE_AUTOREMOVE_OLD_KERNELS=0
+SECURITY_PATCH_REBOOT_POLICY="manual"

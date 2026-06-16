@@ -45,9 +45,10 @@ All commands run as root (`sudo`).
 | `domum-core recovery-pack status` | Age/size/sha of the last pack |
 | `domum-core recovery-pack inspect` | How to list the pack's contents |
 | `domum-core recovery-pack send-latest [--dry-run]` | Email the latest encrypted pack |
-| `domum-core updates check` | Report images with newer digests + apt count (read-only) |
-| `domum-core updates candidates` | Show first-seen age and delay-window readiness |
-| `domum-core updates apply --class A\|B\|C [--dry-run] [--force]` | Update one class (B/C need a fresh backup) |
+| `domum-core updates check` | Check enabled service images and record candidates |
+| `domum-core updates status` | Show candidate digest, first seen, delay, readiness, auto-update, backup gate |
+| `domum-core updates apply <app> [--dry-run] [--force]` | Manually apply one recorded app candidate |
+| `domum-core updates apply-auto [--dry-run] [--force]` | Apply only ready apps with `<APP>_AUTO_UPDATE=1` |
 | `domum-core updates history` | Update log |
 | `domum-core os-updates check` | Show pending OS security/general updates |
 | `domum-core os-updates security-apply [--dry-run]` | Apply security patches only; never reboot |
@@ -60,15 +61,18 @@ All commands run as root (`sudo`).
 | `domum-core schedule install` | Night-profile timers |
 | `domum-core schedule install-maintenance` | Install (not enable) maintenance timers |
 
-## Update classes
+## Per-app updates
 
-- **A infra:** traefik, adguard-home, uptime-kuma, tailscale
-- **B HA-critical:** home-assistant, mariadb, mqtt, zigbee2mqtt, zwave-js-ui, nodered, esphome
-- **C personal:** actual-budget, music-assistant, vaultwarden, obsidian-sync
-- **D host OS:** security patches via `os-updates`
+Update behavior is configured app-by-app in `config/domum.conf`:
 
-Class B/C are stateful — `updates apply` refuses without a backup newer than
-`BACKUP_MAX_AGE_HOURS` (default 48h) unless you pass `--force`.
+```bash
+HOMEASSISTANT_AUTO_UPDATE=0
+HOMEASSISTANT_UPDATE_DELAY_DAYS=14
+```
+
+Class names may appear as documentation labels, but they do not control update
+behavior. Stateful apps require fresh backups before update unless `--force` is
+used.
 
 ## Safe read-only / dry-run suite
 
@@ -80,7 +84,9 @@ sudo domum-core actual backup --dry-run
 sudo domum-core homeassistant backup --dry-run
 sudo domum-core recovery-pack create --dry-run
 sudo domum-core updates check
-sudo domum-core updates candidates
+sudo domum-core updates status
+sudo domum-core updates apply-auto --dry-run
+sudo domum-core updates apply homeassistant --dry-run
 sudo domum-core os-updates check
 sudo domum-core cleanup images --dry-run
 ```

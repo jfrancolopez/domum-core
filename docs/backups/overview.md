@@ -62,7 +62,7 @@ ssh-keyscan -p 23 uXXXXXX.your-storagebox.de \
 ```
 
 Set `BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"`.
-See `docs/SETUP-HETZNER-BACKUP.md` for the full Hetzner setup.
+See `docs/backups/hetzner.md` for the full Hetzner setup.
 
 ## 5. Enable + initialize
 
@@ -96,7 +96,7 @@ sudo systemctl enable --now domum-core-backup-verify.timer
 
 ## Restoring
 
-See `docs/DISASTER-RECOVERY.md`. Quick form:
+See `docs/backups/disaster-recovery.md`. Quick form:
 
 ```bash
 sudo domum-core-backup --snapshots

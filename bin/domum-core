@@ -107,17 +107,40 @@ load_cfg() {
   # Gmail app password file is the password file when provider=gmail.
   RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-${GMAIL_APP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}}"
 
-  # Update classes are derived from the service catalog (the single source of
-  # truth). UPDATE_CLASS_A/B/C may still be set in domum.conf to override a
-  # service's class; left unset here on purpose.
+  # Per-app container update policy. Category labels in the service catalog are
+  # informational only; they do not control update behavior.
+  TRAEFIK_AUTO_UPDATE="${TRAEFIK_AUTO_UPDATE:-1}"
+  TRAEFIK_UPDATE_DELAY_DAYS="${TRAEFIK_UPDATE_DELAY_DAYS:-1}"
+  ADGUARD_AUTO_UPDATE="${ADGUARD_AUTO_UPDATE:-1}"
+  ADGUARD_UPDATE_DELAY_DAYS="${ADGUARD_UPDATE_DELAY_DAYS:-3}"
+  HOMEASSISTANT_AUTO_UPDATE="${HOMEASSISTANT_AUTO_UPDATE:-0}"
+  HOMEASSISTANT_UPDATE_DELAY_DAYS="${HOMEASSISTANT_UPDATE_DELAY_DAYS:-14}"
+  MARIADB_AUTO_UPDATE="${MARIADB_AUTO_UPDATE:-0}"
+  MARIADB_UPDATE_DELAY_DAYS="${MARIADB_UPDATE_DELAY_DAYS:-14}"
+  MQTT_AUTO_UPDATE="${MQTT_AUTO_UPDATE:-0}"
+  MQTT_UPDATE_DELAY_DAYS="${MQTT_UPDATE_DELAY_DAYS:-7}"
+  ZIGBEE2MQTT_AUTO_UPDATE="${ZIGBEE2MQTT_AUTO_UPDATE:-0}"
+  ZIGBEE2MQTT_UPDATE_DELAY_DAYS="${ZIGBEE2MQTT_UPDATE_DELAY_DAYS:-7}"
+  ZWAVE_AUTO_UPDATE="${ZWAVE_AUTO_UPDATE:-0}"
+  ZWAVE_UPDATE_DELAY_DAYS="${ZWAVE_UPDATE_DELAY_DAYS:-7}"
+  NODERED_AUTO_UPDATE="${NODERED_AUTO_UPDATE:-0}"
+  NODERED_UPDATE_DELAY_DAYS="${NODERED_UPDATE_DELAY_DAYS:-7}"
+  ESPHOME_AUTO_UPDATE="${ESPHOME_AUTO_UPDATE:-0}"
+  ESPHOME_UPDATE_DELAY_DAYS="${ESPHOME_UPDATE_DELAY_DAYS:-7}"
+  MUSICASSISTANT_AUTO_UPDATE="${MUSICASSISTANT_AUTO_UPDATE:-0}"
+  MUSICASSISTANT_UPDATE_DELAY_DAYS="${MUSICASSISTANT_UPDATE_DELAY_DAYS:-7}"
+  ACTUAL_BUDGET_AUTO_UPDATE="${ACTUAL_BUDGET_AUTO_UPDATE:-0}"
+  ACTUAL_BUDGET_UPDATE_DELAY_DAYS="${ACTUAL_BUDGET_UPDATE_DELAY_DAYS:-7}"
+  VAULTWARDEN_AUTO_UPDATE="${VAULTWARDEN_AUTO_UPDATE:-0}"
+  VAULTWARDEN_UPDATE_DELAY_DAYS="${VAULTWARDEN_UPDATE_DELAY_DAYS:-14}"
+  OBSIDIAN_SYNC_AUTO_UPDATE="${OBSIDIAN_SYNC_AUTO_UPDATE:-0}"
+  OBSIDIAN_SYNC_UPDATE_DELAY_DAYS="${OBSIDIAN_SYNC_UPDATE_DELAY_DAYS:-7}"
 
-  # Per-class delayed-update windows (hours) and auto-apply toggles (Set 4).
-  AUTO_UPDATE_CLASS_A="${AUTO_UPDATE_CLASS_A:-1}"
-  AUTO_UPDATE_CLASS_B="${AUTO_UPDATE_CLASS_B:-0}"
-  AUTO_UPDATE_CLASS_C="${AUTO_UPDATE_CLASS_C:-0}"
-  UPDATE_DELAY_CLASS_A_HOURS="${UPDATE_DELAY_CLASS_A_HOURS:-24}"
-  UPDATE_DELAY_CLASS_B_HOURS="${UPDATE_DELAY_CLASS_B_HOURS:-168}"
-  UPDATE_DELAY_CLASS_C_HOURS="${UPDATE_DELAY_CLASS_C_HOURS:-72}"
+  HEALTHCHECK_HOMEASSISTANT_HTTP="${HEALTHCHECK_HOMEASSISTANT_HTTP:-0}"
+  HOMEASSISTANT_HEALTH_URL="${HOMEASSISTANT_HEALTH_URL:-}"
+  HEALTHCHECK_ACTUAL_HTTP="${HEALTHCHECK_ACTUAL_HTTP:-0}"
+  ACTUAL_HEALTH_URL="${ACTUAL_HEALTH_URL:-}"
+
   ENABLE_SECURITY_PATCHES="${ENABLE_SECURITY_PATCHES:-1}"
   ENABLE_AUTOREMOVE_OLD_KERNELS="${ENABLE_AUTOREMOVE_OLD_KERNELS:-0}"
   SECURITY_PATCH_REBOOT_POLICY="${SECURITY_PATCH_REBOOT_POLICY:-manual}"
@@ -213,12 +236,35 @@ confirm() {
 
 # ---- service / container resolution (no hardcoding) ------------------------
 
+normalize_service_name() {
+  case "$1" in
+    home-assistant|homeassistant) echo "home-assistant" ;;
+    music-assistant|musicassistant) echo "musicassistant" ;;
+    *) echo "$1" ;;
+  esac
+}
+
 # Map a logical service name to its compose service name.
 compose_service_for() {
-  case "$1" in
-    home-assistant|homeassistant) echo "homeassistant" ;;
-    music-assistant|musicassistant) echo "music-assistant" ;;
-    zwave-js-ui) echo "zwave-js-ui" ;;
+  case "$(normalize_service_name "$1")" in
+    home-assistant) echo "homeassistant" ;;
+    musicassistant) echo "musicassistant" ;;
+    *) echo "$(normalize_service_name "$1")" ;;
+  esac
+}
+
+service_display_name() {
+  case "$(normalize_service_name "$1")" in
+    home-assistant) echo "Home Assistant" ;;
+    actual-budget) echo "Actual Budget" ;;
+    adguard-home) echo "AdGuard Home" ;;
+    musicassistant) echo "Music Assistant" ;;
+    mqtt) echo "MQTT" ;;
+    nodered) echo "Node-RED" ;;
+    esphome) echo "ESPHome" ;;
+    zwave-js-ui) echo "Z-Wave JS UI" ;;
+    zigbee2mqtt) echo "Zigbee2MQTT" ;;
+    obsidian-sync) echo "Obsidian Sync" ;;
     *) echo "$1" ;;
   esac
 }
@@ -226,7 +272,7 @@ compose_service_for() {
 # Resolve the running container ID for a compose service, via compose itself.
 container_for() {
   local svc
-  svc="$(compose_service_for "$1")"
+  svc="$(compose_service_for "$(normalize_service_name "$1")")"
   compose_cmd ps -q "$svc" 2>/dev/null | head -n1
 }
 
@@ -305,34 +351,34 @@ repo_update() {
 
 # ---- service catalog: the single source of truth ---------------------------
 #
-# Columns: name|enable_var|category|class|backup_var|compose_rel|http_probe
+# Columns: name|enable_var|category|label|backup_var|compose_rel|http_probe
 #   name        logical (hyphenated) service name
 #   enable_var  domum.conf flag that turns the service on
 #   category    grouping for status counts
-#   class       update risk class (A/B/C); host OS is class D, handled separately
+#   label       documentation/UI category only; it does not control updates
 #   backup_var  BACKUP_<SERVICE> flag consumed by `backups run` (- if none)
 #   compose_rel compose file relative to $DOMUM_DIR (- if it has no own file)
 #   http_probe  host:port for a best-effort local HTTP/TCP health probe (- if none)
 #
 # go2rtc / portainer / jellyfin / frigate were intentionally removed
-# (see docs/MIGRATION-REMOVED-SERVICES.md).
+# (see docs/reference/removed-services.md).
 service_catalog() {
   cat <<'EOF'
-traefik|ENABLE_TRAEFIK|proxy|A|-|compose/proxy/traefik.yml|-
-home-assistant|ENABLE_HOME_ASSISTANT|automation|B|BACKUP_HOMEASSISTANT|compose/automation/home-assistant.yml|127.0.0.1:8123
-mariadb|ENABLE_MARIADB|automation|B|BACKUP_MARIADB|compose/automation/mariadb.yml|-
-mqtt|ENABLE_MQTT|automation|B|BACKUP_MQTT|compose/automation/mqtt.yml|127.0.0.1:1883
-zigbee2mqtt|ENABLE_ZIGBEE2MQTT|automation|B|BACKUP_ZIGBEE2MQTT|compose/automation/zigbee2mqtt.yml|-
-zwave-js-ui|ENABLE_ZWAVE|automation|B|BACKUP_ZWAVE|compose/automation/zwave-js-ui.yml|-
-nodered|ENABLE_NODERED|automation|B|BACKUP_NODERED|compose/automation/nodered.yml|-
-esphome|ENABLE_ESP_HOME|automation|B|BACKUP_ESPHOME|compose/automation/esphome.yml|-
-music-assistant|ENABLE_MA|automation|C|BACKUP_MUSICASSISTANT|compose/automation/music-assistant.yml|-
-uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|A|-|compose/monitoring/uptime-kuma.yml|-
-adguard-home|ENABLE_ADGUARD_HOME|networking|A|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
-actual-budget|ENABLE_ACTUAL_BUDGET|productivity|C|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|127.0.0.1:5006
-vaultwarden|ENABLE_VAULTWARDEN|security|C|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
-obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|C|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
-tailscale|ENABLE_TAILSCALE|security|A|-|compose/security/tailscale.yml|-
+traefik|ENABLE_TRAEFIK|proxy|infrastructure|-|compose/proxy/traefik.yml|-
+home-assistant|ENABLE_HOME_ASSISTANT|automation|home-automation-core|BACKUP_HOMEASSISTANT|compose/automation/home-assistant.yml|-
+mariadb|ENABLE_MARIADB|automation|home-automation-core|BACKUP_MARIADB|compose/automation/mariadb.yml|-
+mqtt|ENABLE_MQTT|automation|home-automation-core|BACKUP_MQTT|compose/automation/mqtt.yml|127.0.0.1:1883
+zigbee2mqtt|ENABLE_ZIGBEE2MQTT|automation|home-automation-core|BACKUP_ZIGBEE2MQTT|compose/automation/zigbee2mqtt.yml|-
+zwave-js-ui|ENABLE_ZWAVE|automation|home-automation-core|BACKUP_ZWAVE|compose/automation/zwave-js-ui.yml|-
+nodered|ENABLE_NODERED|automation|home-automation-core|BACKUP_NODERED|compose/automation/nodered.yml|-
+esphome|ENABLE_ESP_HOME|automation|home-automation-core|BACKUP_ESPHOME|compose/automation/esphome.yml|-
+musicassistant|ENABLE_MA|automation|optional-media|BACKUP_MUSICASSISTANT|compose/automation/music-assistant.yml|-
+uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|infrastructure|-|compose/monitoring/uptime-kuma.yml|-
+adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
+actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
+vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
+obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
+tailscale|ENABLE_TAILSCALE|security|infrastructure|-|compose/security/tailscale.yml|-
 EOF
 }
 
@@ -406,17 +452,21 @@ compose_cmd() {
 
 init_host() {
   need_root
-  load_cfg
   install_docker
   ensure_dirs
-  ensure_state_dirs
   install -d -m 0700 "$SECRETS_DIR"
 
   # Copy *.conf.example -> *.conf if missing (never overwrite a live config).
+  if [[ ! -f "$CFG_FILE" && -f "${CFG_FILE}.example" ]]; then
+    log "Creating $CFG_FILE from example."
+    install -m 0640 "${CFG_FILE}.example" "$CFG_FILE"
+  fi
   if [[ ! -f "$BACKUP_CFG_FILE" && -f "${BACKUP_CFG_FILE}.example" ]]; then
     log "Creating $BACKUP_CFG_FILE from example."
     install -m 0640 "${BACKUP_CFG_FILE}.example" "$BACKUP_CFG_FILE"
   fi
+  load_cfg
+  ensure_state_dirs
 
   if [[ ! -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
     log "NOTE: $SECRETS_DIR/cloudflare_api_token not found."
@@ -730,7 +780,7 @@ backup_src_dir_for() {
     zigbee2mqtt)    echo "$DOMUM_DIR/compose/automation/zigbee2mqtt" ;;
     zwave-js-ui)    echo "$DOMUM_DIR/compose/automation/zwave-js-ui/store" ;;
     esphome)        echo "$DOMUM_DIR/compose/automation/esphome" ;;
-    music-assistant) echo "$DOMUM_DIR/compose/automation/music-assistant" ;;
+    musicassistant) echo "$DOMUM_DIR/compose/automation/music-assistant" ;;
     adguard-home)   echo "$DOMUM_DIR/compose/networking/adguard" ;;
     vaultwarden)    echo "$DOMUM_DIR/compose/security/vaultwarden/data" ;;
     obsidian-sync)  echo "$DOMUM_DIR/compose/productivity/obsidian-sync/data" ;;
@@ -875,7 +925,7 @@ recovery_pack_restore_md() {
 
 This encrypted archive contains everything needed to rebuild the server's
 identity and configuration. Service *data* is restored separately from restic
-(see docs/DISASTER-RECOVERY.md).
+(see docs/backups/disaster-recovery.md).
 
 ## Decrypt
 
@@ -898,7 +948,7 @@ identity and configuration. Service *data* is restored separately from restic
 3. Restore config/* to $DOMUM_DIR/config/.
 4. Fill restic credentials, then: restic restore ... (per-target).
 5. Restore Actual + Home Assistant per their restore-plan output.
-6. Bring services up in safe order — see docs/DISASTER-RECOVERY.md.
+6. Bring services up in safe order — see docs/backups/disaster-recovery.md.
 7. Validate: sudo domum-core checkup
 EOF
 }
@@ -1177,75 +1227,92 @@ recovery_pack_cmd() {
 #  Section: cautious update model
 # ===========================================================================
 
-update_class_of() {
-  # Optional UPDATE_CLASS_* overrides in domum.conf win; otherwise the catalog
-  # `class` column is the source of truth.
-  local svc="$1" class
-  [[ -n "${UPDATE_CLASS_A:-}" && " $UPDATE_CLASS_A " == *" $svc "* ]] && { echo A; return; }
-  [[ -n "${UPDATE_CLASS_B:-}" && " $UPDATE_CLASS_B " == *" $svc "* ]] && { echo B; return; }
-  [[ -n "${UPDATE_CLASS_C:-}" && " $UPDATE_CLASS_C " == *" $svc "* ]] && { echo C; return; }
-  class="$(catalog_field "$svc" 4)"
-  echo "${class:-?}"
-}
-
-updates_check() {
-  load_cfg
-  export_env_for_compose
-  ensure_state_dirs
-  log "Checking for newer container images (read-only)..."
-  printf '%-16s %-5s %-9s %s\n' "SERVICE" "CLASS" "UPDATE?" "RUNNING IMAGE"
-  local svc cid running_digest image_ref
-  while IFS= read -r svc; do
-    cid="$(container_for "$svc" || true)"
-    if [[ -z "$cid" ]]; then
-      printf '%-16s %-5s %-9s %s\n' "$svc" "$(update_class_of "$svc")" "n/a" "(not running)"
-      continue
-    fi
-    image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
-    running_digest="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
-    # Read-only pull to compare digests.
-    local newest class update="no"
-    class="$(update_class_of "$svc")"
-    if docker pull --quiet "$image_ref" >/dev/null 2>&1; then
-      newest="$(docker image inspect "$image_ref" --format '{{.Id}}' 2>/dev/null || true)"
-      if [[ -n "$newest" && "$newest" != "$running_digest" ]]; then
-        update="YES"
-        record_update_candidate "$svc" "$class" "$image_ref" "$running_digest" "$newest"
-      fi
-    else
-      update="?"
-    fi
-    printf '%-16s %-5s %-9s %s\n' "$svc" "$class" "$update" "$image_ref"
-  done < <(enabled_services)
-
-  echo
-  if cmd_exists apt-get; then
-    local upg
-    upg="$(to_int "$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ')")"
-    echo "Host (Class D): ${upg} apt package(s) upgradable."
-  fi
-  echo
-  echo "To inspect delayed candidates: sudo domum-core updates candidates"
-  echo "To apply: sudo domum-core updates apply --class A|B|C [--dry-run] [--force]"
-}
-
 update_history_dir() { echo "$STATE_ROOT/update-history"; }
 update_candidate_dir() { echo "$STATE_ROOT/update-candidates"; }
 
-update_delay_hours_for_class() {
-  case "${1^^}" in
-    A) to_int "${UPDATE_DELAY_CLASS_A_HOURS:-24}" 24 ;;
-    B) to_int "${UPDATE_DELAY_CLASS_B_HOURS:-168}" 168 ;;
-    C) to_int "${UPDATE_DELAY_CLASS_C_HOURS:-72}" 72 ;;
-    *) echo 0 ;;
+update_token_for() {
+  case "$(normalize_service_name "$1")" in
+    home-assistant) echo "HOMEASSISTANT" ;;
+    actual-budget) echo "ACTUAL_BUDGET" ;;
+    adguard-home) echo "ADGUARD" ;;
+    zwave-js-ui) echo "ZWAVE" ;;
+    musicassistant) echo "MUSICASSISTANT" ;;
+    obsidian-sync) echo "OBSIDIAN_SYNC" ;;
+    *) uppercase_token "$(normalize_service_name "$1")" ;;
   esac
 }
 
+update_auto_enabled_for() {
+  local key
+  key="$(update_token_for "$1")_AUTO_UPDATE"
+  [[ "${!key:-0}" == "1" ]]
+}
+
+update_delay_days_for() {
+  local key
+  key="$(update_token_for "$1")_UPDATE_DELAY_DAYS"
+  to_int "${!key:-7}" 7
+}
+
+service_requires_backup() {
+  case "$(normalize_service_name "$1")" in
+    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+service_backup_dir_for() {
+  case "$(normalize_service_name "$1")" in
+    home-assistant) echo "$STATE_ROOT/service-backups/homeassistant" ;;
+    mariadb) echo "$STATE_ROOT/service-backups/mariadb" ;;
+    actual-budget) echo "$STATE_ROOT/service-backups/actual" ;;
+    *) echo "$STATE_ROOT/service-backups/$(normalize_service_name "$1")" ;;
+  esac
+}
+
+fresh_file_in_dir() {
+  local dir="$1"
+  [[ -d "$dir" ]] || return 1
+  find "$dir" -type f -mmin -$(( BACKUP_MAX_AGE_HOURS * 60 )) 2>/dev/null | grep -q .
+}
+
+restic_backup_fresh() {
+  local hb="$STATE_ROOT/backups/last-success"
+  [[ -f "$hb" ]] || return 1
+  local age_h
+  age_h=$(( ( $(date +%s) - $(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb") ) / 3600 ))
+  (( age_h <= BACKUP_MAX_AGE_HOURS ))
+}
+
+restic_targets_configured() {
+  (( $(count_matches '^BACKUP_TARGET_[A-Z]+_ENABLED=1' "$BACKUP_CFG_FILE") > 0 ))
+}
+
+service_backup_fresh() {
+  local svc="$1"
+  fresh_file_in_dir "$(service_backup_dir_for "$svc")"
+}
+
+backup_gate_ok_for_service() {
+  local svc="$1"
+  service_requires_backup "$svc" || return 0
+  service_backup_fresh "$svc" || return 1
+  if restic_targets_configured; then
+    restic_backup_fresh || return 1
+  fi
+  return 0
+}
+
+candidate_file_for() {
+  echo "$(update_candidate_dir)/$(normalize_service_name "$1").env"
+}
+
 record_update_candidate() {
-  local svc="$1" class="$2" image_ref="$3" running_digest="$4" candidate_digest="$5"
-  local file now old_digest old_first_seen
+  local svc image_ref running_digest candidate_digest file now old_digest old_first_seen note=""
+  svc="$(normalize_service_name "$1")"
+  image_ref="$2"; running_digest="$3"; candidate_digest="$4"
   [[ -n "$candidate_digest" && "$candidate_digest" != "$running_digest" ]] || return 0
-  file="$(update_candidate_dir)/${svc}.env"
+  file="$(candidate_file_for "$svc")"
   now="$(date +%s)"
   old_digest=""; old_first_seen=""
   if [[ -f "$file" ]]; then
@@ -1255,74 +1322,158 @@ record_update_candidate() {
     old_digest="${CANDIDATE_DIGEST:-}"
     old_first_seen="${FIRST_SEEN_TS:-}"
   fi
-  [[ "$old_digest" == "$candidate_digest" && -n "$old_first_seen" ]] || old_first_seen="$now"
+  if [[ "$old_digest" == "$candidate_digest" && -n "$old_first_seen" ]]; then
+    :
+  else
+    [[ -n "$old_digest" && "$old_digest" != "$candidate_digest" ]] && note="candidate changed; delay window reset"
+    old_first_seen="$now"
+    [[ -n "$note" ]] && warn "$svc: $note"
+  fi
   write_env_kv "$file" \
-    SERVICE "$svc" CLASS "$class" IMAGE_REF "$image_ref" \
+    SERVICE "$svc" IMAGE_REF "$image_ref" \
     RUNNING_DIGEST "$running_digest" CANDIDATE_DIGEST "$candidate_digest" \
-    FIRST_SEEN_TS "$old_first_seen" LAST_SEEN_TS "$now"
+    CURRENT_DIGEST "$running_digest" FIRST_SEEN_TS "$old_first_seen" \
+    LAST_SEEN_TS "$now" RESET_NOTE "$note"
+}
+
+clear_update_candidate() {
+  rm -f "$(candidate_file_for "$1")"
 }
 
 candidate_ready_for_apply() {
-  local svc="$1" class="$2" force="$3" file first_seen now age_h delay_h
+  local svc force file first_seen now age_days delay_days
+  svc="$(normalize_service_name "$1")"
   (( force == 1 )) && return 0
-  file="$(update_candidate_dir)/${svc}.env"
+  file="$(candidate_file_for "$svc")"
   [[ -f "$file" ]] || return 1
   unset FIRST_SEEN_TS
   # shellcheck disable=SC1090
   source "$file"
   first_seen="$(to_int "${FIRST_SEEN_TS:-0}")"
   now="$(date +%s)"
-  delay_h="$(update_delay_hours_for_class "$class")"
-  age_h=$(( ( now - first_seen ) / 3600 ))
-  (( age_h >= delay_h ))
+  delay_days="$(update_delay_days_for "$svc")"
+  age_days=$(( ( now - first_seen ) / 86400 ))
+  (( age_days >= delay_days ))
+}
+
+candidate_status_for() {
+  local svc="$1" file now first age_h delay_days ready auto backup_req candidate current first_iso last_iso
+  file="$(candidate_file_for "$svc")"
+  candidate="-"; current="-"; first_iso="-"; last_iso="-"; ready="no"
+  if [[ -f "$file" ]]; then
+    unset CANDIDATE_DIGEST CURRENT_DIGEST RUNNING_DIGEST FIRST_SEEN_TS LAST_SEEN_TS
+    # shellcheck disable=SC1090
+    source "$file"
+    candidate="${CANDIDATE_DIGEST:-}"
+    current="${CURRENT_DIGEST:-${RUNNING_DIGEST:-}}"
+    first="$(to_int "${FIRST_SEEN_TS:-0}")"
+    now="$(date +%s)"
+    age_h=$(( ( now - first ) / 3600 ))
+    delay_days="$(update_delay_days_for "$svc")"
+    (( age_h >= delay_days * 24 )) && ready="yes"
+    first_iso="$(epoch_to_iso "$first")"
+    last_iso="$(epoch_to_iso "$(to_int "${LAST_SEEN_TS:-0}")")"
+  fi
+  auto="disabled"; update_auto_enabled_for "$svc" && auto="enabled"
+  backup_req="no"; service_requires_backup "$svc" && backup_req="yes"
+  printf '%-18s %-9s %-7s %-6s %-7s %-22s %-22s %-18s %s\n' \
+    "$svc" "$auto" "${delay_days:-$(update_delay_days_for "$svc")}d" "$ready" "$backup_req" "$first_iso" "$last_iso" "${current:-"-"}" "${candidate:-"-"}"
+}
+
+updates_check() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  log "Checking enabled container images (read-only pull/inspect)..."
+  printf '%-18s %-9s %-13s %-7s %s\n' "SERVICE" "UPDATE?" "AUTO" "DELAY" "IMAGE"
+  local svc cid running_digest image_ref newest update auto
+  while IFS= read -r svc; do
+    svc="$(normalize_service_name "$svc")"
+    cid="$(container_for "$svc" || true)"
+    auto="disabled"; update_auto_enabled_for "$svc" && auto="enabled"
+    if [[ -z "$cid" ]]; then
+      printf '%-18s %-9s %-13s %-7s %s\n' "$svc" "n/a" "$auto" "$(update_delay_days_for "$svc")d" "(not running)"
+      continue
+    fi
+    image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
+    running_digest="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
+    update="no"
+    if docker pull --quiet "$image_ref" >/dev/null 2>&1; then
+      newest="$(docker image inspect "$image_ref" --format '{{.Id}}' 2>/dev/null || true)"
+      if [[ -n "$newest" && "$newest" != "$running_digest" ]]; then
+        update="YES"
+        record_update_candidate "$svc" "$image_ref" "$running_digest" "$newest"
+      else
+        clear_update_candidate "$svc"
+      fi
+    else
+      update="?"
+    fi
+    printf '%-18s %-9s %-13s %-7s %s\n' "$svc" "$update" "$auto" "$(update_delay_days_for "$svc")d" "$image_ref"
+  done < <(enabled_services)
+
+  echo
+  echo "Next: sudo domum-core updates status"
+  echo "Apply one app: sudo domum-core updates apply <app> [--dry-run] [--force]"
+  echo "Auto-apply ready enabled apps: sudo domum-core updates apply-auto [--dry-run] [--force]"
+}
+
+updates_status() {
+  load_cfg
+  ensure_state_dirs
+  printf '%-18s %-9s %-7s %-6s %-7s %-22s %-22s %-18s %s\n' \
+    "SERVICE" "AUTO" "DELAY" "READY" "BACKUP" "FIRST_SEEN" "LAST_SEEN" "CURRENT" "CANDIDATE"
+  local svc
+  while IFS= read -r svc; do
+    candidate_status_for "$(normalize_service_name "$svc")"
+  done < <(enabled_services)
 }
 
 updates_candidates() {
-  load_cfg
-  ensure_state_dirs
-  local file svc class first age_h delay_h status now any=0
-  now="$(date +%s)"
-  printf '%-16s %-5s %-10s %-10s %s\n' "SERVICE" "CLASS" "AGE_HOURS" "READY?" "CANDIDATE"
-  shopt -s nullglob
-  for file in "$(update_candidate_dir)"/*.env; do
-    any=1
-    unset SERVICE CLASS CANDIDATE_DIGEST FIRST_SEEN_TS IMAGE_REF
-    # shellcheck disable=SC1090
-    source "$file"
-    svc="${SERVICE:-$(basename "$file" .env)}"
-    class="${CLASS:-$(update_class_of "$svc")}"
-    first="$(to_int "${FIRST_SEEN_TS:-0}")"
-    delay_h="$(update_delay_hours_for_class "$class")"
-    age_h=$(( ( now - first ) / 3600 ))
-    status="no"
-    (( age_h >= delay_h )) && status="yes"
-    printf '%-16s %-5s %-10s %-10s %s\n' "$svc" "$class" "$age_h" "$status" "${IMAGE_REF:-${CANDIDATE_DIGEST:-unknown}}"
-  done
-  shopt -u nullglob
-  (( any == 1 )) || echo "(none)"
+  warn "'updates candidates' is deprecated; use 'updates status'."
+  updates_status
 }
 
 record_update_history() {
-  local class="$1" svc="$2" from="$3" to="$4" result="$5" note="${6:-}"
+  local svc="$1" from="$2" to="$3" result="$4" note="${5:-}"
   local ts stamp file
+  svc="$(normalize_service_name "$svc")"
   ts="$(date +%s)"; stamp="$(date +%Y%m%d-%H%M%S)"
   file="$(update_history_dir)/${svc}-${stamp}.env"
   write_env_kv "$file" \
-    CLASS "$class" SERVICE "$svc" FROM_IMAGE "$from" TO_IMAGE "$to" \
-    RESULT "$result" NOTE "$note" TS "$ts"
-  echo "$(epoch_to_iso "$ts") [$class] $svc: $result ${note}" >> "$(update_history_dir)/history.log"
+    SERVICE "$svc" FROM_IMAGE "$from" TO_IMAGE "$to" RESULT "$result" NOTE "$note" TS "$ts"
+  echo "$(epoch_to_iso "$ts") $svc: $result ${note}" >> "$(update_history_dir)/history.log"
 }
 
-backup_is_fresh() {
-  local hb="$STATE_ROOT/backups/last-success" svc_recent
-  # Accept either a restic heartbeat or a fresh service-level backup.
-  if [[ -f "$hb" ]]; then
-    local age_h
-    age_h=$(( ( $(date +%s) - $(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb") ) / 3600 ))
-    (( age_h <= BACKUP_MAX_AGE_HOURS )) && return 0
+updates_apply_one() {
+  local svc="$1" force="$2"
+  svc="$(normalize_service_name "$svc")"
+  local file cid before after cs
+  file="$(candidate_file_for "$svc")"
+  [[ -f "$file" ]] || { log "Skipping $svc: no candidate recorded. Run 'sudo domum-core updates check' first."; return 0; }
+  if ! candidate_ready_for_apply "$svc" "$force"; then
+    log "Skipping $svc: delay window has not elapsed."
+    return 0
   fi
-  svc_recent="$(find "$STATE_ROOT/service-backups" -type f -mmin -$(( BACKUP_MAX_AGE_HOURS * 60 )) 2>/dev/null | head -n1)"
-  [[ -n "$svc_recent" ]]
+  if service_requires_backup "$svc" && ! backup_gate_ok_for_service "$svc"; then
+    if (( force == 0 )); then
+      warn "Skipping $svc: fresh service backup is required, and restic freshness is also required when a restic target is enabled (<= ${BACKUP_MAX_AGE_HOURS}h). Run 'sudo domum-core backups run' or pass --force."
+      return 0
+    fi
+    warn "FORCED UPDATE: $svc requires fresh backups, but the backup gate failed. Proceeding only because --force was provided."
+  fi
+  cs="$(compose_service_for "$svc")"
+  cid="$(container_for "$svc" || true)"
+  before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+  log "Updating $svc..."
+  run compose_cmd pull "$cs"
+  run compose_cmd up -d "$cs"
+  if (( DRY_RUN == 0 )); then
+    cid="$(container_for "$svc" || true)"
+    after="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+    record_update_history "$svc" "$before" "$after" success "compose pull + up"
+    clear_update_candidate "$svc"
+  fi
 }
 
 updates_apply() {
@@ -1330,70 +1481,49 @@ updates_apply() {
   export_env_for_compose
   ensure_state_dirs
 
-  local class="" force=0
+  if [[ "${1:-}" == "--class" ]]; then
+    local legacy_class="${2:-}"
+    warn "'domum-core updates apply --class ${legacy_class}' is deprecated. Use app-by-app settings and 'updates apply-auto' or 'updates apply <app>'."
+    shift 2 || true
+    updates_apply_auto "$@"
+    return
+  fi
+
+  local svc="${1:-}" force=0
+  [[ -n "$svc" ]] || die "Usage: domum-core updates apply <app> [--dry-run] [--force]"
+  shift || true
   while (( $# )); do
     case "$1" in
-      --class) class="$2"; shift ;;
       --dry-run) DRY_RUN=1 ;;
       --force) force=1 ;;
-      *) die "Usage: domum-core updates apply --class A|B|C|D [--dry-run] [--force]" ;;
+      *) die "Usage: domum-core updates apply <app> [--dry-run] [--force]" ;;
     esac
     shift
   done
-  [[ -n "$class" ]] || die "Specify --class A|B|C|D"
-  class="${class^^}"
+  updates_apply_one "$svc" "$force"
+}
 
-  if [[ "$class" == "D" ]]; then
-    log "Applying host (Class D) package upgrades..."
-    if (( DRY_RUN == 1 )); then
-      run apt-get -s upgrade
-    else
-      export DEBIAN_FRONTEND=noninteractive
-      run apt-get update -y
-      run apt-get upgrade -y
-      record_update_history D host "" "" success "apt upgrade"
-    fi
-    return 0
-  fi
-
-  local -a targets=()
-  local svc
+updates_apply_auto() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  local force=0 svc
+  while (( $# )); do
+    case "$1" in
+      --dry-run) DRY_RUN=1 ;;
+      --force) force=1 ;;
+      *) die "Usage: domum-core updates apply-auto [--dry-run] [--force]" ;;
+    esac
+    shift
+  done
   while IFS= read -r svc; do
-    [[ "$(update_class_of "$svc")" == "$class" ]] && targets+=("$svc")
-  done < <(enabled_services)
-
-  (( ${#targets[@]} > 0 )) || { log "No enabled services in class $class."; return 0; }
-
-  # Class B/C are stateful — require a fresh backup unless --force.
-  if [[ "$class" == "B" || "$class" == "C" ]]; then
-    if ! backup_is_fresh; then
-      if (( force == 0 )); then
-        die "Refusing to update Class $class (stateful) without a fresh backup (<= ${BACKUP_MAX_AGE_HOURS}h). Run 'sudo domum-core backups run' or pass --force."
-      fi
-      warn "No fresh backup found, but --force given. Proceeding."
-    fi
-  fi
-
-  log "Updating Class $class services: ${targets[*]}"
-  for svc in "${targets[@]}"; do
-    local cid before after cs
-    if ! candidate_ready_for_apply "$svc" "$class" "$force"; then
-      log "Skipping $svc: update delay window has not elapsed (run 'updates candidates' or use --force)."
+    svc="$(normalize_service_name "$svc")"
+    if ! update_auto_enabled_for "$svc"; then
+      log "Skipping $svc: auto-update disabled."
       continue
     fi
-    cs="$(compose_service_for "$svc")"
-    cid="$(container_for "$svc" || true)"
-    before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
-    log "Pulling $svc..."
-    run compose_cmd pull "$cs"
-    run compose_cmd up -d "$cs"
-    if (( DRY_RUN == 0 )); then
-      cid="$(container_for "$svc" || true)"
-      after="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
-      record_update_history "$class" "$svc" "$before" "$after" success "compose pull + up"
-    fi
-  done
-  log "Class $class update complete."
+    updates_apply_one "$svc" "$force"
+  done < <(enabled_services)
 }
 
 updates_history() {
@@ -1411,11 +1541,13 @@ updates_cmd() {
   need_root
   local sub="${1:-check}"; shift || true
   case "$sub" in
-    check)   updates_check ;;
+    check)      updates_check ;;
+    status)     updates_status ;;
     candidates) updates_candidates ;;
-    apply)   updates_apply "$@" ;;
-    history) updates_history ;;
-    *) die "Usage: domum-core updates {check|candidates|apply --class A|B|C|D [--dry-run] [--force]|history}" ;;
+    apply)      updates_apply "$@" ;;
+    apply-auto) updates_apply_auto "$@" ;;
+    history)    updates_history ;;
+    *) die "Usage: domum-core updates {check|status|apply <app> [--dry-run] [--force]|apply-auto [--dry-run] [--force]|history}" ;;
   esac
 }
 
@@ -1555,11 +1687,18 @@ CHECKUP_CRITICAL=(); CHECKUP_WARNINGS=(); CHECKUP_HEALTHY=(); CHECKUP_ACTIONS=()
 
 checkup_add() {
   local level="$1"; shift
+  local item="$*" existing
   case "$level" in
-    critical) CHECKUP_CRITICAL+=("$*") ;;
-    warning)  CHECKUP_WARNINGS+=("$*") ;;
-    healthy)  CHECKUP_HEALTHY+=("$*") ;;
-    action)   CHECKUP_ACTIONS+=("$*") ;;
+    critical) for existing in "${CHECKUP_CRITICAL[@]}"; do [[ "$existing" == "$item" ]] && return 0; done ;;
+    warning)  for existing in "${CHECKUP_WARNINGS[@]}"; do [[ "$existing" == "$item" ]] && return 0; done ;;
+    healthy)  for existing in "${CHECKUP_HEALTHY[@]}"; do [[ "$existing" == "$item" ]] && return 0; done ;;
+    action)   for existing in "${CHECKUP_ACTIONS[@]}"; do [[ "$existing" == "$item" ]] && return 0; done ;;
+  esac
+  case "$level" in
+    critical) CHECKUP_CRITICAL+=("$item") ;;
+    warning)  CHECKUP_WARNINGS+=("$item") ;;
+    healthy)  CHECKUP_HEALTHY+=("$item") ;;
+    action)   CHECKUP_ACTIONS+=("$item") ;;
   esac
 }
 
@@ -1616,16 +1755,23 @@ mqtt_discovery_enabled() {
 ha_dependency_check() {
   [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] || return 0
 
-  # Core: HA container + HTTP.
+  # Core: HA container. HTTP probing is opt-in because HA is usually routed
+  # through Traefik and may not publish 8123 on localhost.
   if service_running home-assistant; then
     checkup_add healthy "Home Assistant container running."
   else
     checkup_add critical "Home Assistant is enabled but not running."
   fi
-  if cmd_exists curl && curl -fsS --max-time 5 http://127.0.0.1:8123 >/dev/null 2>&1; then
-    checkup_add healthy "Home Assistant HTTP :8123 responding."
-  else
-    checkup_add warning "Home Assistant HTTP :8123 not responding locally."
+  if [[ "${HEALTHCHECK_HOMEASSISTANT_HTTP:-0}" == "1" ]]; then
+    if [[ -n "${HOMEASSISTANT_HEALTH_URL:-}" ]] && cmd_exists curl; then
+      if curl -fsS --max-time 5 "$HOMEASSISTANT_HEALTH_URL" >/dev/null 2>&1; then
+        checkup_add healthy "Home Assistant HTTP health URL responding."
+      else
+        checkup_add warning "Home Assistant HTTP health URL not responding: $HOMEASSISTANT_HEALTH_URL"
+      fi
+    else
+      checkup_add warning "Home Assistant HTTP health check is enabled but HOMEASSISTANT_HEALTH_URL is empty or curl is unavailable."
+    fi
   fi
 
   # MQTT broker + discovery.
@@ -1654,7 +1800,7 @@ ha_dependency_check() {
 
   # Music Assistant.
   if [[ "${ENABLE_MA:-0}" == "1" ]]; then
-    if service_running music-assistant; then checkup_add healthy "Music Assistant running."
+    if service_running musicassistant; then checkup_add healthy "Music Assistant running."
     else checkup_add warning "Music Assistant enabled but not running."; fi
   fi
 }
@@ -1767,20 +1913,17 @@ run_checkup() {
     fi
   done < <(enabled_services)
 
-  # --- HTTP / port probes (best-effort) ---
+  # --- HTTP / port probes (best-effort and explicitly configured) ---
   if cmd_exists curl; then
-    if [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]]; then
-      if curl -fsS --max-time 5 http://127.0.0.1:8123 >/dev/null 2>&1; then
-        checkup_add healthy "Home Assistant HTTP :8123 responding."
+    if [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" && "${HEALTHCHECK_ACTUAL_HTTP:-0}" == "1" ]]; then
+      if [[ -n "${ACTUAL_HEALTH_URL:-}" ]]; then
+        if curl -fsS --max-time 5 "$ACTUAL_HEALTH_URL" >/dev/null 2>&1; then
+          checkup_add healthy "Actual Budget HTTP health URL responding."
+        else
+          checkup_add warning "Actual Budget HTTP health URL not responding: $ACTUAL_HEALTH_URL"
+        fi
       else
-        checkup_add warning "Home Assistant HTTP :8123 not responding locally."
-      fi
-    fi
-    if [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]; then
-      if curl -fsS --max-time 5 http://127.0.0.1:5006 >/dev/null 2>&1; then
-        checkup_add healthy "Actual HTTP :5006 responding."
-      else
-        checkup_add warning "Actual HTTP :5006 not responding locally."
+        checkup_add warning "Actual Budget HTTP health check is enabled but ACTUAL_HEALTH_URL is empty."
       fi
     fi
   fi
@@ -1849,7 +1992,7 @@ run_checkup() {
   local enabled_targets
   enabled_targets="$(count_matches '^BACKUP_TARGET_[A-Z]+_ENABLED=1' "$BACKUP_CFG_FILE")"
   if (( enabled_targets == 0 )); then
-    checkup_add warning "No restic backup targets are enabled (see docs/SETUP-BACKUPS.md)."
+    checkup_add warning "No restic backup targets are enabled (see docs/backups/overview.md)."
     checkup_add action "Configure + enable a backup target in $BACKUP_CFG_FILE"
   else
     checkup_add healthy "${enabled_targets} restic backup target(s) enabled."
@@ -2052,7 +2195,7 @@ set_conf_key() {
 # redact <key> <value> — blank out secret-ish values for display.
 redact() {
   case "$1" in
-    *PASSWORD*|*TOKEN*|*SECRET*) echo "******" ;;
+    *PASSWORD*|*TOKEN*|*SECRET*|*APP_PASSWORD*|*AGEKEY*|*KEY_FILE*) echo "******" ;;
     *) echo "$2" ;;
   esac
 }
@@ -2085,10 +2228,22 @@ configure_show() {
            ENABLE_OBSIDIAN_SYNC ENABLE_TAILSCALE \
            BACKUP_MAX_AGE_HOURS RECOVERY_PACK_ENABLED RECOVERY_PACK_EMAIL_ENABLED \
            RECOVERY_PACK_SMTP_HOST RECOVERY_PACK_SMTP_PASSWORD_FILE \
+           HEALTHCHECK_HOMEASSISTANT_HTTP HOMEASSISTANT_HEALTH_URL \
+           HEALTHCHECK_ACTUAL_HTTP ACTUAL_HEALTH_URL \
            ENABLE_SECURITY_PATCHES SECURITY_PATCH_REBOOT_POLICY \
-           AUTO_UPDATE_CLASS_A AUTO_UPDATE_CLASS_B AUTO_UPDATE_CLASS_C; do
+           ENABLE_AUTOREMOVE_OLD_KERNELS; do
     printf '  %-32s %s\n' "$k" "$(redact "$k" "${!k:-}")"
   done
+  echo
+  echo "Per-app update policy:"
+  local svc token auto_key delay_key
+  while IFS= read -r svc; do
+    token="$(update_token_for "$svc")"
+    auto_key="${token}_AUTO_UPDATE"
+    delay_key="${token}_UPDATE_DELAY_DAYS"
+    printf '  %-18s auto=%s delay_days=%s backup_required=%s\n' \
+      "$svc" "${!auto_key:-0}" "${!delay_key:-7}" "$(service_requires_backup "$svc" && echo yes || echo no)"
+  done < <(enabled_services)
 }
 
 configure_validate() {
@@ -2103,6 +2258,15 @@ configure_validate() {
     [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || { echo "[!] recovery email on but SMTP host unset"; issues=1; }
     [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
   fi
+  local svc token auto_key delay_key delay
+  while IFS= read -r svc; do
+    token="$(update_token_for "$svc")"
+    auto_key="${token}_AUTO_UPDATE"
+    delay_key="${token}_UPDATE_DELAY_DAYS"
+    [[ "${!auto_key:-0}" =~ ^[01]$ ]] || { echo "[!] $auto_key must be 0 or 1"; issues=1; }
+    delay="${!delay_key:-7}"
+    [[ "$delay" =~ ^[0-9]+$ ]] || { echo "[!] $delay_key must be a non-negative integer"; issues=1; }
+  done < <(enabled_services)
   if (( issues == 0 )); then echo "[ok] configuration looks valid."; fi
   return "$issues"
 }
@@ -2119,8 +2283,14 @@ configure_backup_current() {
 }
 
 configure_write_defaults() {
-  load_cfg
-  [[ -f "$BACKUP_CFG_FILE" ]] && { warn "$BACKUP_CFG_FILE exists; use --backup-current first, then edit by hand."; return 1; }
+  if [[ ! -f "$CFG_FILE" ]]; then
+    [[ -f "${CFG_FILE}.example" ]] || die "Missing ${CFG_FILE}.example"
+    install -m 0640 "${CFG_FILE}.example" "$CFG_FILE"
+    log "Wrote default config to $CFG_FILE from example."
+  else
+    warn "$CFG_FILE exists; not overwriting."
+  fi
+  [[ -f "$BACKUP_CFG_FILE" ]] && { warn "$BACKUP_CFG_FILE exists; not overwriting."; return 0; }
   [[ -f "${BACKUP_CFG_FILE}.example" ]] || die "Missing ${BACKUP_CFG_FILE}.example"
   install -m 0640 "${BACKUP_CFG_FILE}.example" "$BACKUP_CFG_FILE"
   log "Wrote default overlay to $BACKUP_CFG_FILE from example."
@@ -2159,11 +2329,26 @@ configure_wizard() {
     echo "  NOTE: store the Gmail app password at the GMAIL_APP_PASSWORD_FILE path (0600, root)."
   fi
 
-  echo "-- Updates --"
-  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_A "$(ask_bool '  auto-update class A (proxy/dns)' "${AUTO_UPDATE_CLASS_A:-1}")"
-  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_B "$(ask_bool '  auto-update class B (HA/automation)' "${AUTO_UPDATE_CLASS_B:-0}")"
-  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_C "$(ask_bool '  auto-update class C (apps)' "${AUTO_UPDATE_CLASS_C:-0}")"
+  echo "-- Updates (per app) --"
+  local svc token auto_key delay_key
+  while IFS= read -r svc; do
+    token="$(update_token_for "$svc")"
+    auto_key="${token}_AUTO_UPDATE"
+    delay_key="${token}_UPDATE_DELAY_DAYS"
+    echo "  $(service_display_name "$svc"):"
+    set_conf_key "$CFG_FILE" "$auto_key" "$(ask_bool '    Auto-update' "${!auto_key:-0}")"
+    set_conf_key "$CFG_FILE" "$delay_key" "$(ask '    Delay days' "${!delay_key:-7}")"
+  done < <(enabled_services)
+
+  echo "-- Health Checks --"
+  set_conf_key "$CFG_FILE" HEALTHCHECK_HOMEASSISTANT_HTTP "$(ask_bool '  Home Assistant HTTP URL check' "${HEALTHCHECK_HOMEASSISTANT_HTTP:-0}")"
+  set_conf_key "$CFG_FILE" HOMEASSISTANT_HEALTH_URL "$(ask '  Home Assistant health URL' "${HOMEASSISTANT_HEALTH_URL:-}")"
+  set_conf_key "$CFG_FILE" HEALTHCHECK_ACTUAL_HTTP "$(ask_bool '  Actual Budget HTTP URL check' "${HEALTHCHECK_ACTUAL_HTTP:-0}")"
+  set_conf_key "$CFG_FILE" ACTUAL_HEALTH_URL "$(ask '  Actual Budget health URL' "${ACTUAL_HEALTH_URL:-}")"
+
+  echo "-- Timers --"
   set_conf_key "$CFG_FILE" ENABLE_SECURITY_PATCHES "$(ask_bool '  OS security patches' "${ENABLE_SECURITY_PATCHES:-1}")"
+  set_conf_key "$CFG_FILE" ENABLE_AUTOREMOVE_OLD_KERNELS "$(ask_bool '  autoremove old kernels' "${ENABLE_AUTOREMOVE_OLD_KERNELS:-0}")"
 
   echo
   log "Configuration written. Validate with: sudo domum-core configure --validate"
@@ -2335,7 +2520,8 @@ Backups (unified — driven by BACKUP_<SERVICE> flags):
 Recovery & updates:
   domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
   domum-core recovery-pack send-latest [--dry-run] | email-test
-  domum-core updates check | candidates | apply --class A|B|C [--dry-run] | history
+  domum-core updates check | status | apply <app> [--dry-run] [--force]
+  domum-core updates apply-auto [--dry-run] [--force] | history
   domum-core os-updates check | security-apply [--dry-run] | history
 
 Maintenance:

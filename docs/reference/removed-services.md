@@ -6,7 +6,7 @@ separate `domum-core-media` (Intel N100) server.
 
 As part of the production hardening pass, the following services were removed
 from this project entirely (compose, config, CLI catalog, docs, backups, update
-classes, and health checks):
+settings, and health checks):
 
 | Service     | Why removed                                  | Belongs on        |
 |-------------|----------------------------------------------|-------------------|

@@ -272,7 +272,7 @@ Nothing was backed up. To configure restic backups:
   2. Set a real BACKUP_TARGET_<NAME>_REPOSITORY + create its password file
   3. Set BACKUP_TARGET_<NAME>_ENABLED=1
   4. sudo domum-core backups init <name>
-See docs/SETUP-BACKUPS.md.
+See docs/backups/overview.md.
 EOF
 }
 

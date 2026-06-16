@@ -1,6 +1,6 @@
 # OS Security Patches
 
-Host OS updates are Class D and are handled separately from container updates.
+Host OS updates are handled separately from container updates.
 
 ```bash
 sudo domum-core os-updates check

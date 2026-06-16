@@ -16,24 +16,25 @@ Use the existing fragments as examples and prefer bind mounts under
 
 ## 2. Add Configuration Defaults
 
-Add an `ENABLE_<SERVICE>` toggle to `config/domum.conf`. If the service has
-persistent data, add a `BACKUP_<SERVICE>` flag to
-`config/domum-backup.conf.example`.
+Add an `ENABLE_<SERVICE>` toggle to `config/domum.conf.example`. Add
+`<SERVICE>_AUTO_UPDATE` and `<SERVICE>_UPDATE_DELAY_DAYS` defaults if the app
+should participate in the update policy. If the service has persistent data,
+add a `BACKUP_<SERVICE>` flag to `config/domum-backup.conf.example`.
 
 ## 3. Register in the Catalog
 
 Add one row to `service_catalog()` in `bin/domum-core`:
 
 ```text
-logical-name|ENABLE_VAR|category|class|BACKUP_VAR|compose/path.yml|host:port
+logical-name|ENABLE_VAR|category|label|BACKUP_VAR|compose/path.yml|host:port
 ```
 
-Use update class B for Home Assistant critical dependencies, C for supporting
-apps, and A for low-risk infrastructure.
+The `label` field is for docs/UI grouping only. Update behavior comes from the
+per-app `*_AUTO_UPDATE` and `*_UPDATE_DELAY_DAYS` settings.
 
 ## 4. Add Backup Coverage
 
-If the service uses a simple bind mount, add it to `service_backup_source_dir()`
+If the service uses a simple bind mount, add it to `backup_src_dir_for()`
 so `domum-core backups run` can tar it before restic runs.
 
 ## 5. Validate

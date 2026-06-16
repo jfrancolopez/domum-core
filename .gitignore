@@ -1,6 +1,12 @@
 .env
 *.env
+*.local
+*.secret
+*.key
+*.agekey
 secrets/
+data/
+logs/
 **/data/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
@@ -13,4 +19,5 @@ nimbalyst-local/
 codex/
 
 # Live backup/recovery config — only the .example is committed.
+config/domum.conf
 config/domum-backup.conf

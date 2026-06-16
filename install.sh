@@ -57,9 +57,16 @@ install -d -m 0750 "${STATE_ROOT}"
 install -d -m 0750 "${LOG_DIR}"
 mkdir -p "${INSTALL_DIR}/data" "${INSTALL_DIR}/logs"
 
-if [[ ! -f "${INSTALL_DIR}/config/domum.conf" ]]; then
-  echo "[domum] ERROR: config/domum.conf not found in repo."
+if [[ ! -f "${INSTALL_DIR}/config/domum.conf" \
+   && -f "${INSTALL_DIR}/config/domum.conf.example" ]]; then
+  echo "[domum] Creating config/domum.conf from example..."
+  install -m 0640 "${INSTALL_DIR}/config/domum.conf.example" \
+                  "${INSTALL_DIR}/config/domum.conf"
+elif [[ ! -f "${INSTALL_DIR}/config/domum.conf" ]]; then
+  echo "[domum] ERROR: config/domum.conf missing and no example exists."
   exit 1
+else
+  echo "[domum] Preserving existing config/domum.conf."
 fi
 
 # Copy *.conf.example -> *.conf if the live config is missing (never overwrite).
@@ -68,16 +75,33 @@ if [[ ! -f "${INSTALL_DIR}/config/domum-backup.conf" \
   echo "[domum] Creating config/domum-backup.conf from example..."
   install -m 0640 "${INSTALL_DIR}/config/domum-backup.conf.example" \
                   "${INSTALL_DIR}/config/domum-backup.conf"
+elif [[ -f "${INSTALL_DIR}/config/domum-backup.conf" ]]; then
+  echo "[domum] Preserving existing config/domum-backup.conf."
+fi
+
+if git -C "${INSTALL_DIR}" ls-files --error-unmatch config/domum.conf >/dev/null 2>&1; then
+  echo "[domum] WARN: config/domum.conf is tracked by git; remove it with:"
+  echo "             git -C ${INSTALL_DIR} rm --cached config/domum.conf"
+elif [[ -f "${INSTALL_DIR}/config/domum.conf" ]]; then
+  echo "[domum] NOTE: config/domum.conf is local/untracked and will not be overwritten."
+fi
+if git -C "${INSTALL_DIR}" ls-files --error-unmatch config/domum-backup.conf >/dev/null 2>&1; then
+  echo "[domum] WARN: config/domum-backup.conf is tracked by git; remove it with:"
+  echo "             git -C ${INSTALL_DIR} rm --cached config/domum-backup.conf"
+elif [[ -f "${INSTALL_DIR}/config/domum-backup.conf" ]]; then
+  echo "[domum] NOTE: config/domum-backup.conf is local/untracked and will not be overwritten."
 fi
 
 echo "[domum] Done."
 echo "Next:"
+echo "  sudo domum-core configure --show"
+echo "  sudo domum-core configure --validate"
 echo "  sudo domum-core init"
-echo "  sudo domum-core apply"
+echo "  sudo domum-core apply        # only after reviewing config"
 echo
 echo "[domum] init/apply were NOT run automatically."
 echo "[domum] Run them after reviewing config and any local git drift."
 echo "[domum] Done. Re-run anytime with the same curl command."
-echo "[domum] For backups/recovery/timers, see docs/SETUP-BACKUPS.md and"
-echo "        docs/DISASTER-RECOVERY.md. Install maintenance timers (disabled):"
+echo "[domum] For backups/recovery/timers, see docs/backups/overview.md and"
+echo "        docs/backups/disaster-recovery.md. Install maintenance timers (disabled):"
 echo "        sudo domum-core schedule install-maintenance"
