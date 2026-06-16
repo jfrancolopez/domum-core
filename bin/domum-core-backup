@@ -84,6 +84,16 @@ require_files() {
   (( ${#missing[@]} == 0 )) || die "Missing required files: ${missing[*]}"
 }
 
+# warn (not fail) if a secret file is group/world-readable or not root-owned.
+check_secret_perms() {
+  local f="$1" mode owner
+  [[ -f "$f" ]] || return 0
+  mode="$(stat -c %a "$f" 2>/dev/null || stat -f %Lp "$f" 2>/dev/null || echo '?')"
+  owner="$(stat -c %U "$f" 2>/dev/null || stat -f %Su "$f" 2>/dev/null || echo '?')"
+  [[ "$mode" == "600" || "$mode" == "400" ]] || log "WARNING: $f mode is $mode (expected 600)."
+  [[ "$owner" == "root" ]] || log "WARNING: $f owner is $owner (expected root)."
+}
+
 backup_target_names() {
   local name
   for name in ${BACKUP_TARGETS:-}; do
@@ -163,6 +173,7 @@ restic_for_target() {
   env_file="$(backup_target_value "$target" ENV_FILE)"
   [[ -n "$repository" ]] || die "No BACKUP_TARGET_$(uppercase_token "$target")_REPOSITORY configured."
   require_files "$pw_file"
+  check_secret_perms "$pw_file"
   cmd_exists restic || die "restic is not installed (apt-get install -y restic)."
 
   (

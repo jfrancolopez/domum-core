@@ -70,18 +70,42 @@ load_cfg() {
   ACTUAL_KEEP="${ACTUAL_KEEP:-7}"
   HA_KEEP="${HA_KEEP:-7}"
   MARIADB_KEEP="${MARIADB_KEEP:-7}"
+  SERVICE_BACKUP_KEEP="${SERVICE_BACKUP_KEEP:-7}"
+
+  # Per-service backup flags consumed by `backups run`. Default ON so an
+  # enabled service is protected even before the overlay file is edited.
+  BACKUP_HOMEASSISTANT="${BACKUP_HOMEASSISTANT:-1}"
+  BACKUP_MARIADB="${BACKUP_MARIADB:-1}"
+  BACKUP_ACTUAL="${BACKUP_ACTUAL:-1}"
+  BACKUP_VAULTWARDEN="${BACKUP_VAULTWARDEN:-1}"
+  BACKUP_OBSIDIAN="${BACKUP_OBSIDIAN:-1}"
+  BACKUP_ZIGBEE2MQTT="${BACKUP_ZIGBEE2MQTT:-1}"
+  BACKUP_ZWAVE="${BACKUP_ZWAVE:-1}"
+  BACKUP_NODERED="${BACKUP_NODERED:-1}"
+  BACKUP_MQTT="${BACKUP_MQTT:-1}"
+  BACKUP_ESPHOME="${BACKUP_ESPHOME:-1}"
+  BACKUP_ADGUARD="${BACKUP_ADGUARD:-1}"
 
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
   RECOVERY_PACK_AGE_PUBKEY_FILE="${RECOVERY_PACK_AGE_PUBKEY_FILE:-$SECRETS_DIR/recovery-age.pub}"
   RECOVERY_PACK_DEST="${RECOVERY_PACK_DEST:-$STATE_ROOT/recovery-pack}"
   RECOVERY_PACK_REMINDER_DAYS="${RECOVERY_PACK_REMINDER_DAYS:-30}"
-  RECOVERY_PACK_EMAIL_ENABLED="${RECOVERY_PACK_EMAIL_ENABLED:-0}"
-  RECOVERY_PACK_EMAIL_TO="${RECOVERY_PACK_EMAIL_TO:-${DOMUM_EMAIL:-}}"
-  RECOVERY_PACK_EMAIL_FROM="${RECOVERY_PACK_EMAIL_FROM:-${DOMUM_EMAIL:-}}"
+  # Recovery email. The spec's friendly names (ENABLE_RECOVERY_EMAIL /
+  # RECOVERY_EMAIL_* / GMAIL_APP_PASSWORD_FILE) are accepted as aliases over the
+  # underlying RECOVERY_PACK_SMTP_* settings. Gmail is the default provider.
+  RECOVERY_EMAIL_PROVIDER="${RECOVERY_EMAIL_PROVIDER:-gmail}"
+  RECOVERY_PACK_EMAIL_ENABLED="${RECOVERY_PACK_EMAIL_ENABLED:-${ENABLE_RECOVERY_EMAIL:-0}}"
+  RECOVERY_PACK_EMAIL_TO="${RECOVERY_PACK_EMAIL_TO:-${RECOVERY_EMAIL_TO:-${DOMUM_EMAIL:-}}}"
+  RECOVERY_PACK_EMAIL_FROM="${RECOVERY_PACK_EMAIL_FROM:-${RECOVERY_EMAIL_FROM:-${DOMUM_EMAIL:-}}}"
+  # Gmail SMTP submission defaults (smtps/465). Override for other providers.
+  if [[ "$RECOVERY_EMAIL_PROVIDER" == "gmail" ]]; then
+    RECOVERY_PACK_SMTP_HOST="${RECOVERY_PACK_SMTP_HOST:-smtp.gmail.com}"
+  fi
   RECOVERY_PACK_SMTP_HOST="${RECOVERY_PACK_SMTP_HOST:-}"
   RECOVERY_PACK_SMTP_PORT="${RECOVERY_PACK_SMTP_PORT:-465}"
   RECOVERY_PACK_SMTP_USERNAME_FILE="${RECOVERY_PACK_SMTP_USERNAME_FILE:-$SECRETS_DIR/recovery_pack_smtp_username}"
-  RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}"
+  # Gmail app password file is the password file when provider=gmail.
+  RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-${GMAIL_APP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}}"
 
   # Update classes are derived from the service catalog (the single source of
   # truth). UPDATE_CLASS_A/B/C may still be set in domum.conf to override a
@@ -682,6 +706,76 @@ Live config dir:   $cfg_dir
 EOF
 }
 
+# ---- generic service-level backups (unified engine) ------------------------
+
+# Bind-mount data dir for a logical service (empty if it has no own dir, e.g.
+# a service whose data lives in a named docker volume captured by restic).
+backup_src_dir_for() {
+  case "$1" in
+    home-assistant) ha_config_dir ;;
+    actual-budget)  actual_data_dir ;;
+    mqtt)           echo "$DOMUM_DIR/compose/automation/mqtt" ;;
+    zigbee2mqtt)    echo "$DOMUM_DIR/compose/automation/zigbee2mqtt" ;;
+    zwave-js-ui)    echo "$DOMUM_DIR/compose/automation/zwave-js-ui/store" ;;
+    esphome)        echo "$DOMUM_DIR/compose/automation/esphome" ;;
+    music-assistant) echo "$DOMUM_DIR/compose/automation/music-assistant" ;;
+    adguard-home)   echo "$DOMUM_DIR/compose/networking/adguard" ;;
+    vaultwarden)    echo "$DOMUM_DIR/compose/security/vaultwarden/data" ;;
+    obsidian-sync)  echo "$DOMUM_DIR/compose/productivity/obsidian-sync/data" ;;
+    *) echo "" ;;
+  esac
+}
+
+# Validate a freshly written artifact: exists, non-empty, and (for .gz) intact.
+validate_backup_artifact() {
+  local path="$1"
+  [[ -f "$path" ]] || { warn "backup artifact missing: $path"; return 1; }
+  [[ "$(to_int "$(file_size "$path")")" -gt 0 ]] || { warn "backup artifact is empty: $path"; return 1; }
+  case "$path" in
+    *.gz) gzip -t "$path" 2>/dev/null || { warn "backup artifact failed gzip integrity: $path"; return 1; } ;;
+  esac
+  return 0
+}
+
+# Tar a service's bind-mount dir into staging (used for services without a
+# bespoke quiesce step). Returns the artifact path on stdout.
+service_fs_backup() {
+  local name="$1" src stage ts archive
+  src="$(backup_src_dir_for "$name")"
+  [[ -n "$src" ]] || { log "$name has no bind-mount dir (captured via restic) — skipping service tar."; return 0; }
+  [[ -d "$src" ]] || { warn "$name data dir not found: $src — skipping."; return 0; }
+  stage="$STATE_ROOT/service-backups/$name"
+  install -d -m 0750 "$stage"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  archive="$stage/${name}-${ts}.tar.gz"
+  log "$name backup -> $archive"
+  run tar -C "$(dirname "$src")" -czf "$archive" "$(basename "$src")" \
+    || { warn "$name tar failed."; return 1; }
+  if (( DRY_RUN == 0 )); then
+    validate_backup_artifact "$archive" || return 1
+    prune_staging "$stage" "${name}-*.tar.gz" "${SERVICE_BACKUP_KEEP:-7}"
+  fi
+}
+
+backup_history_log() { echo "$STATE_ROOT/backups/history.log"; }
+
+# Drive app-consistent service-level backups for every enabled+flagged service.
+run_service_backups() {
+  local dry="${1:-0}" name enable_var _cat _class bvar _rel _probe rc=0
+  while IFS='|' read -r name enable_var _cat _class bvar _rel _probe; do
+    [[ "${!enable_var:-0}" == "1" ]] || continue          # service enabled?
+    [[ "$bvar" == "-" || -z "$bvar" ]] && continue        # has a backup flag?
+    [[ "${!bvar:-0}" == "1" ]] || { log "$name backup disabled ($bvar=0) — skipping."; continue; }
+    case "$name" in
+      home-assistant) DRY_RUN="$dry" homeassistant_backup || rc=1 ;;  # also dumps MariaDB
+      mariadb)        : ;;  # captured by the HA recorder dump
+      actual-budget)  DRY_RUN="$dry" actual_backup || rc=1 ;;
+      *)              DRY_RUN="$dry" service_fs_backup "$name" || rc=1 ;;
+    esac
+  done < <(service_catalog)
+  return "$rc"
+}
+
 # ===========================================================================
 #  Section: restic backups (delegates to bin/domum-core-backup)
 # ===========================================================================
@@ -704,19 +798,36 @@ backups_cmd() {
   bin="$(backup_bin)"
   case "$sub" in
     run)
-      local dry=0
+      local dry=0 svc_rc=0 restic_rc=0
       [[ "${1:-}" == "--dry-run" ]] && dry=1
-      # Refresh service-level backups first so they ride along in restic.
-      log "Refreshing service-level backups before restic run..."
-      DRY_RUN="$dry" actual_backup || warn "Actual backup step failed."
-      DRY_RUN="$dry" homeassistant_backup || warn "HA backup step failed."
-      if (( dry == 1 )); then
-        "$bin" --dry-run
-      else
-        "$bin"
+      ensure_state_dirs
+      # 1+2. App-consistent service-level backups + artifact validation,
+      #      flag-driven from the catalog (BACKUP_<SERVICE>).
+      log "Stage 1: service-level backups..."
+      run_service_backups "$dry" || { svc_rc=1; warn "One or more service-level backups failed."; }
+      # 3. Metadata: which services were captured this run.
+      if (( dry == 0 )); then
+        enabled_services > "$STATE_ROOT/backups/last-services.txt" 2>/dev/null || true
       fi
+      # 4. restic push.
+      log "Stage 4: restic backup..."
+      if (( dry == 1 )); then "$bin" --dry-run; else "$bin" || restic_rc=1; fi
+      # 5. Snapshot verification (skip on dry-run).
+      if (( dry == 0 && restic_rc == 0 )); then
+        log "Stage 5: verifying latest snapshots..."
+        "$bin" --snapshots || warn "Snapshot listing failed."
+      fi
+      # 6. Backup history.
+      if (( dry == 0 )); then
+        printf '%s  service_rc=%s  restic_rc=%s\n' \
+          "$(date -Iseconds)" "$svc_rc" "$restic_rc" >> "$(backup_history_log)"
+      fi
+      (( svc_rc == 0 && restic_rc == 0 ))
       ;;
     verify)    "$bin" --check ;;
+    history)
+      if [[ -f "$(backup_history_log)" ]]; then cat "$(backup_history_log)"; else echo "No backup history yet."; fi
+      ;;
     snapshots) "$bin" --snapshots ;;
     prune)
       if [[ "${1:-}" == "--dry-run" ]]; then
@@ -726,7 +837,7 @@ backups_cmd() {
       fi
       ;;
     init)      "$bin" init "$@" ;;
-    *) die "Usage: domum-core backups {run [--dry-run]|verify|snapshots|prune [--dry-run]|init <target>}" ;;
+    *) die "Usage: domum-core backups {run [--dry-run]|verify|snapshots|history|prune [--dry-run]|init <target>}" ;;
   esac
 }
 
@@ -780,37 +891,101 @@ identity and configuration. Service *data* is restored separately from restic
 EOF
 }
 
-send_recovery_pack_email() {
-  local archive="$1" smtp_user smtp_pass message
-  [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || return 0
-  [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || die "RECOVERY_PACK_SMTP_HOST required when email delivery is enabled."
-  [[ -f "$RECOVERY_PACK_SMTP_USERNAME_FILE" && -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || die "SMTP credential files are missing."
-  smtp_user="$(read_secret_file_value "$RECOVERY_PACK_SMTP_USERNAME_FILE")"
+# send_email_with_attachment <file> <subject> <body-text> [dry]
+# Low-level sender. Always sends what is already on disk (the caller is
+# responsible for AGE-encrypting first — we never encrypt here, never email
+# plaintext). Set dry=1 to validate config + show the plan without sending.
+send_email_with_attachment() {
+  local attach="$1" subject="$2" body="$3" dry="${4:-0}"
+  local smtp_user smtp_pass from to message
+  [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || die "RECOVERY_PACK_SMTP_HOST required for email delivery (set provider/host)."
+  from="${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}"
+  to="${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}"
+  [[ -n "$from" && -n "$to" ]] || die "Recovery email From/To not set."
+  # Gmail uses the From address as the SMTP username; a username file overrides.
+  if [[ -f "$RECOVERY_PACK_SMTP_USERNAME_FILE" ]]; then
+    smtp_user="$(read_secret_file_value "$RECOVERY_PACK_SMTP_USERNAME_FILE")"
+  else
+    smtp_user="$from"
+  fi
+  [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || die "SMTP/app password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"
+  [[ -f "$attach" ]] || die "Attachment not found: $attach"
+  if (( dry == 1 )); then
+    log "[dry-run] would email '$subject' with attachment $(basename "$attach")"
+    log "[dry-run]   smtps://${RECOVERY_PACK_SMTP_HOST}:${RECOVERY_PACK_SMTP_PORT} as $smtp_user, $from -> $to"
+    return 0
+  fi
   smtp_pass="$(read_secret_file_value "$RECOVERY_PACK_SMTP_PASSWORD_FILE")"
   message="$(mktemp)"
   {
-    printf 'From: %s\n' "${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}"
-    printf 'To: %s\n' "${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}"
-    printf 'Subject: domum-core recovery pack %s\n' "$(basename "$archive")"
+    printf 'From: %s\n' "$from"
+    printf 'To: %s\n' "$to"
+    printf 'Subject: %s\n' "$subject"
     printf 'MIME-Version: 1.0\n'
     printf 'Content-Type: multipart/mixed; boundary="domum-boundary"\n\n'
     printf -- '--domum-boundary\n'
     printf 'Content-Type: text/plain; charset="utf-8"\n\n'
-    printf 'Encrypted recovery pack attached: %s\n\n' "$(basename "$archive")"
+    printf '%s\n\n' "$body"
     printf -- '--domum-boundary\n'
-    printf 'Content-Type: application/octet-stream; name="%s"\n' "$(basename "$archive")"
+    printf 'Content-Type: application/octet-stream; name="%s"\n' "$(basename "$attach")"
     printf 'Content-Transfer-Encoding: base64\n'
-    printf 'Content-Disposition: attachment; filename="%s"\n\n' "$(basename "$archive")"
-    base64 < "$archive"
+    printf 'Content-Disposition: attachment; filename="%s"\n\n' "$(basename "$attach")"
+    base64 < "$attach"
     printf '\n--domum-boundary--\n'
   } > "$message"
   curl --silent --show-error --ssl-reqd \
     --url "smtps://${RECOVERY_PACK_SMTP_HOST}:${RECOVERY_PACK_SMTP_PORT}" \
     --user "${smtp_user}:${smtp_pass}" \
-    --mail-from "${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}" \
-    --mail-rcpt "${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}" \
+    --mail-from "$from" \
+    --mail-rcpt "$to" \
     --upload-file "$message"
   rm -f "$message"
+}
+
+send_recovery_pack_email() {
+  local archive="$1" dry="${2:-0}"
+  [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || return 0
+  send_email_with_attachment "$archive" \
+    "domum-core recovery pack $(basename "$archive")" \
+    "Encrypted (AGE) recovery pack attached: $(basename "$archive")" "$dry"
+}
+
+# Email the most recent recovery pack on record.
+recovery_pack_send_latest() {
+  local dry="${1:-0}" state_file
+  [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || die "Recovery email disabled (set ENABLE_RECOVERY_EMAIL=1)."
+  state_file="$(recovery_pack_state_file)"
+  [[ -f "$state_file" ]] || die "No recovery pack recorded — run: sudo domum-core recovery-pack create"
+  unset ARCHIVE_PATH
+  # shellcheck disable=SC1090
+  source "$state_file"
+  [[ -f "${ARCHIVE_PATH:-}" ]] || die "Recovery pack archive missing: ${ARCHIVE_PATH:-}"
+  case "$ARCHIVE_PATH" in
+    *.age) : ;;  # encrypted — safe to send
+    *) die "Refusing to email a non-encrypted artifact: $ARCHIVE_PATH" ;;
+  esac
+  send_recovery_pack_email "$ARCHIVE_PATH" "$dry" \
+    || die "Recovery-pack email failed."
+  (( dry == 1 )) || log "Recovery pack emailed: $(basename "$ARCHIVE_PATH")"
+}
+
+# Send a tiny AGE-encrypted test attachment to validate SMTP end-to-end.
+recovery_pack_email_test() {
+  [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || die "Recovery email disabled (set ENABLE_RECOVERY_EMAIL=1)."
+  [[ -f "$RECOVERY_PACK_AGE_PUBKEY_FILE" ]] || die "Missing AGE public key: $RECOVERY_PACK_AGE_PUBKEY_FILE"
+  cmd_exists age || die "age not installed (apt-get install -y age)."
+  local plain enc recipient
+  recipient="$(awk '/age1/ {for(i=1;i<=NF;i++) if($i ~ /^age1/){print $i; exit}}' "$RECOVERY_PACK_AGE_PUBKEY_FILE")"
+  [[ -n "$recipient" ]] || die "Could not parse age recipient from $RECOVERY_PACK_AGE_PUBKEY_FILE"
+  plain="$(mktemp)"; enc="$(mktemp /tmp/domum-email-test.XXXXXX.age)"
+  printf 'domum-core email test at %s\n' "$(date -Iseconds)" > "$plain"
+  age -r "$recipient" -o "$enc" "$plain"
+  rm -f "$plain"
+  send_email_with_attachment "$enc" \
+    "domum-core recovery email test" \
+    "If you can decrypt the attached .age file with your offline key, recovery email works." 0 \
+    && log "Test email sent to ${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}." || warn "Test email failed."
+  rm -f "$enc"
 }
 
 recovery_pack_create() {
@@ -973,7 +1148,13 @@ recovery_pack_cmd() {
       ;;
     status)  recovery_pack_status ;;
     inspect) recovery_pack_inspect ;;
-    *) die "Usage: domum-core recovery-pack {create [--dry-run] [--no-email]|status|inspect}" ;;
+    send-latest)
+      local dry=0
+      [[ "${1:-}" == "--dry-run" ]] && dry=1
+      recovery_pack_send_latest "$dry"
+      ;;
+    email-test) recovery_pack_email_test ;;
+    *) die "Usage: domum-core recovery-pack {create [--dry-run] [--no-email]|status|inspect|send-latest [--dry-run]|email-test}" ;;
   esac
 }
 
@@ -1246,6 +1427,128 @@ pi_temp_check() {
   fi
 }
 
+# tcp_probe <host> <port> — true if a TCP connection opens within ~2s.
+tcp_probe() {
+  local host="$1" port="$2"
+  timeout 2 bash -c "echo > /dev/tcp/${host}/${port}" >/dev/null 2>&1
+}
+
+# mqtt_discovery_enabled — best-effort: HA default discovery is on unless the
+# MQTT integration is explicitly configured with discovery: false.
+mqtt_discovery_enabled() {
+  local ha_cfg
+  ha_cfg="$(ha_config_dir)/configuration.yaml"
+  [[ -f "$ha_cfg" ]] || return 0
+  ! grep -Eq '^\s*discovery:\s*false' "$ha_cfg"
+}
+
+# ha_dependency_check — validates Home Assistant and its automation dependency
+# chain. Populates the shared checkup accumulators. Used by checkup and by the
+# read-only `homeassistant audit`.
+ha_dependency_check() {
+  [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] || return 0
+
+  # Core: HA container + HTTP.
+  if service_running home-assistant; then
+    checkup_add healthy "Home Assistant container running."
+  else
+    checkup_add critical "Home Assistant is enabled but not running."
+  fi
+  if cmd_exists curl && curl -fsS --max-time 5 http://127.0.0.1:8123 >/dev/null 2>&1; then
+    checkup_add healthy "Home Assistant HTTP :8123 responding."
+  else
+    checkup_add warning "Home Assistant HTTP :8123 not responding locally."
+  fi
+
+  # MQTT broker + discovery.
+  if [[ "${ENABLE_MQTT:-0}" == "1" ]]; then
+    if tcp_probe 127.0.0.1 1883; then checkup_add healthy "MQTT broker reachable (HA dependency)."
+    else checkup_add critical "MQTT broker unreachable — HA discovery/devices will break."; fi
+    if mqtt_discovery_enabled; then checkup_add healthy "MQTT discovery enabled."
+    else checkup_add warning "MQTT discovery appears disabled in HA configuration.yaml."; fi
+  fi
+
+  # Automation integrations: container health gates HA functionality.
+  local dep
+  for dep in zigbee2mqtt:ENABLE_ZIGBEE2MQTT zwave-js-ui:ENABLE_ZWAVE \
+             esphome:ENABLE_ESP_HOME nodered:ENABLE_NODERED; do
+    local name="${dep%%:*}" ev="${dep##*:}"
+    [[ "${!ev:-0}" == "1" ]] || continue
+    if service_running "$name"; then checkup_add healthy "$name healthy (HA dependency)."
+    else checkup_add critical "$name is enabled but not running (HA dependency)."; fi
+  done
+
+  # MariaDB + recorder.
+  if [[ "${ENABLE_MARIADB:-0}" == "1" ]]; then
+    if service_running mariadb; then checkup_add healthy "MariaDB running (HA recorder backend)."
+    else checkup_add critical "MariaDB not running — HA recorder history unavailable."; fi
+  fi
+
+  # Music Assistant.
+  if [[ "${ENABLE_MA:-0}" == "1" ]]; then
+    if service_running music-assistant; then checkup_add healthy "Music Assistant running."
+    else checkup_add warning "Music Assistant enabled but not running."; fi
+  fi
+}
+
+# homeassistant_audit — READ-ONLY report of HA + its dependencies. Never starts,
+# stops, or modifies anything.
+homeassistant_audit() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] || die "Home Assistant is not enabled (ENABLE_HOME_ASSISTANT=0)."
+
+  CHECKUP_CRITICAL=(); CHECKUP_WARNINGS=(); CHECKUP_HEALTHY=(); CHECKUP_ACTIONS=()
+  ha_dependency_check
+
+  echo "domum-core — Home Assistant audit (read-only)"
+  echo
+  echo "Automation dependencies (enabled):"
+  local name enable_var _cat _class _bvar _rel _probe
+  while IFS='|' read -r name enable_var _cat _class _bvar _rel _probe; do
+    [[ "$_cat" == "automation" ]] || continue
+    [[ "${!enable_var:-0}" == "1" ]] || continue
+    if service_running "$name"; then
+      printf '  [ok]   %s\n' "$name"
+    else
+      printf '  [DOWN] %s\n' "$name"
+    fi
+  done < <(service_catalog)
+
+  echo
+  echo "Missing / not-enabled automation integrations:"
+  local any_missing=0
+  while IFS='|' read -r name enable_var _cat _class _bvar _rel _probe; do
+    [[ "$_cat" == "automation" ]] || continue
+    [[ "${!enable_var:-0}" == "1" ]] && continue
+    printf '  [off]  %s (%s=0)\n' "$name" "$enable_var"; any_missing=1
+  done < <(service_catalog)
+  (( any_missing == 1 )) || echo "  (none — all automation services enabled)"
+
+  echo
+  echo "Health findings:"
+  (( ${#CHECKUP_CRITICAL[@]} )) && printf '  [!] %s\n' "${CHECKUP_CRITICAL[@]}"
+  (( ${#CHECKUP_WARNINGS[@]} )) && printf '  [~] %s\n' "${CHECKUP_WARNINGS[@]}"
+  (( ${#CHECKUP_HEALTHY[@]} ))  && printf '  [ok] %s\n' "${CHECKUP_HEALTHY[@]}"
+
+  echo
+  echo "Backup status (HA-critical):"
+  local d
+  for d in homeassistant mariadb; do
+    if find "$STATE_ROOT/service-backups/$d" -type f 2>/dev/null | grep -q .; then
+      local latest
+      latest="$(find "$STATE_ROOT/service-backups/$d" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)"
+      printf '  [ok]   %s — latest: %s\n' "$d" "${latest:-unknown}"
+    else
+      printf '  [none] %s — no service backup yet\n' "$d"
+    fi
+  done
+  echo
+  echo "(read-only — to act: sudo domum-core backups run / sudo domum-core checkup)"
+  (( ${#CHECKUP_CRITICAL[@]} == 0 ))
+}
+
 run_checkup() {
   load_cfg
   export_env_for_compose
@@ -1314,12 +1617,15 @@ run_checkup() {
     fi
   fi
   if [[ "${ENABLE_MQTT:-0}" == "1" ]] && cmd_exists bash; then
-    if (echo > /dev/tcp/127.0.0.1/1883) >/dev/null 2>&1; then
+    if tcp_probe 127.0.0.1 1883; then
       checkup_add healthy "MQTT port 1883 is listening."
     else
       checkup_add warning "MQTT port 1883 not reachable on localhost."
     fi
   fi
+
+  # --- Home Assistant dependency chain (HA-first) ---
+  ha_dependency_check
 
   # --- disk usage ---
   local path pcent
@@ -1688,15 +1994,19 @@ Health:
   domum-core checkup [--json|--quiet]
   domum-core doctor
 
-Backups:
-  domum-core backups run [--dry-run]
-  domum-core backups verify | snapshots | prune [--dry-run]
-  domum-core backups init <target>
-  domum-core actual backup [--dry-run] | restore-plan
+Home Assistant:
+  domum-core homeassistant audit          read-only HA dependency report
   domum-core homeassistant backup [--dry-run] | restore-plan
+
+Backups (unified — driven by BACKUP_<SERVICE> flags):
+  domum-core backups run [--dry-run]
+  domum-core backups verify | snapshots | history | prune [--dry-run]
+  domum-core backups init <target>        e.g. init hetzner
+  domum-core actual backup [--dry-run] | restore-plan
 
 Recovery & updates:
   domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
+  domum-core recovery-pack send-latest [--dry-run] | email-test
   domum-core updates check | apply --class A|B|C|D [--dry-run] | history
 
 Maintenance:
@@ -1731,7 +2041,8 @@ main() {
       case "${1:-}" in
         backup) shift; [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1; homeassistant_backup ;;
         restore-plan) homeassistant_restore_plan ;;
-        *) die "Usage: domum-core homeassistant {backup [--dry-run]|restore-plan}" ;;
+        audit) homeassistant_audit ;;
+        *) die "Usage: domum-core homeassistant {backup [--dry-run]|restore-plan|audit}" ;;
       esac
       ;;
     recovery-pack) recovery_pack_cmd "$@" ;;

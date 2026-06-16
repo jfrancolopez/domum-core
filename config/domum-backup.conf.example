@@ -72,6 +72,24 @@ BACKUP_TARGET_HETZNER_SFTP_PORT="23"
 # BACKUP_TARGET_CLOUD_RETENTION="weekly"
 
 # ============================================================
+# SECTION: which services `domum-core backups run` backs up
+# ============================================================
+# The unified backup engine (domum-core backups run) takes an app-consistent
+# service-level snapshot of each ENABLED service whose flag below is 1, then
+# hands everything to restic. Flags for services you do not run are ignored.
+BACKUP_HOMEASSISTANT=1
+BACKUP_MARIADB=1
+BACKUP_ACTUAL=1
+BACKUP_VAULTWARDEN=1
+BACKUP_OBSIDIAN=1
+BACKUP_ZIGBEE2MQTT=1
+BACKUP_ZWAVE=1
+BACKUP_NODERED=1
+BACKUP_MQTT=1
+BACKUP_ESPHOME=1
+BACKUP_ADGUARD=1
+
+# ============================================================
 # SECTION: per-service backup tuning
 # ============================================================
 # Actual Budget: optional short `docker pause` around the tar for a consistent
@@ -89,15 +107,25 @@ RECOVERY_PACK_AGE_PUBKEY_FILE="/etc/domum-core/secrets/recovery-age.pub"
 RECOVERY_PACK_DEST="/var/lib/domum-core/recovery-pack"
 RECOVERY_PACK_REMINDER_DAYS=30
 
-# Optional SMTP delivery of the .age file. DISABLED by default. Only the
-# encrypted pack is ever emailed.
-RECOVERY_PACK_EMAIL_ENABLED=0
-RECOVERY_PACK_EMAIL_TO=""
-RECOVERY_PACK_EMAIL_FROM=""
-RECOVERY_PACK_SMTP_HOST=""
-RECOVERY_PACK_SMTP_PORT="465"
-RECOVERY_PACK_SMTP_USERNAME_FILE="/etc/domum-core/secrets/recovery_pack_smtp_username"
-RECOVERY_PACK_SMTP_PASSWORD_FILE="/etc/domum-core/secrets/recovery_pack_smtp_password"
+# Optional email delivery of the .age file. DISABLED by default. Only the
+# AGE-encrypted pack is ever emailed — never plaintext.
+#
+# Simple Gmail setup (recommended): create a Google "App Password", store it in
+# GMAIL_APP_PASSWORD_FILE (0600, root), and set the four ENABLE/EMAIL keys. The
+# CLI defaults host to smtp.gmail.com:465 and uses RECOVERY_EMAIL_FROM as the
+# SMTP username automatically.
+ENABLE_RECOVERY_EMAIL=0
+RECOVERY_EMAIL_PROVIDER="gmail"
+RECOVERY_EMAIL_TO=""
+RECOVERY_EMAIL_FROM=""
+GMAIL_APP_PASSWORD_FILE="/etc/domum-core/secrets/gmail-app-password"
+#
+# Advanced / non-Gmail overrides (the friendly keys above map onto these):
+# RECOVERY_PACK_EMAIL_ENABLED=0
+# RECOVERY_PACK_SMTP_HOST=""
+# RECOVERY_PACK_SMTP_PORT="465"
+# RECOVERY_PACK_SMTP_USERNAME_FILE="/etc/domum-core/secrets/recovery_pack_smtp_username"
+# RECOVERY_PACK_SMTP_PASSWORD_FILE="/etc/domum-core/secrets/recovery_pack_smtp_password"
 
 # ============================================================
 # SECTION: update classes (used by `domum-core updates`)
