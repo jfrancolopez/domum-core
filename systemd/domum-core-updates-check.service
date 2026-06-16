@@ -1,0 +1,13 @@
+[Unit]
+Description=domum-core: check container update candidates
+Documentation=file:///opt/domum-core/docs/UPDATES.md
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=/usr/local/bin/domum-core
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=/usr/local/bin/domum-core updates check
+TimeoutStartSec=1h

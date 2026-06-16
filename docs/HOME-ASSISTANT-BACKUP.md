@@ -44,5 +44,5 @@ the current one aside), reloads the MariaDB dump, then starts HA. Verify at
 
 ```bash
 sudo domum-core schedule install-maintenance
-sudo systemctl enable --now domum-core-homeassistant-backup.timer  # daily 02:10
+sudo systemctl enable --now domum-core-backups.timer
 ```

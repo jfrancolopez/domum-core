@@ -135,3 +135,17 @@ GMAIL_APP_PASSWORD_FILE="/etc/domum-core/secrets/gmail-app-password"
 # UPDATE_CLASS_A="traefik adguard-home tailscale"
 # UPDATE_CLASS_B="home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome"
 # UPDATE_CLASS_C="actual-budget music-assistant vaultwarden obsidian-sync"
+
+AUTO_UPDATE_CLASS_A=1
+AUTO_UPDATE_CLASS_B=0
+AUTO_UPDATE_CLASS_C=0
+UPDATE_DELAY_CLASS_A_HOURS=24
+UPDATE_DELAY_CLASS_B_HOURS=168
+UPDATE_DELAY_CLASS_C_HOURS=72
+
+# ============================================================
+# SECTION: host OS security patches (Class D)
+# ============================================================
+ENABLE_SECURITY_PATCHES=1
+ENABLE_AUTOREMOVE_OLD_KERNELS=0
+SECURITY_PATCH_REBOOT_POLICY="manual"

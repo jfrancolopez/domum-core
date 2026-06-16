@@ -59,7 +59,7 @@ under `/var/lib/domum-core/service-backups/volumes/`, and the service backup
 staging dirs. Re-import named volumes:
 
 ```bash
-for v in nodered-data portainer-data uptime-kuma-data traefik-letsencrypt; do
+for v in nodered-data uptime-kuma-data traefik-letsencrypt; do
   docker volume create "$v"
   docker run --rm -v "$v":/to -v /var/lib/domum-core/service-backups/volumes:/from \
     alpine sh -c "cd /to && tar -xzf /from/$v.tar.gz"

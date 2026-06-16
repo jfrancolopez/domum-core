@@ -44,9 +44,13 @@ All commands run as root (`sudo`).
 | `domum-core recovery-pack create [--dry-run] [--no-email]` | Build AGE-encrypted DR pack |
 | `domum-core recovery-pack status` | Age/size/sha of the last pack |
 | `domum-core recovery-pack inspect` | How to list the pack's contents |
+| `domum-core recovery-pack send-latest [--dry-run]` | Email the latest encrypted pack |
 | `domum-core updates check` | Report images with newer digests + apt count (read-only) |
-| `domum-core updates apply --class A\|B\|C\|D [--dry-run]` | Update one class (B/C need a fresh backup) |
+| `domum-core updates candidates` | Show first-seen age and delay-window readiness |
+| `domum-core updates apply --class A\|B\|C [--dry-run] [--force]` | Update one class (B/C need a fresh backup) |
 | `domum-core updates history` | Update log |
+| `domum-core os-updates check` | Show pending OS security/general updates |
+| `domum-core os-updates security-apply [--dry-run]` | Apply security patches only; never reboot |
 
 ## Maintenance
 
@@ -54,14 +58,14 @@ All commands run as root (`sudo`).
 |---|---|
 | `domum-core cleanup images [--dry-run]` | Prune dangling, unused images (dry-run default) |
 | `domum-core schedule install` | Night-profile timers |
-| `domum-core schedule install-maintenance` | Install (not enable) the 7 maintenance timers |
+| `domum-core schedule install-maintenance` | Install (not enable) maintenance timers |
 
 ## Update classes
 
-- **A infra:** traefik, adguard-home, uptime-kuma, portainer, tailscale
+- **A infra:** traefik, adguard-home, uptime-kuma, tailscale
 - **B HA-critical:** home-assistant, mariadb, mqtt, zigbee2mqtt, zwave-js-ui, nodered, esphome
-- **C personal:** actual-budget, music-assistant, jellyfin
-- **D host OS:** apt packages
+- **C personal:** actual-budget, music-assistant, vaultwarden, obsidian-sync
+- **D host OS:** security patches via `os-updates`
 
 Class B/C are stateful — `updates apply` refuses without a backup newer than
 `BACKUP_MAX_AGE_HOURS` (default 48h) unless you pass `--force`.
@@ -76,5 +80,7 @@ sudo domum-core actual backup --dry-run
 sudo domum-core homeassistant backup --dry-run
 sudo domum-core recovery-pack create --dry-run
 sudo domum-core updates check
+sudo domum-core updates candidates
+sudo domum-core os-updates check
 sudo domum-core cleanup images --dry-run
 ```

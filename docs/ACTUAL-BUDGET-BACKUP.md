@@ -42,5 +42,5 @@ restarts. If anything is wrong, restore the `.bak` dir and start again.
 
 ```bash
 sudo domum-core schedule install-maintenance
-sudo systemctl enable --now domum-core-actual-backup.timer   # daily 02:00
+sudo systemctl enable --now domum-core-backups.timer
 ```

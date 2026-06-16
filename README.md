@@ -10,8 +10,10 @@ Curl command:
 
 - Installs Docker if missing
 - Clones or updates the repository
-- Initializes the host
-- Applies the desired state
+- Installs the `domum-core` CLI
+
+It does **not** run `init` or `apply` automatically on re-install. Review config
+and run those explicitly.
 
 ---
 
@@ -62,6 +64,18 @@ Required Cloudflare permissions:
 
 
 Re-running the same command updates everything.
+
+Useful docs:
+
+- `docs/CONFIGURE.md`
+- `docs/SETUP-BACKUPS.md`
+- `docs/SETUP-HETZNER-BACKUP.md`
+- `docs/RECOVERY-PACK-EMAIL.md`
+- `docs/VAULTWARDEN.md`
+- `docs/OBSIDIAN-SYNC.md`
+- `docs/SECURITY-PATCHES.md`
+- `docs/ADGUARD-TAILSCALE-DNS.md`
+- `docs/MIGRATION-REMOVED-SERVICES.md`
 
 ---
 
@@ -136,7 +150,9 @@ Certificates are automatically generated for:
 
     ha.ladomum.com
     status.ladomum.com
-    portainer.ladomum.com
+    actual.ladomum.com
+    vault.ladomum.com      # optional
+    obsidian.ladomum.com   # optional
 
 ---
 
@@ -146,7 +162,7 @@ Create local A records:
 
     ha.ladomum.com -> 192.168.x.x
     status.ladomum.com -> 192.168.x.x
-    portainer.ladomum.com -> 192.168.x.x
+    actual.ladomum.com -> 192.168.x.x
 
 If wildcard supported:
 
@@ -178,5 +194,3 @@ Now internal names resolve both locally and remotely.
 - Use git for all service changes.
 - Re-run curl anytime to converge state.
 - See `docs/CLI-CHEATSHEET.md` for the full `domum-core` command surface.
-
-

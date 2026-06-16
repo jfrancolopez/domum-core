@@ -1,6 +1,6 @@
 [Unit]
-Description=domum-core: daily Actual Budget backup
-Documentation=file:///opt/domum-core/docs/CLI-CHEATSHEET.md
+Description=domum-core: unified service + restic backup
+Documentation=file:///opt/domum-core/docs/SETUP-BACKUPS.md
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service
@@ -11,5 +11,5 @@ Type=oneshot
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
-ExecStart=/usr/local/bin/domum-core actual backup
+ExecStart=/usr/local/bin/domum-core backups run
 TimeoutStartSec=6h

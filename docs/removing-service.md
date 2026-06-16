@@ -1,55 +1,35 @@
 # Removing a Service
 
+Removal is intentionally conservative: stop managing the service first, then
+delete data only after you confirm it is no longer needed.
 
-## Step 1 — Disable the Toggle
+## 1. Disable the Toggle
 
-Edit:
+Set the service flag to `0` in `config/domum.conf`:
 
-    /opt/domum-core/domum.conf
+```bash
+ENABLE_EXAMPLE_SERVICE=0
+sudo domum-core apply
+```
 
-Set the service to 0:
+`apply` uses compose with `--remove-orphans`, so disabled containers are stopped
+without deleting bind mounts or volumes.
 
-    ENABLE_FRIGATE=0
+## 2. Remove Catalog and Compose References
 
----
+For repo-level removals, delete the compose fragment and remove the row from
+`service_catalog()` in `bin/domum-core`. Also remove any `BACKUP_<SERVICE>` flag
+and service-specific docs.
 
-## Step 2 — Converge State
+## 3. Clean Data Manually
 
-Run:
+Only after a verified backup and a deliberate decision, remove old bind mounts
+or docker volumes by hand.
 
-    curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+```bash
+docker volume ls
+docker volume rm <volume-name>
+sudo rm -rf /opt/domum-core/compose/<category>/<service-name>
+```
 
-Docker Compose will:
-
-- Stop the container
-- Remove orphaned containers
-- Leave persistent volumes intact
-
----
-
-## Step 3 — Optional: Remove Data
-
-If you want to delete stored data:
-
-    sudo rm -rf /opt/domum-core/data/frigate
-
-Only do this if you are sure you do not need the data.
-
----
-
-## Step 4 — Optional: Remove Compose Fragment
-
-Delete the compose fragment from the repo:
-
-    compose/automation/frigate.yml
-
-Remove the toggle logic from bin/domum if permanently removing support.
-
-Commit → Push → Run curl again.
-
----
-
-# Clean Removal Lifecycle
-
-Disable → Curl → Verify → Remove Data (optional) → Done.
-
+Do not automate data deletion in `apply` or `install.sh`.

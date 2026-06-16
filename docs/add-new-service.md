@@ -1,118 +1,46 @@
 # Adding a New Service
 
+New services should be added through the service catalog so compose, status,
+updates, and backups share one source of truth.
 
-## Step 1 — Create a Compose Fragment
+## 1. Create a Compose Fragment
 
-Create a new compose file inside the appropriate category:
+Create a focused compose file:
 
-    compose/<category>/<service-name>.yml
-
-Example:
-
-    compose/automation/frigate.yml
-
-Keep it focused. Do not redefine global networks or shared configuration already defined in compose/base.yml.
-
-Example skeleton:
-
-```yaml
-services:
-  frigate:
-    image: ghcr.io/blakeblackshear/frigate:stable
-    container_name: frigate
-    restart: unless-stopped
-    networks:
-      - domum-proxy
-      - domum-internal
-    volumes:
-      - ${DOMUM_DIR}/data/frigate:/config
+```text
+compose/<category>/<service-name>.yml
 ```
 
+Use the existing fragments as examples and prefer bind mounts under
+`/opt/domum-core/compose/<category>/<service-name>/` for persistent state.
 
----
+## 2. Add Configuration Defaults
 
-## Step 2 — Add a Toggle
+Add an `ENABLE_<SERVICE>` toggle to `config/domum.conf`. If the service has
+persistent data, add a `BACKUP_<SERVICE>` flag to
+`config/domum-backup.conf.example`.
 
-Edit your host config:
+## 3. Register in the Catalog
 
-    /etc/domum/domum.conf
+Add one row to `service_catalog()` in `bin/domum-core`:
 
-Add:
+```text
+logical-name|ENABLE_VAR|category|class|BACKUP_VAR|compose/path.yml|host:port
+```
 
-    ENABLE_FRIGATE=1
+Use update class B for Home Assistant critical dependencies, C for supporting
+apps, and A for low-risk infrastructure.
 
-If optional by default, keep it disabled in repo config:
+## 4. Add Backup Coverage
 
-    ENABLE_FRIGATE=0
+If the service uses a simple bind mount, add it to `service_backup_source_dir()`
+so `domum-core backups run` can tar it before restic runs.
 
----
-
-## Step 3 — Register the Service in bin/domum
-
-Inside compose_files_for_enabled_services(), add:
+## 5. Validate
 
 ```bash
-if [[ "${ENABLE_FRIGATE:-0}" == "1" ]]; then
-  files+=("$DOMUM_DIR/compose/automation/frigate.yml")
-fi
+bash -n bin/domum-core
+sudo domum-core configure --validate
+sudo domum-core backups run --dry-run
+sudo domum-core apply
 ```
-
-Ensure the path matches exactly.
-
----
-
-## Step 4 — Optional: Add Profiles
-
-If the service should only run at night or under a specific profile:
-
-```yaml
-profiles:
-  - night
-```
-
-Enable the profile in domum.conf:
-
-    ENABLE_NIGHT_PROFILE=1
-
----
-
-## Step 5 — Apply Changes
-
-Run:
-
-    curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
-
-The system will:
-
-- Pull latest repo
-- Detect toggle
-- Start container
-- Remove orphaned containers if necessary
-
----
-
-## Step 6 — Expose via Traefik (Optional)
-
-If the service needs a public hostname:
-
-1. Add Traefik labels in the compose file
-2. Create LAN DNS record in UniFi
-3. Configure Tailscale split DNS if remote access is required
-
----
-
-# Best Practices
-
-- One service per compose fragment
-- No hardcoded IPs
-- Use ${DOMUM_DIR}/data/<service> for storage
-- Use existing Docker networks
-- Keep secrets in /etc/domum-core/secrets
-- Never edit files directly in /opt/domum-core
-
----
-
-# Service Lifecycle
-
-Add service → Add toggle → Commit → Push → Run curl → Done.
-

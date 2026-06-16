@@ -1,0 +1,12 @@
+[Unit]
+Description=domum-core: apply OS security patches only
+Documentation=file:///opt/domum-core/docs/SECURITY-PATCHES.md
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/usr/local/bin/domum-core
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=/usr/local/bin/domum-core os-updates security-apply
+TimeoutStartSec=2h

@@ -17,11 +17,11 @@ install.
 - `/var/lib/domum-core/service-backups/` — so the Actual/HA/MariaDB artifacts
   ride along
 - `/var/lib/domum-core/recovery-pack/` — the encrypted recovery packs
-- **named-volume exports** — Node-RED, Portainer, Uptime-Kuma, Traefik
+- **named-volume exports** — Node-RED, Uptime-Kuma, Traefik
   letsencrypt are tarred out of their docker volumes into staging first
 
-**Excluded:** `compose/media`, Frigate media (`/mnt/domum/frigate`), DB WAL/SHM
-files, TTS caches. (`BACKUP_EXCLUDES`.)
+**Excluded:** DB WAL/SHM files, TTS caches, and other disposable paths
+configured in `BACKUP_EXCLUDES`.
 
 ## 1. Install restic
 
@@ -61,7 +61,8 @@ ssh-keyscan -p 23 uXXXXXX.your-storagebox.de \
   | sudo tee /etc/domum-core/secrets/hetzner_storagebox_known_hosts >/dev/null
 ```
 
-Set `BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:domum-core"`.
+Set `BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"`.
+See `docs/SETUP-HETZNER-BACKUP.md` for the full Hetzner setup.
 
 ## 5. Enable + initialize
 
@@ -84,9 +85,7 @@ sudo domum-core backups snapshots
 
 ```bash
 sudo domum-core schedule install-maintenance
-sudo systemctl enable --now domum-core-actual-backup.timer
-sudo systemctl enable --now domum-core-homeassistant-backup.timer
-sudo systemctl enable --now domum-core-backup.timer
+sudo systemctl enable --now domum-core-backups.timer
 sudo systemctl enable --now domum-core-backup-verify.timer
 ```
 

@@ -118,6 +118,9 @@ load_cfg() {
   UPDATE_DELAY_CLASS_A_HOURS="${UPDATE_DELAY_CLASS_A_HOURS:-24}"
   UPDATE_DELAY_CLASS_B_HOURS="${UPDATE_DELAY_CLASS_B_HOURS:-168}"
   UPDATE_DELAY_CLASS_C_HOURS="${UPDATE_DELAY_CLASS_C_HOURS:-72}"
+  ENABLE_SECURITY_PATCHES="${ENABLE_SECURITY_PATCHES:-1}"
+  ENABLE_AUTOREMOVE_OLD_KERNELS="${ENABLE_AUTOREMOVE_OLD_KERNELS:-0}"
+  SECURITY_PATCH_REBOOT_POLICY="${SECURITY_PATCH_REBOOT_POLICY:-manual}"
 }
 
 ensure_state_dirs() {
@@ -130,6 +133,7 @@ ensure_state_dirs() {
   install -d -m 0750 "$STATE_ROOT/service-backups/volumes"
   install -d -m 0750 "$STATE_ROOT/recovery-pack"
   install -d -m 0750 "$STATE_ROOT/update-history"
+  install -d -m 0750 "$STATE_ROOT/update-candidates"
   install -d -m 0750 "$STATE_ROOT/rollback"
   install -d -m 0750 "$LOG_DIR"
 }
@@ -989,10 +993,13 @@ recovery_pack_email_test() {
   printf 'domum-core email test at %s\n' "$(date -Iseconds)" > "$plain"
   age -r "$recipient" -o "$enc" "$plain"
   rm -f "$plain"
-  send_email_with_attachment "$enc" \
+  if send_email_with_attachment "$enc" \
     "domum-core recovery email test" \
-    "If you can decrypt the attached .age file with your offline key, recovery email works." 0 \
-    && log "Test email sent to ${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}." || warn "Test email failed."
+    "If you can decrypt the attached .age file with your offline key, recovery email works." 0; then
+    log "Test email sent to ${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}."
+  else
+    warn "Test email failed."
+  fi
   rm -f "$enc"
 }
 
@@ -1184,6 +1191,7 @@ update_class_of() {
 updates_check() {
   load_cfg
   export_env_for_compose
+  ensure_state_dirs
   log "Checking for newer container images (read-only)..."
   printf '%-16s %-5s %-9s %s\n' "SERVICE" "CLASS" "UPDATE?" "RUNNING IMAGE"
   local svc cid running_digest image_ref
@@ -1196,14 +1204,18 @@ updates_check() {
     image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
     running_digest="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
     # Read-only pull to compare digests.
-    local newest update="no"
+    local newest class update="no"
+    class="$(update_class_of "$svc")"
     if docker pull --quiet "$image_ref" >/dev/null 2>&1; then
       newest="$(docker image inspect "$image_ref" --format '{{.Id}}' 2>/dev/null || true)"
-      [[ -n "$newest" && "$newest" != "$running_digest" ]] && update="YES"
+      if [[ -n "$newest" && "$newest" != "$running_digest" ]]; then
+        update="YES"
+        record_update_candidate "$svc" "$class" "$image_ref" "$running_digest" "$newest"
+      fi
     else
       update="?"
     fi
-    printf '%-16s %-5s %-9s %s\n' "$svc" "$(update_class_of "$svc")" "$update" "$image_ref"
+    printf '%-16s %-5s %-9s %s\n' "$svc" "$class" "$update" "$image_ref"
   done < <(enabled_services)
 
   echo
@@ -1213,10 +1225,82 @@ updates_check() {
     echo "Host (Class D): ${upg} apt package(s) upgradable."
   fi
   echo
-  echo "To apply: sudo domum-core updates apply --class A|B|C|D [--dry-run]"
+  echo "To inspect delayed candidates: sudo domum-core updates candidates"
+  echo "To apply: sudo domum-core updates apply --class A|B|C [--dry-run] [--force]"
 }
 
 update_history_dir() { echo "$STATE_ROOT/update-history"; }
+update_candidate_dir() { echo "$STATE_ROOT/update-candidates"; }
+
+update_delay_hours_for_class() {
+  case "${1^^}" in
+    A) to_int "${UPDATE_DELAY_CLASS_A_HOURS:-24}" 24 ;;
+    B) to_int "${UPDATE_DELAY_CLASS_B_HOURS:-168}" 168 ;;
+    C) to_int "${UPDATE_DELAY_CLASS_C_HOURS:-72}" 72 ;;
+    *) echo 0 ;;
+  esac
+}
+
+record_update_candidate() {
+  local svc="$1" class="$2" image_ref="$3" running_digest="$4" candidate_digest="$5"
+  local file now old_digest old_first_seen
+  [[ -n "$candidate_digest" && "$candidate_digest" != "$running_digest" ]] || return 0
+  file="$(update_candidate_dir)/${svc}.env"
+  now="$(date +%s)"
+  old_digest=""; old_first_seen=""
+  if [[ -f "$file" ]]; then
+    unset CANDIDATE_DIGEST FIRST_SEEN_TS
+    # shellcheck disable=SC1090
+    source "$file"
+    old_digest="${CANDIDATE_DIGEST:-}"
+    old_first_seen="${FIRST_SEEN_TS:-}"
+  fi
+  [[ "$old_digest" == "$candidate_digest" && -n "$old_first_seen" ]] || old_first_seen="$now"
+  write_env_kv "$file" \
+    SERVICE "$svc" CLASS "$class" IMAGE_REF "$image_ref" \
+    RUNNING_DIGEST "$running_digest" CANDIDATE_DIGEST "$candidate_digest" \
+    FIRST_SEEN_TS "$old_first_seen" LAST_SEEN_TS "$now"
+}
+
+candidate_ready_for_apply() {
+  local svc="$1" class="$2" force="$3" file first_seen now age_h delay_h
+  (( force == 1 )) && return 0
+  file="$(update_candidate_dir)/${svc}.env"
+  [[ -f "$file" ]] || return 1
+  unset FIRST_SEEN_TS
+  # shellcheck disable=SC1090
+  source "$file"
+  first_seen="$(to_int "${FIRST_SEEN_TS:-0}")"
+  now="$(date +%s)"
+  delay_h="$(update_delay_hours_for_class "$class")"
+  age_h=$(( ( now - first_seen ) / 3600 ))
+  (( age_h >= delay_h ))
+}
+
+updates_candidates() {
+  load_cfg
+  ensure_state_dirs
+  local file svc class first age_h delay_h status now any=0
+  now="$(date +%s)"
+  printf '%-16s %-5s %-10s %-10s %s\n' "SERVICE" "CLASS" "AGE_HOURS" "READY?" "CANDIDATE"
+  shopt -s nullglob
+  for file in "$(update_candidate_dir)"/*.env; do
+    any=1
+    unset SERVICE CLASS CANDIDATE_DIGEST FIRST_SEEN_TS IMAGE_REF
+    # shellcheck disable=SC1090
+    source "$file"
+    svc="${SERVICE:-$(basename "$file" .env)}"
+    class="${CLASS:-$(update_class_of "$svc")}"
+    first="$(to_int "${FIRST_SEEN_TS:-0}")"
+    delay_h="$(update_delay_hours_for_class "$class")"
+    age_h=$(( ( now - first ) / 3600 ))
+    status="no"
+    (( age_h >= delay_h )) && status="yes"
+    printf '%-16s %-5s %-10s %-10s %s\n' "$svc" "$class" "$age_h" "$status" "${IMAGE_REF:-${CANDIDATE_DIGEST:-unknown}}"
+  done
+  shopt -u nullglob
+  (( any == 1 )) || echo "(none)"
+}
 
 record_update_history() {
   local class="$1" svc="$2" from="$3" to="$4" result="$5" note="${6:-}"
@@ -1293,6 +1377,10 @@ updates_apply() {
   log "Updating Class $class services: ${targets[*]}"
   for svc in "${targets[@]}"; do
     local cid before after cs
+    if ! candidate_ready_for_apply "$svc" "$class" "$force"; then
+      log "Skipping $svc: update delay window has not elapsed (run 'updates candidates' or use --force)."
+      continue
+    fi
     cs="$(compose_service_for "$svc")"
     cid="$(container_for "$svc" || true)"
     before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
@@ -1324,9 +1412,81 @@ updates_cmd() {
   local sub="${1:-check}"; shift || true
   case "$sub" in
     check)   updates_check ;;
+    candidates) updates_candidates ;;
     apply)   updates_apply "$@" ;;
     history) updates_history ;;
-    *) die "Usage: domum-core updates {check|apply --class A|B|C|D [--dry-run]|history}" ;;
+    *) die "Usage: domum-core updates {check|candidates|apply --class A|B|C|D [--dry-run] [--force]|history}" ;;
+  esac
+}
+
+# ===========================================================================
+#  Section: OS security updates (Class D)
+# ===========================================================================
+
+os_updates_history_dir() { echo "$STATE_ROOT/update-history/os"; }
+
+apt_security_upgrade_simulation() {
+  apt-get -s upgrade 2>/dev/null | awk '/^Inst / && ($0 ~ /Debian-Security|security/)'
+}
+
+os_updates_check() {
+  load_cfg
+  ensure_state_dirs
+  cmd_exists apt-get || die "apt-get not found."
+  local sec gen
+  sec="$(to_int "$(apt_security_upgrade_simulation | wc -l)")"
+  gen="$(to_int "$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ')")"
+  echo "OS updates:"
+  echo "  security: $sec"
+  echo "  general:  $gen"
+  [[ -f /var/run/reboot-required ]] && echo "  reboot:   required" || echo "  reboot:   not currently required"
+}
+
+os_updates_security_apply() {
+  load_cfg
+  ensure_state_dirs
+  [[ "${ENABLE_SECURITY_PATCHES:-1}" == "1" ]] || die "Security patching disabled (ENABLE_SECURITY_PATCHES=0)."
+  local dry=0
+  while (( $# )); do
+    case "$1" in
+      --dry-run) dry=1 ;;
+      *) die "Usage: domum-core os-updates security-apply [--dry-run]" ;;
+    esac
+    shift
+  done
+  export DEBIAN_FRONTEND=noninteractive
+  if (( dry == 1 )); then
+    apt-get -s upgrade
+    return 0
+  fi
+  apt-get update -y
+  if ! cmd_exists unattended-upgrade; then
+    apt-get install -y --no-install-recommends unattended-upgrades
+  fi
+  unattended-upgrade -d
+  install -d -m 0750 "$(os_updates_history_dir)"
+  printf '%s security-apply reboot_required=%s policy=%s\n' \
+    "$(date -Iseconds)" \
+    "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)" \
+    "${SECURITY_PATCH_REBOOT_POLICY:-manual}" \
+    >> "$(os_updates_history_dir)/history.log"
+  [[ -f /var/run/reboot-required ]] && warn "Reboot required; policy is manual, so no reboot was attempted."
+}
+
+os_updates_history() {
+  local logf
+  logf="$(os_updates_history_dir)/history.log"
+  [[ -f "$logf" ]] && cat "$logf" || echo "No OS update history yet."
+}
+
+os_updates_cmd() {
+  need_root
+  local sub="${1:-check}"; shift || true
+  case "$sub" in
+    check) os_updates_check ;;
+    security-apply) os_updates_security_apply "$@" ;;
+    history) os_updates_history ;;
+    *) die "Usage: domum-core os-updates {check|security-apply [--dry-run]|history}" ;;
   esac
 }
 
@@ -1892,7 +2052,7 @@ set_conf_key() {
 # redact <key> <value> — blank out secret-ish values for display.
 redact() {
   case "$1" in
-    *PASSWORD*|*TOKEN*|*SECRET*|*APP_PASSWORD*) echo "******" ;;
+    *PASSWORD*|*TOKEN*|*SECRET*) echo "******" ;;
     *) echo "$2" ;;
   esac
 }
@@ -1943,11 +2103,6 @@ configure_validate() {
     [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || { echo "[!] recovery email on but SMTP host unset"; issues=1; }
     [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
   fi
-  # Backup targets: confirm referenced password files exist + perms.
-  local f
-  for f in "$RECOVERY_PACK_AGE_PUBKEY_FILE"; do
-    [[ -f "$f" ]] || continue
-  done
   if (( issues == 0 )); then echo "[ok] configuration looks valid."; fi
   return "$issues"
 }
@@ -2125,14 +2280,15 @@ schedule_install_maintenance() {
 Units installed but DISABLED. Enable the ones you want with:
 
   sudo systemctl enable --now domum-core-checkup.timer
-  sudo systemctl enable --now domum-core-actual-backup.timer
-  sudo systemctl enable --now domum-core-homeassistant-backup.timer
-  sudo systemctl enable --now domum-core-backup.timer
+  sudo systemctl enable --now domum-core-backups.timer
   sudo systemctl enable --now domum-core-recovery-pack.timer
+  sudo systemctl enable --now domum-core-recovery-email.timer
+  sudo systemctl enable --now domum-core-updates-check.timer
+  sudo systemctl enable --now domum-core-security-patches.timer
   sudo systemctl enable --now domum-core-backup-verify.timer
   sudo systemctl enable --now domum-core-cleanup-report.timer
 
-Review timing first: systemctl cat domum-core-backup.timer
+Review timing first: systemctl cat domum-core-backups.timer
 EOF
 }
 
@@ -2179,7 +2335,8 @@ Backups (unified — driven by BACKUP_<SERVICE> flags):
 Recovery & updates:
   domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
   domum-core recovery-pack send-latest [--dry-run] | email-test
-  domum-core updates check | apply --class A|B|C|D [--dry-run] | history
+  domum-core updates check | candidates | apply --class A|B|C [--dry-run] | history
+  domum-core os-updates check | security-apply [--dry-run] | history
 
 Maintenance:
   domum-core cleanup images [--dry-run]
@@ -2220,6 +2377,7 @@ main() {
       ;;
     recovery-pack) recovery_pack_cmd "$@" ;;
     updates)  updates_cmd "$@" ;;
+    os-updates) os_updates_cmd "$@" ;;
     cleanup)
       case "${1:-}" in
         images) shift; cleanup_images "$@" ;;

@@ -26,7 +26,12 @@ apt-get install -y --no-install-recommends curl ca-certificates git
 echo "[domum] Cloning or updating repo in ${INSTALL_DIR}..."
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
   git -C "${INSTALL_DIR}" fetch --all --prune
-  git -C "${INSTALL_DIR}" reset --hard origin/main
+  if ! git -C "${INSTALL_DIR}" diff --quiet || ! git -C "${INSTALL_DIR}" diff --cached --quiet; then
+    echo "[domum] WARN: local changes detected in ${INSTALL_DIR}; not resetting or pulling."
+    echo "[domum]       Review with: git -C ${INSTALL_DIR} status"
+  else
+    git -C "${INSTALL_DIR}" pull --ff-only
+  fi
 else
   rm -rf "${INSTALL_DIR}"
   git clone "${REPO_URL}" "${INSTALL_DIR}"
@@ -69,10 +74,9 @@ echo "[domum] Done."
 echo "Next:"
 echo "  sudo domum-core init"
 echo "  sudo domum-core apply"
-echo "[domum] Running init + apply..."
-"${BIN_CORE}" init
-"${BIN_CORE}" apply
-
+echo
+echo "[domum] init/apply were NOT run automatically."
+echo "[domum] Run them after reviewing config and any local git drift."
 echo "[domum] Done. Re-run anytime with the same curl command."
 echo "[domum] For backups/recovery/timers, see docs/SETUP-BACKUPS.md and"
 echo "        docs/DISASTER-RECOVERY.md. Install maintenance timers (disabled):"
