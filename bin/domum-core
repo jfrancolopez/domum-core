@@ -369,6 +369,14 @@ export_env_for_compose() {
   export DOMUM_LAN_IP="${DOMUM_LAN_IP:-}"
   export DOMUM_TS_IP="${DOMUM_TS_IP:-}"
 
+  # Optional-service interpolation (safe defaults; compose has its own too).
+  export VAULTWARDEN_DOMAIN="${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}"
+  export VAULTWARDEN_SIGNUPS_ALLOWED="${VAULTWARDEN_SIGNUPS_ALLOWED:-false}"
+  export VAULTWARDEN_INVITATIONS_ALLOWED="${VAULTWARDEN_INVITATIONS_ALLOWED:-false}"
+  export OBSIDIAN_DOMAIN="${OBSIDIAN_DOMAIN:-obsidian.${DOMUM_DOMAIN}}"
+  export OBSIDIAN_COUCHDB_USER="${OBSIDIAN_COUCHDB_USER:-obsidian}"
+  export OBSIDIAN_COUCHDB_PASSWORD="${OBSIDIAN_COUCHDB_PASSWORD:-changeme}"
+
   if [[ -z "${CF_DNS_API_TOKEN:-}" && -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
     CF_DNS_API_TOKEN="$(cat "$SECRETS_DIR/cloudflare_api_token")"
     export CF_DNS_API_TOKEN
@@ -1857,6 +1865,169 @@ doctor_cmd() {
 }
 
 # ===========================================================================
+#  Section: configure wizard
+# ===========================================================================
+
+# set_conf_key <file> <KEY> <value> — comment-preserving in-place upsert. If KEY
+# exists (even commented) it is replaced; otherwise appended. Quotes the value.
+set_conf_key() {
+  local file="$1" key="$2" val="$3" tmp
+  install -d -m 0750 "$(dirname "$file")"
+  [[ -f "$file" ]] || : > "$file"
+  tmp="$(mktemp)"
+  if grep -qE "^[#[:space:]]*${key}=" "$file"; then
+    # Replace the first (active or commented) definition; awk avoids sed quoting pain.
+    awk -v k="$key" -v v="$val" '
+      !done && $0 ~ "^[#[:space:]]*"k"=" { print k"=\""v"\""; done=1; next }
+      { print }
+    ' "$file" > "$tmp"
+  else
+    cat "$file" > "$tmp"
+    printf '%s="%s"\n' "$key" "$val" >> "$tmp"
+  fi
+  cat "$tmp" > "$file"
+  rm -f "$tmp"
+}
+
+# redact <key> <value> — blank out secret-ish values for display.
+redact() {
+  case "$1" in
+    *PASSWORD*|*TOKEN*|*SECRET*|*APP_PASSWORD*) echo "******" ;;
+    *) echo "$2" ;;
+  esac
+}
+
+# ask <prompt> <current> — read a value, defaulting to current on empty input.
+ask() {
+  local prompt="$1" current="$2" reply
+  read -r -p "$prompt [$current]: " reply
+  printf '%s' "${reply:-$current}"
+}
+
+ask_bool() {
+  local prompt="$1" current="$2" reply
+  read -r -p "$prompt (1/0) [$current]: " reply
+  reply="${reply:-$current}"
+  [[ "$reply" == "1" ]] && echo 1 || echo 0
+}
+
+configure_show() {
+  load_cfg
+  echo "domum-core effective configuration (secrets redacted)"
+  echo "  config: $CFG_FILE"
+  echo "  overlay: $BACKUP_CFG_FILE"
+  echo
+  local k
+  for k in DOMUM_DOMAIN DOMUM_EMAIL DOMUM_LAN_IP DOMUM_TS_IP \
+           ENABLE_HOME_ASSISTANT ENABLE_MQTT ENABLE_ZIGBEE2MQTT ENABLE_ZWAVE \
+           ENABLE_ESP_HOME ENABLE_NODERED ENABLE_MA ENABLE_MARIADB \
+           ENABLE_ADGUARD_HOME ENABLE_ACTUAL_BUDGET ENABLE_VAULTWARDEN \
+           ENABLE_OBSIDIAN_SYNC ENABLE_TAILSCALE \
+           BACKUP_MAX_AGE_HOURS RECOVERY_PACK_ENABLED RECOVERY_PACK_EMAIL_ENABLED \
+           RECOVERY_PACK_SMTP_HOST RECOVERY_PACK_SMTP_PASSWORD_FILE \
+           ENABLE_SECURITY_PATCHES SECURITY_PATCH_REBOOT_POLICY \
+           AUTO_UPDATE_CLASS_A AUTO_UPDATE_CLASS_B AUTO_UPDATE_CLASS_C; do
+    printf '  %-32s %s\n' "$k" "$(redact "$k" "${!k:-}")"
+  done
+}
+
+configure_validate() {
+  load_cfg
+  local issues=0
+  [[ -n "${DOMUM_DOMAIN:-}" ]] || { echo "[!] DOMUM_DOMAIN is empty"; issues=1; }
+  [[ -n "${DOMUM_EMAIL:-}" ]]  || { echo "[!] DOMUM_EMAIL is empty"; issues=1; }
+  if [[ "${RECOVERY_PACK_ENABLED:-1}" == "1" && ! -f "$RECOVERY_PACK_AGE_PUBKEY_FILE" ]]; then
+    echo "[~] AGE public key missing: $RECOVERY_PACK_AGE_PUBKEY_FILE (recovery-pack create will fail)"
+  fi
+  if [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]]; then
+    [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || { echo "[!] recovery email on but SMTP host unset"; issues=1; }
+    [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
+  fi
+  # Backup targets: confirm referenced password files exist + perms.
+  local f
+  for f in "$RECOVERY_PACK_AGE_PUBKEY_FILE"; do
+    [[ -f "$f" ]] || continue
+  done
+  if (( issues == 0 )); then echo "[ok] configuration looks valid."; fi
+  return "$issues"
+}
+
+configure_backup_current() {
+  load_cfg
+  local dest ts
+  ts="$(date +%Y%m%d-%H%M%S)"
+  dest="$STATE_ROOT/config-backups/$ts"
+  install -d -m 0750 "$dest"
+  [[ -f "$CFG_FILE" ]] && install -m 0600 "$CFG_FILE" "$dest/"
+  [[ -f "$BACKUP_CFG_FILE" ]] && install -m 0600 "$BACKUP_CFG_FILE" "$dest/"
+  log "Current config backed up to $dest"
+}
+
+configure_write_defaults() {
+  load_cfg
+  [[ -f "$BACKUP_CFG_FILE" ]] && { warn "$BACKUP_CFG_FILE exists; use --backup-current first, then edit by hand."; return 1; }
+  [[ -f "${BACKUP_CFG_FILE}.example" ]] || die "Missing ${BACKUP_CFG_FILE}.example"
+  install -m 0640 "${BACKUP_CFG_FILE}.example" "$BACKUP_CFG_FILE"
+  log "Wrote default overlay to $BACKUP_CFG_FILE from example."
+}
+
+configure_wizard() {
+  load_cfg
+  configure_backup_current
+  echo "=== domum-core configure ==="
+  echo "Press Enter to keep the current value shown in [brackets]."
+  echo
+
+  echo "-- Identity --"
+  set_conf_key "$CFG_FILE" DOMUM_DOMAIN "$(ask 'Base domain' "${DOMUM_DOMAIN:-}")"
+  set_conf_key "$CFG_FILE" DOMUM_EMAIL  "$(ask 'ACME / contact email' "${DOMUM_EMAIL:-}")"
+  set_conf_key "$CFG_FILE" DOMUM_LAN_IP "$(ask 'LAN IP' "${DOMUM_LAN_IP:-}")"
+  set_conf_key "$CFG_FILE" DOMUM_TS_IP  "$(ask 'Tailscale IP' "${DOMUM_TS_IP:-}")"
+
+  echo "-- Services (1=on 0=off) --"
+  local name enable_var _rest
+  while IFS='|' read -r name enable_var _rest; do
+    set_conf_key "$CFG_FILE" "$enable_var" "$(ask_bool "  $name" "${!enable_var:-0}")"
+  done < <(service_catalog)
+
+  echo "-- Backup --"
+  set_conf_key "$CFG_FILE" BACKUP_MAX_AGE_HOURS "$(ask 'Backup freshness gate (hours)' "${BACKUP_MAX_AGE_HOURS:-48}")"
+  echo "  (Restic targets + Hetzner live in $BACKUP_CFG_FILE — edit there; see docs.)"
+
+  echo "-- Recovery --"
+  set_conf_key "$CFG_FILE" RECOVERY_PACK_ENABLED "$(ask_bool '  recovery pack generation' "${RECOVERY_PACK_ENABLED:-1}")"
+  local em; em="$(ask_bool '  email recovery pack' "${RECOVERY_PACK_EMAIL_ENABLED:-0}")"
+  set_conf_key "$BACKUP_CFG_FILE" ENABLE_RECOVERY_EMAIL "$em"
+  if [[ "$em" == "1" ]]; then
+    set_conf_key "$BACKUP_CFG_FILE" RECOVERY_EMAIL_TO   "$(ask '  recovery email to' "${RECOVERY_PACK_EMAIL_TO:-}")"
+    set_conf_key "$BACKUP_CFG_FILE" RECOVERY_EMAIL_FROM "$(ask '  recovery email from (Gmail address)' "${RECOVERY_PACK_EMAIL_FROM:-}")"
+    echo "  NOTE: store the Gmail app password at the GMAIL_APP_PASSWORD_FILE path (0600, root)."
+  fi
+
+  echo "-- Updates --"
+  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_A "$(ask_bool '  auto-update class A (proxy/dns)' "${AUTO_UPDATE_CLASS_A:-1}")"
+  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_B "$(ask_bool '  auto-update class B (HA/automation)' "${AUTO_UPDATE_CLASS_B:-0}")"
+  set_conf_key "$CFG_FILE" AUTO_UPDATE_CLASS_C "$(ask_bool '  auto-update class C (apps)' "${AUTO_UPDATE_CLASS_C:-0}")"
+  set_conf_key "$CFG_FILE" ENABLE_SECURITY_PATCHES "$(ask_bool '  OS security patches' "${ENABLE_SECURITY_PATCHES:-1}")"
+
+  echo
+  log "Configuration written. Validate with: sudo domum-core configure --validate"
+  log "Apply changes with: sudo domum-core apply"
+}
+
+configure_cmd() {
+  need_root
+  case "${1:-}" in
+    ""|wizard)        configure_wizard ;;
+    --show)           configure_show ;;
+    --validate)       configure_validate ;;
+    --write-defaults) configure_write_defaults ;;
+    --backup-current) configure_backup_current ;;
+    *) die "Usage: domum-core configure [--show|--validate|--write-defaults|--backup-current]" ;;
+  esac
+}
+
+# ===========================================================================
 #  Section: schedule (night profile) + maintenance timers
 # ===========================================================================
 
@@ -1984,6 +2155,7 @@ domum-core — home-automation server management CLI
 
 Deployment:
   domum-core init
+  domum-core configure [--show|--validate|--write-defaults|--backup-current]
   domum-core apply
   domum-core update                       git pull (warns on local drift)
   domum-core status [--counts]
@@ -2021,6 +2193,7 @@ main() {
   local cmd="${1:-}"; shift || true
   case "$cmd" in
     init)     init_host "$@" ;;
+    configure) configure_cmd "$@" ;;
     apply)    apply "$@" ;;
     update)   repo_update "$@" ;;
     status)   status "$@" ;;

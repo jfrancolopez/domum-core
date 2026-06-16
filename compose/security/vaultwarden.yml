@@ -1,0 +1,33 @@
+services:
+  vaultwarden:
+    image: docker.io/vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    networks:
+      - domum-data
+      - domum-proxy
+    environment:
+      - TZ=America/New_York
+      # Lock the server down by default: no public sign-ups, no invitations.
+      - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS_ALLOWED:-false}
+      - INVITATIONS_ALLOWED=${VAULTWARDEN_INVITATIONS_ALLOWED:-false}
+      - DOMAIN=https://${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}
+    volumes:
+      - /opt/domum-core/compose/security/vaultwarden/data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}`)
+      - traefik.http.routers.vaultwarden.entrypoints=websecure
+      - traefik.http.routers.vaultwarden.tls=true
+      - traefik.http.routers.vaultwarden.tls.certresolver=cf
+      - traefik.http.routers.vaultwarden.middlewares=forwardedHeaders@file
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
+  domum-data:
+    external: true
