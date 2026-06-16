@@ -58,11 +58,9 @@ $DOMUM_DIR/config \
 $STATE_ROOT/service-backups \
 $STATE_ROOT/recovery-pack}"
   # Named volumes exported (tar) into staging so they ride along in restic.
-  BACKUP_VOLUMES="${BACKUP_VOLUMES:-nodered-data portainer-data uptime-kuma-data traefik-letsencrypt}"
+  BACKUP_VOLUMES="${BACKUP_VOLUMES:-nodered-data uptime-kuma-data traefik-letsencrypt}"
   # Excludes: large disposable / regenerable data.
   BACKUP_EXCLUDES="${BACKUP_EXCLUDES:-\
-$DOMUM_DIR/compose/media \
-/mnt/domum/frigate \
 */tts/* \
 *.db-wal \
 *.db-shm}"

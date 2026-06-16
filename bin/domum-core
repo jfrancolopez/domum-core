@@ -83,10 +83,17 @@ load_cfg() {
   RECOVERY_PACK_SMTP_USERNAME_FILE="${RECOVERY_PACK_SMTP_USERNAME_FILE:-$SECRETS_DIR/recovery_pack_smtp_username}"
   RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}"
 
-  # Update classes — declared here so the user can override in domum.conf.
-  UPDATE_CLASS_A="${UPDATE_CLASS_A:-traefik adguard-home uptime-kuma portainer tailscale}"
-  UPDATE_CLASS_B="${UPDATE_CLASS_B:-home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome}"
-  UPDATE_CLASS_C="${UPDATE_CLASS_C:-actual-budget music-assistant jellyfin}"
+  # Update classes are derived from the service catalog (the single source of
+  # truth). UPDATE_CLASS_A/B/C may still be set in domum.conf to override a
+  # service's class; left unset here on purpose.
+
+  # Per-class delayed-update windows (hours) and auto-apply toggles (Set 4).
+  AUTO_UPDATE_CLASS_A="${AUTO_UPDATE_CLASS_A:-1}"
+  AUTO_UPDATE_CLASS_B="${AUTO_UPDATE_CLASS_B:-0}"
+  AUTO_UPDATE_CLASS_C="${AUTO_UPDATE_CLASS_C:-0}"
+  UPDATE_DELAY_CLASS_A_HOURS="${UPDATE_DELAY_CLASS_A_HOURS:-24}"
+  UPDATE_DELAY_CLASS_B_HOURS="${UPDATE_DELAY_CLASS_B_HOURS:-168}"
+  UPDATE_DELAY_CLASS_C_HOURS="${UPDATE_DELAY_CLASS_C_HOURS:-72}"
 }
 
 ensure_state_dirs() {
@@ -127,6 +134,24 @@ sha256_of_file() {
 }
 
 file_size() { stat -c %s "$1" 2>/dev/null || stat -f %z "$1"; }
+
+# to_int <value> [default] — first integer token of arbitrary command output, or
+# default (0). Strips newlines/junk so the result is always safe inside (( )).
+# Guards against the `grep -c` / `wc -l` "0\n0" trap that throws
+# "syntax error in expression".
+to_int() {
+  local v
+  v="$(printf '%s' "${1:-}" | tr -dc '0-9\n' | head -n1)"
+  printf '%s' "${v:-${2:-0}}"
+}
+
+# count_matches <regex> <file> — count matching lines, always emitting exactly one
+# integer (0 when the file is missing or nothing matches).
+count_matches() {
+  local n
+  n="$(grep -cE "$1" "$2" 2>/dev/null | head -n1 | tr -dc '0-9')"
+  printf '%s' "${n:-0}"
+}
 
 write_env_kv() {
   local path="$1"; shift
@@ -250,62 +275,60 @@ repo_update() {
   log "Repo updated."
 }
 
-compose_files_for_enabled_services() {
-  local files=()
-  files+=("$DOMUM_DIR/compose/base.yml")
-
-  [[ "${ENABLE_TRAEFIK:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/proxy/traefik.yml")
-  [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] && files+=("$DOMUM_DIR/compose/automation/home-assistant.yml")
-  [[ "${ENABLE_MARIADB:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/mariadb.yml")
-  [[ "${ENABLE_GO2RTC:-0}" == "1" ]]         && files+=("$DOMUM_DIR/compose/automation/go2rtc.yml")
-  [[ "${ENABLE_FRIGATE:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/frigate.yml")
-  [[ "${ENABLE_MQTT:-0}" == "1" ]]           && files+=("$DOMUM_DIR/compose/automation/mqtt.yml")
-  [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]    && files+=("$DOMUM_DIR/compose/automation/zigbee2mqtt.yml")
-  [[ "${ENABLE_ZWAVE:-0}" == "1" ]]          && files+=("$DOMUM_DIR/compose/automation/zwave-js-ui.yml")
-  [[ "${ENABLE_NODERED:-0}" == "1" ]]        && files+=("$DOMUM_DIR/compose/automation/nodered.yml")
-  [[ "${ENABLE_ESP_HOME:-0}" == "1" ]]       && files+=("$DOMUM_DIR/compose/automation/esphome.yml")
-  [[ "${ENABLE_MA:-0}" == "1" ]]             && files+=("$DOMUM_DIR/compose/automation/music-assistant.yml")
-  [[ "${ENABLE_UPTIME_KUMA:-0}" == "1" ]]    && files+=("$DOMUM_DIR/compose/monitoring/uptime-kuma.yml")
-  [[ "${ENABLE_PORTAINER:-0}" == "1" ]]      && files+=("$DOMUM_DIR/compose/monitoring/portainer.yml")
-  [[ "${ENABLE_JELLYFIN:-0}" == "1" ]]       && files+=("$DOMUM_DIR/compose/media/jellyfin.yml")
-  [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]   && files+=("$DOMUM_DIR/compose/networking/adguard-home.yml")
-  [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]  && files+=("$DOMUM_DIR/compose/productivity/actual-budget.yml")
-  [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]      && files+=("$DOMUM_DIR/compose/security/tailscale.yml")
-
-  for f in "${files[@]}"; do
-    [[ -f "$f" ]] || die "Missing compose file: $f"
-    echo "-f"
-    echo "$f"
-  done
-}
-
-# Enabled services in (logical-name|enable-var|category) form. The single
-# source of truth for status counts, checkup, and update classing.
+# ---- service catalog: the single source of truth ---------------------------
+#
+# Columns: name|enable_var|category|class|backup_var|compose_rel|http_probe
+#   name        logical (hyphenated) service name
+#   enable_var  domum.conf flag that turns the service on
+#   category    grouping for status counts
+#   class       update risk class (A/B/C); host OS is class D, handled separately
+#   backup_var  BACKUP_<SERVICE> flag consumed by `backups run` (- if none)
+#   compose_rel compose file relative to $DOMUM_DIR (- if it has no own file)
+#   http_probe  host:port for a best-effort local HTTP/TCP health probe (- if none)
+#
+# go2rtc / portainer / jellyfin / frigate were intentionally removed
+# (see docs/MIGRATION-REMOVED-SERVICES.md).
 service_catalog() {
   cat <<'EOF'
-traefik|ENABLE_TRAEFIK|proxy
-home-assistant|ENABLE_HOME_ASSISTANT|automation
-mariadb|ENABLE_MARIADB|automation
-go2rtc|ENABLE_GO2RTC|automation
-frigate|ENABLE_FRIGATE|automation
-mqtt|ENABLE_MQTT|automation
-zigbee2mqtt|ENABLE_ZIGBEE2MQTT|automation
-zwave-js-ui|ENABLE_ZWAVE|automation
-nodered|ENABLE_NODERED|automation
-esphome|ENABLE_ESP_HOME|automation
-music-assistant|ENABLE_MA|automation
-uptime-kuma|ENABLE_UPTIME_KUMA|monitoring
-portainer|ENABLE_PORTAINER|monitoring
-jellyfin|ENABLE_JELLYFIN|media
-adguard-home|ENABLE_ADGUARD_HOME|networking
-actual-budget|ENABLE_ACTUAL_BUDGET|productivity
-tailscale|ENABLE_TAILSCALE|security
+traefik|ENABLE_TRAEFIK|proxy|A|-|compose/proxy/traefik.yml|-
+home-assistant|ENABLE_HOME_ASSISTANT|automation|B|BACKUP_HOMEASSISTANT|compose/automation/home-assistant.yml|127.0.0.1:8123
+mariadb|ENABLE_MARIADB|automation|B|BACKUP_MARIADB|compose/automation/mariadb.yml|-
+mqtt|ENABLE_MQTT|automation|B|BACKUP_MQTT|compose/automation/mqtt.yml|127.0.0.1:1883
+zigbee2mqtt|ENABLE_ZIGBEE2MQTT|automation|B|BACKUP_ZIGBEE2MQTT|compose/automation/zigbee2mqtt.yml|-
+zwave-js-ui|ENABLE_ZWAVE|automation|B|BACKUP_ZWAVE|compose/automation/zwave-js-ui.yml|-
+nodered|ENABLE_NODERED|automation|B|BACKUP_NODERED|compose/automation/nodered.yml|-
+esphome|ENABLE_ESP_HOME|automation|B|BACKUP_ESPHOME|compose/automation/esphome.yml|-
+music-assistant|ENABLE_MA|automation|C|BACKUP_MUSICASSISTANT|compose/automation/music-assistant.yml|-
+uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|A|-|compose/monitoring/uptime-kuma.yml|-
+adguard-home|ENABLE_ADGUARD_HOME|networking|A|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
+actual-budget|ENABLE_ACTUAL_BUDGET|productivity|C|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|127.0.0.1:5006
+vaultwarden|ENABLE_VAULTWARDEN|security|C|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
+obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|C|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
+tailscale|ENABLE_TAILSCALE|security|A|-|compose/security/tailscale.yml|-
 EOF
 }
 
+# catalog_field <name> <column-number> — look up one column for a service.
+catalog_field() {
+  service_catalog | awk -F'|' -v n="$1" -v c="$2" '$1==n {print $c; exit}'
+}
+
+compose_files_for_enabled_services() {
+  echo "-f"; echo "$DOMUM_DIR/compose/base.yml"
+  local name enable_var _cat _class _bvar compose_rel _probe f
+  while IFS='|' read -r name enable_var _cat _class _bvar compose_rel _probe; do
+    [[ "${!enable_var:-0}" == "1" ]] || continue
+    [[ "$compose_rel" == "-" || -z "$compose_rel" ]] && continue
+    f="$DOMUM_DIR/$compose_rel"
+    [[ -f "$f" ]] || die "Missing compose file: $f"
+    echo "-f"
+    echo "$f"
+  done < <(service_catalog)
+}
+
 enabled_services() {
-  local name enable_var _cat
-  while IFS='|' read -r name enable_var _cat; do
+  local name enable_var _rest
+  while IFS='|' read -r name enable_var _rest; do
     [[ "${!enable_var:-0}" == "1" ]] && echo "$name"
   done < <(service_catalog)
 }
@@ -313,8 +336,6 @@ enabled_services() {
 profiles_for_apply() {
   local profiles=("core")
   [[ "${ENABLE_NIGHT_PROFILE:-0}" == "1" ]] && profiles+=("night")
-  [[ "${ENABLE_MEDIA_PROFILE:-0}" == "1" ]] && profiles+=("media")
-  [[ "${ENABLE_AI_PROFILE:-0}" == "1" ]]    && profiles+=("ai")
   printf "%s\n" "${profiles[@]}"
 }
 
@@ -489,7 +510,8 @@ status() {
 prune_staging() {
   # prune_staging <dir> <glob> <keep>
   local dir="$1" glob="$2" keep="$3" count
-  count="$(find "$dir" -maxdepth 1 -name "$glob" -type f 2>/dev/null | wc -l | tr -d ' ')"
+  count="$(to_int "$(find "$dir" -maxdepth 1 -name "$glob" -type f 2>/dev/null | wc -l)")"
+  keep="$(to_int "$keep" 7)"
   if (( count > keep )); then
     # shellcheck disable=SC2012,SC2086
     ls -1t "$dir"/$glob 2>/dev/null | tail -n +$(( keep + 1 )) | while IFS= read -r old; do
@@ -960,11 +982,14 @@ recovery_pack_cmd() {
 # ===========================================================================
 
 update_class_of() {
-  local svc="$1"
-  [[ " $UPDATE_CLASS_A " == *" $svc "* ]] && { echo A; return; }
-  [[ " $UPDATE_CLASS_B " == *" $svc "* ]] && { echo B; return; }
-  [[ " $UPDATE_CLASS_C " == *" $svc "* ]] && { echo C; return; }
-  echo "?"
+  # Optional UPDATE_CLASS_* overrides in domum.conf win; otherwise the catalog
+  # `class` column is the source of truth.
+  local svc="$1" class
+  [[ -n "${UPDATE_CLASS_A:-}" && " $UPDATE_CLASS_A " == *" $svc "* ]] && { echo A; return; }
+  [[ -n "${UPDATE_CLASS_B:-}" && " $UPDATE_CLASS_B " == *" $svc "* ]] && { echo B; return; }
+  [[ -n "${UPDATE_CLASS_C:-}" && " $UPDATE_CLASS_C " == *" $svc "* ]] && { echo C; return; }
+  class="$(catalog_field "$svc" 4)"
+  echo "${class:-?}"
 }
 
 updates_check() {
@@ -995,7 +1020,7 @@ updates_check() {
   echo
   if cmd_exists apt-get; then
     local upg
-    upg="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+    upg="$(to_int "$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ')")"
     echo "Host (Class D): ${upg} apt package(s) upgradable."
   fi
   echo
@@ -1300,7 +1325,7 @@ run_checkup() {
   local path pcent
   for path in / /opt "$STATE_ROOT"; do
     [[ -e "$path" ]] || continue
-    pcent="$(df -P "$path" | awk 'NR==2 {gsub("%","",$5); print $5}')"
+    pcent="$(to_int "$(df -P "$path" 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')")"
     if (( pcent >= 90 )); then
       checkup_add critical "$path is ${pcent}% full."
     elif (( pcent >= 80 )); then
@@ -1348,7 +1373,7 @@ run_checkup() {
 
   # --- backup targets configured ---
   local enabled_targets
-  enabled_targets="$(grep -cE '^BACKUP_TARGET_[A-Z]+_ENABLED=1' "$BACKUP_CFG_FILE" 2>/dev/null || echo 0)"
+  enabled_targets="$(count_matches '^BACKUP_TARGET_[A-Z]+_ENABLED=1' "$BACKUP_CFG_FILE")"
   if (( enabled_targets == 0 )); then
     checkup_add warning "No restic backup targets are enabled (see docs/SETUP-BACKUPS.md)."
     checkup_add action "Configure + enable a backup target in $BACKUP_CFG_FILE"
@@ -1414,14 +1439,14 @@ run_checkup() {
 
   # --- dangling images ---
   local dangling
-  dangling="$(docker images --filter dangling=true -q 2>/dev/null | wc -l | tr -d ' ')"
+  dangling="$(to_int "$(docker images --filter dangling=true -q 2>/dev/null | wc -l)")"
   (( dangling > 0 )) && { checkup_add warning "${dangling} dangling Docker images can be pruned."; checkup_add action "sudo domum-core cleanup images --dry-run"; }
 
   # --- pending apt updates ---
   if cmd_exists apt-get; then
     local sec gen
-    sec="$(apt-get -s upgrade 2>/dev/null | grep '^Inst ' | grep -ci security || true)"
-    gen="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+    sec="$(to_int "$(apt-get -s upgrade 2>/dev/null | grep '^Inst ' | grep -ci security)")"
+    gen="$(to_int "$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst ')")"
     (( sec > 0 )) && checkup_add warning "${sec} security update(s) available."
     (( gen > 0 )) && checkup_add warning "${gen} package update(s) available."
   fi

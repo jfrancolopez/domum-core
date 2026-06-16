@@ -33,10 +33,10 @@ BACKUP_MAX_AGE_HOURS=48
 # BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups /var/lib/domum-core/recovery-pack"
 #
 # Named docker volumes exported (tar) into staging so they ride along.
-# BACKUP_VOLUMES="nodered-data portainer-data uptime-kuma-data traefik-letsencrypt"
+# BACKUP_VOLUMES="nodered-data uptime-kuma-data traefik-letsencrypt"
 #
-# Excludes (large / disposable). Frigate media and Jellyfin caches excluded.
-# BACKUP_EXCLUDES="/opt/domum-core/compose/media /mnt/domum/frigate */tts/* *.db-wal *.db-shm"
+# Excludes (large / disposable).
+# BACKUP_EXCLUDES="*/tts/* *.db-wal *.db-shm"
 
 # ============================================================
 # SECTION: backup targets (ALL DISABLED by default)
@@ -102,7 +102,8 @@ RECOVERY_PACK_SMTP_PASSWORD_FILE="/etc/domum-core/secrets/recovery_pack_smtp_pas
 # ============================================================
 # SECTION: update classes (used by `domum-core updates`)
 # ============================================================
-# Adjust which services fall in each risk class. Class D is the host OS (apt).
-UPDATE_CLASS_A="traefik adguard-home uptime-kuma portainer tailscale"
-UPDATE_CLASS_B="home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome"
-UPDATE_CLASS_C="actual-budget music-assistant jellyfin"
+# Classes default from the service catalog in bin/domum-core. Uncomment to
+# override which services fall in each risk class. Class D is the host OS (apt).
+# UPDATE_CLASS_A="traefik adguard-home tailscale"
+# UPDATE_CLASS_B="home-assistant mariadb mqtt zigbee2mqtt zwave-js-ui nodered esphome"
+# UPDATE_CLASS_C="actual-budget music-assistant vaultwarden obsidian-sync"
