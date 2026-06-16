@@ -249,7 +249,7 @@ compose_service_for() {
   case "$(normalize_service_name "$1")" in
     home-assistant) echo "homeassistant" ;;
     musicassistant) echo "musicassistant" ;;
-    *) echo "$(normalize_service_name "$1")" ;;
+    *) normalize_service_name "$1" ;;
   esac
 }
 
@@ -2195,7 +2195,7 @@ set_conf_key() {
 # redact <key> <value> — blank out secret-ish values for display.
 redact() {
   case "$1" in
-    *PASSWORD*|*TOKEN*|*SECRET*|*APP_PASSWORD*|*AGEKEY*|*KEY_FILE*) echo "******" ;;
+    *PASSWORD*|*TOKEN*|*SECRET*|*AGEKEY*|*KEY_FILE*) echo "******" ;;
     *) echo "$2" ;;
   esac
 }
