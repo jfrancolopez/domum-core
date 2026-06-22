@@ -6,6 +6,9 @@ services:
     networks:
       - domum-data
       - domum-proxy
+    dns:
+      - 1.1.1.1
+      - 9.9.9.9
     environment:
       - TZ=America/New_York
       - ACTUAL_DATA_DIR=/data
