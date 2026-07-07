@@ -35,6 +35,11 @@ ENABLE_ESP_HOME=1
 ENABLE_MA=1
 
 # ============================================================
+# Monitoring
+# ============================================================
+# ENABLE_UPTIME_KUMA=0
+
+# ============================================================
 # DNS role: only for Tailscale split DNS
 # ============================================================
 ENABLE_ADGUARD_HOME=1
@@ -45,7 +50,11 @@ ADGUARD_ROLE="tailscale-split-dns"
 # ============================================================
 ENABLE_ACTUAL_BUDGET=1
 ENABLE_VAULTWARDEN=1
+# VAULTWARDEN_SIGNUPS_ALLOWED=false
+# VAULTWARDEN_INVITATIONS_ALLOWED=false
 ENABLE_OBSIDIAN_SYNC=0
+# OBSIDIAN_COUCHDB_USER="obsidian"
+# OBSIDIAN_COUCHDB_PASSWORD="changeme"
 
 # Removed / intentionally not part of domum-core:
 # go2rtc, frigate, jellyfin, and portainer belong outside this Pi profile.
@@ -127,3 +136,11 @@ OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
 ENABLE_SECURITY_PATCHES=1
 ENABLE_AUTOREMOVE_OLD_KERNELS=0
 SECURITY_PATCH_REBOOT_POLICY="manual"
+
+# ============================================================
+# Night profile
+# ============================================================
+# ENABLE_NIGHT_PROFILE=0
+# NIGHT_UP_TIME="23:00"
+# NIGHT_DOWN_TIME="07:00"
+# NIGHT_AUTOSTOP_OUTSIDE_WINDOW=1
