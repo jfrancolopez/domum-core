@@ -2,7 +2,7 @@ services:
   # Self-hosted Obsidian sync backend for the obsidian-livesync community
   # plugin. CouchDB is the storage engine the plugin replicates against —
   # real-time, works across desktop + mobile, and the most widely used
-  # self-hosted option. See docs/OBSIDIAN-SYNC.md for why this was chosen.
+  # self-hosted option. See docs/services/obsidian-sync.md for why this was chosen.
   obsidian-sync:
     image: docker.io/couchdb:3
     container_name: obsidian-sync

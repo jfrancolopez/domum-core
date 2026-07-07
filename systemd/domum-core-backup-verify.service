@@ -1,6 +1,6 @@
 [Unit]
 Description=domum-core: weekly restic repository check
-Documentation=file:///opt/domum-core/docs/CLI-CHEATSHEET.md
+Documentation=file:///opt/domum-core/docs/operations/cli-cheatsheet.md
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service

@@ -1,6 +1,6 @@
 [Unit]
 Description=domum-core: unified service + restic backup
-Documentation=file:///opt/domum-core/docs/SETUP-BACKUPS.md
+Documentation=file:///opt/domum-core/docs/backups/overview.md
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service

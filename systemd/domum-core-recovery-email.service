@@ -1,6 +1,6 @@
 [Unit]
 Description=domum-core: email latest encrypted recovery pack
-Documentation=file:///opt/domum-core/docs/RECOVERY-PACK-EMAIL.md
+Documentation=file:///opt/domum-core/docs/backups/gmail-recovery.md
 Wants=network-online.target
 After=network-online.target
 ConditionPathExists=/usr/local/bin/domum-core

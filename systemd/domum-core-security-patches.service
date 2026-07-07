@@ -1,6 +1,6 @@
 [Unit]
 Description=domum-core: apply OS security patches only
-Documentation=file:///opt/domum-core/docs/SECURITY-PATCHES.md
+Documentation=file:///opt/domum-core/docs/operations/security-patches.md
 Wants=network-online.target
 After=network-online.target
 ConditionPathExists=/usr/local/bin/domum-core

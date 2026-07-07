@@ -1,6 +1,6 @@
 [Unit]
 Description=domum-core: check container update candidates
-Documentation=file:///opt/domum-core/docs/UPDATES.md
+Documentation=file:///opt/domum-core/docs/operations/updates.md
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service
