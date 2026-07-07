@@ -11,7 +11,7 @@ exactly one implementation of the `domum` back-compat shim.
 
 ## Reason
 Two inconsistencies:
-1. `install.sh` line 4: `REPO_URL_DEFAULT="https://github.com/solosoyfranco/domum-core.git"`,
+1. `install.sh` line 4: `REPO_URL_DEFAULT="https://github.com/jfrancolopez/domum-core.git"`,
    but the actual remote and the README both use
    `https://github.com/jfrancolopez/domum-core`. A fresh install on a new
    host clones the wrong (or stale) repo. The sibling repo already uses the
@@ -23,8 +23,7 @@ Two inconsistencies:
 
 ## Implementation plan
 1. Change `REPO_URL_DEFAULT` to the `jfrancolopez` URL (confirm with
-   `git remote -v` first — if `solosoyfranco` is an intentional mirror,
-   document that in a comment instead and keep whichever is canonical).
+   `git remote -v` first).
 2. In `install.sh`, replace the heredoc shim generation with
    `install -m 0755 "${INSTALL_DIR}/bin/domum" "${BIN_SHIM}"` so `bin/domum`
    is the single source of truth.

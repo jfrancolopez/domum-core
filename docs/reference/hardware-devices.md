@@ -176,7 +176,7 @@ HAS_ZIGBEE_DONGLE=0
 2) Deploy via curl:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 ```
 
 3) Plug in the device, confirm it exists:
@@ -195,7 +195,7 @@ sudo nano /opt/domum-core/config/domum.conf
 5) Re-run deploy:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 ```
 
 ---
@@ -232,6 +232,5 @@ Common fixes:
 
 That is exactly why `/dev/serial/by-id` is recommended.
 Use the by-id path and the issue goes away.
-
 
 

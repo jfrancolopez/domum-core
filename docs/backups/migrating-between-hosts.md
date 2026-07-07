@@ -36,7 +36,7 @@ If you need persistent data:
 
 On the new machine:
 
-    curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+    curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 
 ---
 
@@ -60,4 +60,3 @@ Confirm all expected containers are running.
 # Migration Summary
 
 Copy secrets → Copy config → Optional data → Run curl → Done.
-

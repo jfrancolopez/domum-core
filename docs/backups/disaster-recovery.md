@@ -20,7 +20,7 @@ on new hardware.
 Flash Raspberry Pi OS (64-bit), boot, set hostname/network, then:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/solosoyfranco/domum-core/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 ```
 
 This installs Docker, clones the repo to `/opt/domum-core`, installs

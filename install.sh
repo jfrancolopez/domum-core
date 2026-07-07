@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL_DEFAULT="https://github.com/solosoyfranco/domum-core.git"
+REPO_URL_DEFAULT="https://github.com/jfrancolopez/domum-core.git"
 INSTALL_DIR_DEFAULT="/opt/domum-core"
 SECRETS_DIR="/etc/domum-core/secrets"
 STATE_ROOT="/var/lib/domum-core"
@@ -42,12 +42,7 @@ install -m 0755 "${INSTALL_DIR}/bin/domum-core" "${BIN_CORE}"
 install -m 0755 "${INSTALL_DIR}/bin/domum-core-backup" "${BIN_BACKUP}"
 
 echo "[domum] Installing back-compat 'domum' shim -> domum-core..."
-cat > "${BIN_SHIM}" <<EOF
-#!/usr/bin/env bash
-# Back-compat shim: domum -> domum-core
-exec ${BIN_CORE} "\$@"
-EOF
-chmod 0755 "${BIN_SHIM}"
+install -m 0755 "${INSTALL_DIR}/bin/domum" "${BIN_SHIM}"
 
 echo "[domum] Creating directories..."
 # Standardized secrets path is /etc/domum-core/secrets (was drifting to
