@@ -16,20 +16,21 @@ foundation, without merging anything.
 
 ### Phase 0 — Correctness & trust (trivial fixes, do as one batch)
 
-| # | Task | Complexity | Risk |
-|---|------|-----------|------|
-| 01 | [Untrack the live config/domum.conf](task-01-untrack-live-config.md) | trivial | low |
-| 19 | [Make install.sh non-destructive (rm -rf landmine)](task-19-install-sh-nondestructive.md) | trivial | low |
-| 02 | [Fix install.sh repo URL and duplicate shim](task-02-fix-installer-repo-url-and-shim.md) | trivial | low |
-| 20 | [Keep installed CLI/units in sync with the repo](task-20-installed-cli-stays-in-sync.md) | small | low |
-| 03 | [Fix --force delay-window bypass bug](task-03-fix-force-flag-bug.md) | trivial | low |
-| 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | trivial | low |
-| 32 | [Architecture principles + acceptance checklist doc](task-32-architecture-principles-doc.md) | small | none |
+| # | Task | Status | Complexity | Risk |
+|---|------|--------|-----------|------|
+| 01 | [Untrack the live config/domum.conf](task-01-untrack-live-config.md) | ✅ done (42e4d10) | trivial | low |
+| 02 | [Fix install.sh repo URL and duplicate shim](task-02-fix-installer-repo-url-and-shim.md) | ✅ done (ac036c9) | trivial | low |
+| 03 | [Fix --force delay-window bypass bug](task-03-fix-force-flag-bug.md) | ✅ done (b49327b) | trivial | low |
+| 19 | [Make install.sh non-destructive (rm -rf landmine)](task-19-install-sh-nondestructive.md) | open — **the rm -rf survived the task-02 fix; still live** | trivial | low |
+| 20 | [Keep installed CLI/units in sync with the repo](task-20-installed-cli-stays-in-sync.md) | open — install.sh still copies, not symlinks | small | low |
+| 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | open | trivial | low |
+| 32 | [Architecture principles + acceptance checklist doc](task-32-architecture-principles-doc.md) | open | small | none |
 
 Rationale: 19 removes the one line that can destroy a restore; 20 makes every
-later fix actually reach the production host. 02+19+20 touch the same files —
-one PR is fine. 32 last in this phase: write the constitution before the big
-recovery work is built against it.
+later fix actually reach the production host (note: the 03 fix is live in git
+but the Pi runs the installed copy until install.sh is re-run — exactly the
+gap task 20 closes). 32 last in this phase: write the constitution before the
+big recovery work is built against it.
 
 ### Phase 1 — Backup & recovery (the mission of this audit)
 
@@ -53,7 +54,7 @@ ahead of the rest of 26 at any time.
 |---|------|-----------|------|
 | 25 | [Weekly health report email](task-25-weekly-health-report.md) | medium | low |
 | 28 | [Checkup: USB radio device presence](task-28-checkup-usb-radio-presence.md) | small | low |
-| 05 | [Fix stale documentation references](task-05-stale-doc-references.md) | small | none |
+| 05 | [Fix stale documentation references](task-05-stale-doc-references.md) — ✅ done (a3ffbb4); remember `schedule install-maintenance` on the Pi to refresh installed units | small | none |
 
 ### Phase 3 — Update model hardening
 
