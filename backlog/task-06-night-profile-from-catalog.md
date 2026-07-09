@@ -20,6 +20,18 @@ consistent". Any future service addition must be remembered in two places.
 The main CLI already has `compose_cmd` + `--profile night` (see
 `domum_night_autostop`), so the standalone script is pure duplication.
 
+## Option 0 (added by 2026-07-09 audit — decide first): delete the feature
+`ENABLE_NIGHT_PROFILE=0` in the live config and no compose service in the
+repo carries a `night` profile label (every fragment is `profiles: [core]` —
+verify with `grep -rn 'night' compose/`). The feature currently costs:
+`night-profile.sh`, the two unit templates in `schedule_install`, the
+`domum_night_autostop()` hook inside `apply`, and three config keys — all for
+a profile with zero members. If the operator confirms the night profile is
+not coming back, the simplest correct move is to **remove all of it**
+(script, schedule install/remove, autostop hook, config keys, docs mentions)
+instead of rebuilding it on the catalog. Ask first; only proceed with the
+plan below if the feature is staying.
+
 ## Implementation plan
 1. Add to `bin/domum-core`:
    ```

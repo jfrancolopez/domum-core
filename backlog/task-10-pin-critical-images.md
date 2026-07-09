@@ -26,6 +26,14 @@ config is in git, adguard config is a bind mount) `:latest` + the delay
 window is acceptable and keeps maintenance burden near zero. Start with the
 two that can genuinely hurt.
 
+**Amendment (2026-07-09 audit):** treat Traefik as a third candidate — but
+pin the **major only** (`image: ${TRAEFIK_IMAGE:-traefik:v3}`), not a full
+version. Traefik is the one service where `:latest` +
+`TRAEFIK_AUTO_UPDATE=1` + a 1-day delay means a future v3→v4
+static-config break could take down ingress for *every* service overnight.
+A major pin keeps auto-updates flowing within v3 while making a major bump
+an explicit config edit. Zero added maintenance until a new major releases.
+
 ## Implementation plan
 1. In `compose/automation/mariadb.yml`:
    `image: ${MARIADB_IMAGE:-mariadb:11.4}` (choose the currently-running
