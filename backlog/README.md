@@ -133,6 +133,16 @@ against it:
   password-manager entry + one printed copy. Everything else is
   reconstructable.
 
+## For implementing agents
+
+Tasks in this backlog are executed by different AI models in fresh sessions
+(opencode / Codex / Claude Code — assume no shared context and no memory of
+the conversations that produced these tasks). **Read [/AGENTS.md](../AGENTS.md)
+first** — it is the execution contract: prime directives, scope discipline,
+verification commands, and the stop-and-ask conditions. Every task file is
+deliberately self-contained; if one isn't, that is a bug — fix the task file
+in the same session.
+
 ## Ground rules for every task
 
 - Never rewrite working code for style alone.

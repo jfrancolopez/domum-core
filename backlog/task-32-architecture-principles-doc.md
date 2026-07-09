@@ -76,15 +76,27 @@ Before merging any change:
 - [ ] The maintenance question answered: who/what breaks if this is
       forgotten about for a year?
 
-### Part 3 — pointers
+### Part 3 — pointers and the AGENTS.md boundary
 Link the backlog README's ground rules to this doc (replace the duplicated
 list there with a link + the CI line), and reference it from
 `docs/README.md` and `docs/reference/audit.md`.
+
+**Division of labor with `/AGENTS.md` (exists since 2026-07-09; do not
+duplicate it):** AGENTS.md is the *operational* contract for an implementing
+agent in a fresh session — prime directives, scope rules, verification
+commands, stop conditions. This document is the *design* constitution — what
+to build, what to reject, and why. Rule of thumb: if a line tells an agent
+how to behave during a session, it belongs in AGENTS.md; if it tells anyone
+what the system should look like, it belongs here. When this doc lands,
+update AGENTS.md's "Conventions" pointer (it already anticipates this file)
+and check both for accidental overlap — each fact lives in exactly one of
+the two.
 
 ## Affected files
 - `docs/reference/architecture-principles.md` (new)
 - `docs/README.md` (index entry, top of Reference section)
 - `backlog/README.md` (ground rules section links here instead of duplicating)
+- `AGENTS.md` (update its principles pointer; de-duplicate overlap per Part 3)
 - `bin/domum-core` header comment (add one line pointing at the doc; keep the
   short in-code rules — they are load-bearing for sessions that only read
   the script)
