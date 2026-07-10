@@ -58,11 +58,17 @@ Items A2–D of task 26 remain open.
 
 ### Phase 3 — Update model hardening
 
+**Priority raised (2026-07-10):** the predicted incident happened — `apply`
+recreated mariadb onto a previously pulled `mariadb:latest` 12.3, which
+crash-looped on the old datadir and took Home Assistant down until the image
+was pinned back. Do 10 first (formalize the emergency pin), then 09
+(the warning that would have prevented it), then 31.
+
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
+| 10 | [Pin critical stateful images (MariaDB, HA, Traefik-major)](task-10-pin-critical-images.md) | medium | medium |
 | 09 | [Warn on pending update candidates during apply](task-09-apply-warns-on-candidates.md) | small | low |
 | 31 | [Apply exactly the aged candidate + `updates rollback`](task-31-updates-apply-race-and-rollback.md) | medium | medium |
-| 10 | [Pin critical stateful images (MariaDB, HA, Traefik-major)](task-10-pin-critical-images.md) | medium | medium |
 
 ### Phase 4 — Hygiene & simplification
 

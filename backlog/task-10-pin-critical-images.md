@@ -26,6 +26,25 @@ config is in git, adguard config is a bind mount) `:latest` + the delay
 window is acceptable and keeps maintenance burden near zero. Start with the
 two that can genuinely hurt.
 
+**THIS HAPPENED (2026-07-10 incident — no longer hypothetical):** a routine
+`sudo domum-core apply` recreated the mariadb container onto a previously
+pulled `mariadb:latest` that had moved to **12.3**, while the datadir was
+from the older major. The entrypoint skipped `mariadb-upgrade`
+(`MARIADB_AUTO_UPGRADE` unset), then 12.3 could not parse the old-format
+`tc.log` ("Bad magic header in tc log") and crash-looped; Home Assistant
+stayed down (depends_on: service_healthy) until MariaDB was rolled back to
+the datadir's own major.minor (read from
+`data/mariadb_upgrade_info`) by pinning the image. Notes for implementation:
+- The emergency pin commit from the incident is the seed of this task —
+  convert it to the `${MARIADB_IMAGE:-...}` pattern rather than re-deriving.
+- Also add `stop_grace_period: 1m` to mariadb.yml — the 12.3 logs showed
+  crash recovery, meaning the old container likely hit compose's default
+  10s stop timeout and was SIGKILLed mid-write on recreate.
+- The deliberate 11→12 upgrade is a separate, planned operation: fresh
+  `mariadb-dump` first, set `MARIADB_AUTO_UPGRADE=1` in the env file, move
+  the pin, apply, verify, and if tc.log complains after a *clean* shutdown,
+  move it aside (never delete).
+
 **Amendment (2026-07-09 audit):** treat Traefik as a third candidate — but
 pin the **major only** (`image: ${TRAEFIK_IMAGE:-traefik:v3}`), not a full
 version. Traefik is the one service where `:latest` +
