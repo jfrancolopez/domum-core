@@ -42,6 +42,8 @@ All commands run as root (`sudo`).
 
 | Command | What it does |
 |---|---|
+| `domum-core restore [--pack <p> --key <k>]` | Guided DR wizard: pack intake → snapshot pick → staged restore (keeps `.pre-restore-*` siblings) → volumes → bring-up → MariaDB load → timer replay |
+| `domum-core restore --manual` | Last resort: one repo + password, pulls config + recovery pack, then pivots to the pack |
 | `domum-core recovery-pack create [--dry-run] [--no-email]` | Build AGE-encrypted DR pack |
 | `domum-core recovery-pack status` | Age/size/sha of the last pack |
 | `domum-core recovery-pack inspect` | How to list the pack's contents |

@@ -412,16 +412,27 @@ EOF
   log "Repository ready (id ${repo_id:0:12}). Metadata: $meta_file"
 }
 
+# NOTE: restic reproduces the ORIGINAL ABSOLUTE PATHS under <target-dir>
+# (restoring to /opt/domum-core yields /opt/domum-core/opt/domum-core/...).
+# Restore to a staging dir (disk-backed /var/tmp or the wizard's staging),
+# then move into place — `domum-core restore` does this for you.
 do_restore() {
-  local snap="${1:-}" target_dir="${2:-}" repo="${3:-}"
-  [[ -n "$snap" && -n "$target_dir" ]] || die "Usage: domum-core-backup --restore <snapshot> <target-dir> [repo-name]"
+  local snap="" target_dir="" repo="" verify=0 arg
+  local -a pos=()
+  for arg in "$@"; do
+    if [[ "$arg" == "--verify" ]]; then verify=1; else pos+=("$arg"); fi
+  done
+  snap="${pos[0]:-}"; target_dir="${pos[1]:-}"; repo="${pos[2]:-}"
+  [[ -n "$snap" && -n "$target_dir" ]] || die "Usage: domum-core-backup --restore <snapshot> <target-dir> [repo-name] [--verify]"
   if [[ -z "$repo" ]]; then
     repo="$(enabled_backup_targets | head -n1)"
     [[ -n "$repo" ]] || die "No enabled backup targets."
   fi
   mkdir -p "$target_dir"
-  log "restic restore $snap -> $target_dir (from $repo)"
-  restic_for_target "$repo" restore "$snap" --target "$target_dir"
+  log "restic restore $snap -> $target_dir (from $repo; original absolute paths are recreated UNDER the target dir)"
+  local -a opts=(restore "$snap" --target "$target_dir")
+  (( verify == 1 )) && opts+=(--verify)
+  restic_for_target "$repo" "${opts[@]}"
 }
 
 main() {
@@ -437,7 +448,8 @@ Usage:
   domum-core-backup --prune          restic forget --prune (retention)
   domum-core-backup --prune-dry-run  Preview retention
   domum-core-backup --snapshots      List latest snapshots per target
-  domum-core-backup --restore <snap> <dir> [repo]
+  domum-core-backup --restore <snap> <dir> [repo] [--verify]
+                                     (absolute paths are recreated UNDER <dir>)
   domum-core-backup init <target>    Initialize a restic repository
 EOF
       return 0

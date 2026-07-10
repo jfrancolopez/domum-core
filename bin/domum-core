@@ -1094,6 +1094,326 @@ backups_cmd() {
 }
 
 # ===========================================================================
+#  Section: guided restore (the DR wizard)
+# ===========================================================================
+# One guided command from a fresh install to a running system: unpack the
+# recovery pack -> pick target + snapshot -> restore to staging -> rsync into
+# place (never in place; every overwritten file keeps a .pre-restore sibling)
+# -> reassemble volumes -> bring up in safe order -> load MariaDB -> offer to
+# re-enable the timers recorded in the backup manifest.
+#
+# Two credential intakes, one shared everything-else: the recovery pack
+# (primary — carries config + all secrets) or --manual (last resort: one repo
+# string + password, restores config + the pack, then pivots to the pack).
+# The hard floor no wizard removes: the AGE private key (and, for --manual, a
+# restic password) must survive off-Pi.
+
+RESTORE_STAGING="${RESTORE_STAGING:-$STATE_ROOT/restore-staging}"
+# Where decrypted pack contents / typed passwords briefly live (root-only).
+RESTORE_TMPDIR="${RESTORE_TMPDIR:-/root}"
+
+# Extract a top-level string field from BACKUP-MANIFEST.json (grep-based on
+# purpose: no dependencies, display-only).
+manifest_str_field() {
+  grep -oE "\"$2\": \"[^\"]*\"" "$1" 2>/dev/null | head -n1 | sed -E "s/\"$2\": \"(.*)\"/\1/"
+}
+
+restore_show_manifest_summary() {
+  local mf="$1"
+  if [[ ! -f "$mf" ]]; then
+    log "No backup manifest in this snapshot (predates task 33) — continuing without it."
+    return 0
+  fi
+  local n_svc
+  n_svc="$(grep -oE '\{"name":' "$mf" 2>/dev/null | wc -l | tr -d ' ' || true)"
+  echo
+  echo "About to restore (from the snapshot's own manifest):"
+  echo "  created:  $(manifest_str_field "$mf" created_at)"
+  echo "  host:     $(manifest_str_field "$mf" host)"
+  echo "  commit:   $(manifest_str_field "$mf" git_commit)"
+  echo "  os:       $(manifest_str_field "$mf" os_release)"
+  echo "  services: ${n_svc}"
+  echo
+}
+
+restore_pack_intake() {
+  local pack="$1" key="$2" tmpdir
+  cmd_exists age || die "age is not installed (apt-get install -y age)."
+  [[ -f "$pack" ]] || die "Recovery pack not found: $pack"
+  [[ -f "$key" ]] || die "AGE key not found: $key"
+  tmpdir="$(mktemp -d "$RESTORE_TMPDIR/domum-restore-pack.XXXXXX")"
+  log "Decrypting recovery pack -> $tmpdir"
+  age -d -i "$key" "$pack" | tar -xzf - -C "$tmpdir" \
+    || { rm -rf "$tmpdir"; die "Failed to decrypt/unpack the recovery pack."; }
+
+  echo "Pack contents:"
+  ( cd "$tmpdir" && find . -type f | sed 's/^/  /' )
+  confirm "Install secrets to $SECRETS_DIR and config to $DOMUM_DIR/config?" \
+    || { log "Pack left unpacked at $tmpdir (nothing installed)."; return 1; }
+
+  install -d -m 0700 "$SECRETS_DIR"
+  if [[ -d "$tmpdir/secrets" ]]; then
+    ( cd "$tmpdir/secrets" && find . -type f ) | while IFS= read -r rel; do
+      rel="${rel#./}"
+      install -D -m 0600 "$tmpdir/secrets/$rel" "$SECRETS_DIR/$rel"
+    done
+    chown -R root:root "$SECRETS_DIR"
+  fi
+  local f base
+  for f in "$tmpdir"/config/*; do
+    [[ -f "$f" ]] || continue
+    base="$(basename "$f")"
+    if [[ -f "$DOMUM_DIR/config/$base" ]]; then
+      install -m 0640 "$DOMUM_DIR/config/$base" "$DOMUM_DIR/config/$base.pre-restore"
+    fi
+    install -m 0640 "$f" "$DOMUM_DIR/config/$base"
+  done
+  rm -rf "$tmpdir"
+  log "Secrets + config installed."
+}
+
+restore_manual_intake() {
+  # Last resort: one repo + password. Restores config/ and the recovery-pack
+  # directory from that repo, then pivots to the pack for everything else.
+  cmd_exists restic || die "restic is not installed (apt-get install -y restic)."
+  local repo pw pwfile
+  read -r -p "restic repository (e.g. /mnt/usb/domum-core or sftp:user@host:/./repo): " repo
+  [[ -n "$repo" ]] || die "No repository given."
+  read -r -s -p "restic password: " pw; echo
+  [[ -n "$pw" ]] || die "No password given."
+  pwfile="$(mktemp "$RESTORE_TMPDIR/.domum-restore-pw.XXXXXX")"
+  printf '%s\n' "$pw" > "$pwfile"; chmod 600 "$pwfile"; pw=""
+
+  export RESTIC_REPOSITORY="$repo" RESTIC_PASSWORD_FILE="$pwfile"
+  log "Snapshots in $repo:"
+  restic snapshots --latest 3 || { rm -f "$pwfile"; die "Cannot read that repository."; }
+  local snap
+  read -r -p "Snapshot ID to pull config + recovery pack from [latest]: " snap
+  snap="${snap:-latest}"
+
+  local stag="$RESTORE_STAGING-manual"
+  mkdir -p "$stag"
+  restic restore "$snap" --target "$stag" \
+    --include "$DOMUM_DIR/config" --include "$STATE_ROOT/recovery-pack" \
+    || { rm -f "$pwfile"; die "Restore of config/recovery-pack failed."; }
+  rm -f "$pwfile"; unset RESTIC_REPOSITORY RESTIC_PASSWORD_FILE
+
+  mkdir -p "$DOMUM_DIR/config" "$STATE_ROOT/recovery-pack"
+  [[ -d "$stag$DOMUM_DIR/config" ]] \
+    && rsync -a --backup --suffix=".pre-restore" "$stag$DOMUM_DIR/config/" "$DOMUM_DIR/config/"
+  [[ -d "$stag$STATE_ROOT/recovery-pack" ]] \
+    && rsync -a "$stag$STATE_ROOT/recovery-pack/" "$STATE_ROOT/recovery-pack/"
+
+  cat <<EOF
+
+Config and recovery pack(s) restored:
+  $(find "$STATE_ROOT/recovery-pack" -maxdepth 1 -name 'recovery-pack-*.tar.age' 2>/dev/null | tail -n3 | sed 's/^/  /' || echo "  (none found — check the snapshot)")
+
+Next: decrypt the newest pack with your OFFLINE AGE key and re-run:
+  sudo domum-core restore --pack $STATE_ROOT/recovery-pack/recovery-pack-<newest>.tar.age --key /path/to/recovery-age.key
+
+(Staging kept at $stag — remove it when done.)
+EOF
+}
+
+restore_pick_target_snapshot() {
+  # Sets RESTORE_TARGET and RESTORE_SNAP. Unreachable targets are non-fatal.
+  local bin first_target=""
+  bin="$(backup_bin)"
+  echo
+  echo "Available snapshots per enabled target (unreachable targets listed as failed):"
+  "$bin" --snapshots || true
+  echo
+  first_target="$(grep -oE '^BACKUP_TARGET_[A-Z0-9]+_ENABLED=1' "$BACKUP_CFG_FILE" 2>/dev/null \
+    | head -n1 | sed -E 's/^BACKUP_TARGET_([A-Z0-9]+)_ENABLED=1/\1/' | tr '[:upper:]' '[:lower:]' || true)"
+  read -r -p "Restore from target [${first_target:-none}]: " RESTORE_TARGET
+  RESTORE_TARGET="${RESTORE_TARGET:-$first_target}"
+  [[ -n "$RESTORE_TARGET" ]] || die "No target selected and none enabled in $BACKUP_CFG_FILE."
+  read -r -p "Snapshot ID [latest]: " RESTORE_SNAP
+  RESTORE_SNAP="${RESTORE_SNAP:-latest}"
+}
+
+restore_data_from_snapshot() {
+  local bin ts
+  bin="$(backup_bin)"
+  ts="$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$RESTORE_STAGING"
+
+  log "Restoring snapshot '$RESTORE_SNAP' from '$RESTORE_TARGET' to staging: $RESTORE_STAGING"
+  "$bin" --restore "$RESTORE_SNAP" "$RESTORE_STAGING" "$RESTORE_TARGET" \
+    || die "restic restore failed."
+
+  restore_show_manifest_summary "$RESTORE_STAGING$STATE_ROOT/service-backups/BACKUP-MANIFEST.json"
+
+  echo "Staging now holds (top level):"
+  find "$RESTORE_STAGING" -maxdepth 3 -type d 2>/dev/null | head -20 | sed 's/^/  /' || true
+  echo
+  echo "Next: rsync staging into place. Every overwritten file keeps a"
+  echo "sibling copy with suffix .pre-restore-$ts (nothing is deleted)."
+  confirm "Rsync restored data into $DOMUM_DIR and $STATE_ROOT?" || die "Stopped before touching live data. Staging kept at $RESTORE_STAGING."
+
+  if [[ -d "$RESTORE_STAGING$DOMUM_DIR" ]]; then
+    rsync -aHAX --backup --suffix=".pre-restore-$ts" "$RESTORE_STAGING$DOMUM_DIR/" "$DOMUM_DIR/"
+  fi
+  if [[ -d "$RESTORE_STAGING$STATE_ROOT" ]]; then
+    rsync -aHAX --backup --suffix=".pre-restore-$ts" "$RESTORE_STAGING$STATE_ROOT/" "$STATE_ROOT/"
+  fi
+  log "Data in place. Staging kept at $RESTORE_STAGING (remove manually when satisfied)."
+}
+
+restore_reassemble() {
+  ensure_networks
+  local vol_stage="$STATE_ROOT/service-backups/volumes" f v
+  if compgen -G "$vol_stage/*.tar.gz" >/dev/null; then
+    echo "Named-volume exports found:"
+    find "$vol_stage" -maxdepth 1 -name '*.tar.gz' | sed 's/^/  /'
+    if confirm "Re-import these docker volumes (existing volume contents are overwritten)?"; then
+      for f in "$vol_stage"/*.tar.gz; do
+        v="$(basename "$f" .tar.gz)"
+        docker volume create "$v" >/dev/null
+        docker run --rm -v "$v":/to -v "$vol_stage":/from alpine \
+          sh -c "cd /to && tar -xzf /from/$(basename "$f")" \
+          || warn "Volume import failed: $v"
+        log "  imported volume $v"
+      done
+    fi
+  else
+    log "No named-volume exports in staging — skipping volume import."
+  fi
+}
+
+restore_bring_up() {
+  export_env_for_compose
+  local -a order=(
+    "ENABLE_ADGUARD_HOME|compose/networking/adguard-home.yml"
+    "ENABLE_MARIADB|compose/automation/mariadb.yml"
+    "ENABLE_MQTT|compose/automation/mqtt.yml"
+    "ENABLE_ZIGBEE2MQTT|compose/automation/zigbee2mqtt.yml"
+    "ENABLE_ZWAVE|compose/automation/zwave-js-ui.yml"
+  )
+  confirm "Bring services up in safe order (dns -> db -> mqtt -> radios -> apply)?" || { log "Skipping bring-up."; return 0; }
+  local entry ev frag
+  cd "$DOMUM_DIR"
+  for entry in "${order[@]}"; do
+    ev="${entry%%|*}"; frag="${entry##*|}"
+    [[ "${!ev:-0}" == "1" && -f "$DOMUM_DIR/$frag" ]] || continue
+    log "up: $frag"
+    docker compose -f compose/base.yml -f "$frag" up -d || warn "compose up failed for $frag"
+  done
+  log "Converging the rest with apply..."
+  apply || warn "apply reported errors — investigate with 'domum-core checkup'."
+}
+
+restore_load_mariadb() {
+  [[ "${ENABLE_MARIADB:-0}" == "1" ]] || return 0
+  local dump cn
+  # shellcheck disable=SC2012
+  dump="$(ls -1t "$STATE_ROOT/service-backups/mariadb"/mariadb-all-*.sql.gz 2>/dev/null | head -n1 || true)"
+  if [[ -z "$dump" ]]; then
+    warn "No MariaDB dump found in staging — HA recorder history not restored."
+    return 0
+  fi
+  echo
+  echo "MariaDB data is restored from the SQL dump (raw datadir is not in backups):"
+  echo "  newest dump: $dump"
+  echo "  manual form: gunzip -c $dump | docker exec -i <mariadb> sh -c 'mariadb -uroot -p\"\$MARIADB_ROOT_PASSWORD\"'"
+  confirm "Load this dump into the running MariaDB now?" || { log "Skipped MariaDB load."; return 0; }
+  cn="$(container_name_for mariadb)" || { warn "MariaDB container not running — load the dump manually later."; return 0; }
+  gunzip -c "$dump" \
+    | docker exec -i "$cn" sh -c 'exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' \
+    || { warn "MariaDB load failed — run the manual form above."; return 1; }
+  log "MariaDB dump loaded."
+}
+
+restore_reenable_timers() {
+  local mf="$STATE_ROOT/service-backups/BACKUP-MANIFEST.json" t
+  [[ -f "$mf" ]] || return 0
+  local -a timers=()
+  while IFS= read -r t; do timers+=("$t"); done < <(
+    grep -oE '"enabled_timers": \[[^]]*\]' "$mf" 2>/dev/null \
+      | grep -oE '[a-zA-Z0-9@._-]+\.timer'
+  )
+  (( ${#timers[@]} > 0 )) || return 0
+  echo
+  echo "The backup manifest recorded these enabled timers on the old host:"
+  printf '  %s\n' "${timers[@]}"
+  confirm "Install unit files and re-enable these timers?" || { log "Timers left disabled — enable later via 'schedule install-maintenance'."; return 0; }
+  install_maintenance_unit_files
+  for t in "${timers[@]}"; do
+    if systemctl enable --now "$t" 2>/dev/null; then
+      log "  enabled $t"
+    else
+      warn "  could not enable $t"
+    fi
+  done
+}
+
+restore_cmd() {
+  need_root
+  local pack="" key="" manual=0
+  while (( $# > 0 )); do
+    case "$1" in
+      --pack)   pack="${2:-}"; shift 2 ;;
+      --key)    key="${2:-}"; shift 2 ;;
+      --manual) manual=1; shift ;;
+      --yes)    ASSUME_YES=1; shift ;;
+      *) die "Usage: domum-core restore [--pack <pack.tar.age> --key <age.key>] [--manual] [--yes]" ;;
+    esac
+  done
+
+  if (( manual == 1 )); then
+    restore_manual_intake
+    return 0
+  fi
+
+  # Step 1 — credentials. Skippable when config + secrets already exist.
+  if [[ -n "$pack" || -n "$key" ]]; then
+    [[ -n "$pack" && -n "$key" ]] || die "--pack and --key go together."
+    restore_pack_intake "$pack" "$key" || return 1
+  elif [[ -f "$BACKUP_CFG_FILE" ]] && [[ -d "$SECRETS_DIR" ]] && find "$SECRETS_DIR" -type f -name 'restic_password_*' 2>/dev/null | grep -q .; then
+    log "Config + restic secrets already present — skipping pack intake."
+  else
+    cat <<EOF
+No credentials found. You need the recovery pack and your OFFLINE AGE key:
+  sudo domum-core restore --pack /path/recovery-pack-*.tar.age --key /path/recovery-age.key
+No pack at hand but a reachable restic repo + password? Last resort:
+  sudo domum-core restore --manual
+EOF
+    return 1
+  fi
+
+  load_cfg
+  ensure_state_dirs
+
+  # Steps 2-3 — pick, restore to staging, confirm, move into place.
+  restore_pick_target_snapshot
+  restore_data_from_snapshot
+
+  # Step 4 — volumes + networks.
+  restore_reassemble
+
+  # Step 5 — bring-up in safe order, then converge.
+  restore_bring_up
+
+  # Step 6 — recorder history.
+  restore_load_mariadb
+
+  # Step 7 — host finishers.
+  restore_reenable_timers
+
+  echo
+  log "Restore flow complete. Final check:"
+  checkup_cmd || true
+  cat <<EOF
+
+Reminders:
+  - Staging kept at $RESTORE_STAGING; *.pre-restore-* siblings mark every
+    overwritten file. Remove both manually once the system looks right.
+  - Tailscale (if used) needs a fresh auth key — designed loss, ~2 minutes.
+EOF
+}
+
+# ===========================================================================
 #  Section: recovery pack (AGE-encrypted)
 # ===========================================================================
 
@@ -2738,6 +3058,8 @@ Backups (unified — driven by BACKUP_<SERVICE> flags):
   domum-core actual backup [--dry-run] | restore-plan
 
 Recovery & updates:
+  domum-core restore [--pack <p> --key <k>] [--manual] [--yes]
+                                          guided disaster-recovery wizard
   domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
   domum-core recovery-pack send-latest [--dry-run] | email-test
   domum-core updates check | status | apply <app> [--dry-run] [--force]
@@ -2764,6 +3086,7 @@ main() {
     doctor)   doctor_cmd "$@" ;;
     schedule) schedule_cmd "$@" ;;
     backups)  backups_cmd "$@" ;;
+    restore)  restore_cmd "$@" ;;
     actual)
       need_root
       case "${1:-}" in
