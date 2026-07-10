@@ -21,7 +21,7 @@ foundation, without merging anything.
 | 01 | [Untrack the live config/domum.conf](task-01-untrack-live-config.md) | ✅ done (42e4d10) | trivial | low |
 | 02 | [Fix install.sh repo URL and duplicate shim](task-02-fix-installer-repo-url-and-shim.md) | ✅ done (ac036c9) | trivial | low |
 | 03 | [Fix --force delay-window bypass bug](task-03-fix-force-flag-bug.md) | ✅ done (b49327b) | trivial | low |
-| 19 | [Make install.sh non-destructive (rm -rf landmine)](task-19-install-sh-nondestructive.md) | open — **the rm -rf survived the task-02 fix; still live** | trivial | low |
+| 19 | [Make install.sh non-destructive (rm -rf landmine)](task-19-install-sh-nondestructive.md) | ✅ done (6a02978) | trivial | low |
 | 20 | [Keep installed CLI/units in sync with the repo](task-20-installed-cli-stays-in-sync.md) | open — install.sh still copies, not symlinks | small | low |
 | 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | open | trivial | low |
 | 32 | [Architecture principles + acceptance checklist doc](task-32-architecture-principles-doc.md) | open | small | none |
