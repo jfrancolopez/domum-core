@@ -45,8 +45,8 @@ big recovery work is built against it.
 | 34 | [Make `init` converge the host (disposable OS)](task-34-init-host-convergence.md) | small-med | low-med |
 
 Note: the wrong restic `--target` command in disaster-recovery.md (task 26,
-item A1) is the most urgent docs fix in the repo — it can be cherry-picked
-ahead of the rest of 26 at any time.
+item A1) was cherry-picked ahead of the rest of 26 — ✅ done (8c610f0).
+Items A2–D of task 26 remain open.
 
 ### Phase 2 — Visibility
 
