@@ -1,8 +1,15 @@
 services:
   mariadb:
-    image: mariadb:latest
+    # Pinned to the datadir's version (mariadb_upgrade_info: 12.2.2) after the
+    # 2026-07-10 :latest→12.3 crash-loop incident. Bump deliberately only:
+    # fresh dump -> set MARIADB_AUTO_UPGRADE=1 in the env file -> move pin ->
+    # apply -> verify. See backlog/task-10-pin-critical-images.md.
+    image: ${MARIADB_IMAGE:-mariadb:12.2}
     container_name: mariadb
     restart: unless-stopped
+    # MariaDB can exceed compose's default 10s stop timeout; SIGKILL mid-write
+    # is what corrupted tc.log during the incident.
+    stop_grace_period: 1m
 
     # Keep it off the public proxy network.
     # We'll use a dedicated internal network so HA and future Grafana can reach it.
