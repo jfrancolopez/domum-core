@@ -23,7 +23,7 @@ foundation, without merging anything.
 | 03 | [Fix --force delay-window bypass bug](task-03-fix-force-flag-bug.md) | ✅ done (b49327b) | trivial | low |
 | 19 | [Make install.sh non-destructive (rm -rf landmine)](task-19-install-sh-nondestructive.md) | ✅ done (6a02978) | trivial | low |
 | 20 | [Keep installed CLI/units in sync with the repo](task-20-installed-cli-stays-in-sync.md) | ✅ done (6ac428a) — on the Pi: re-run install.sh once to swap copies for symlinks | small | low |
-| 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | open | trivial | low |
+| 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | ✅ done (d75232e) — verify on Pi: `backups run --dry-run` shows a musicassistant line | trivial | low |
 | 32 | [Architecture principles + acceptance checklist doc](task-32-architecture-principles-doc.md) | open | small | none |
 
 Rationale: 19 removes the one line that can destroy a restore; 20 makes every
