@@ -32,8 +32,18 @@ if [[ -d "${INSTALL_DIR}/.git" ]]; then
   else
     git -C "${INSTALL_DIR}" pull --ff-only
   fi
+elif [[ -d "${INSTALL_DIR}" ]]; then
+  if [[ -z "$(ls -A "${INSTALL_DIR}")" ]]; then
+    rmdir "${INSTALL_DIR}"
+    git clone "${REPO_URL}" "${INSTALL_DIR}"
+  else
+    echo "[domum] ERROR: ${INSTALL_DIR} exists but is not a git checkout." >&2
+    echo "[domum] Refusing to delete it. If this is restored data, move it aside first:" >&2
+    echo "[domum]     sudo mv ${INSTALL_DIR} ${INSTALL_DIR}.pre-install-\$(date +%Y%m%d)" >&2
+    echo "[domum] then re-run this installer and merge your data back afterwards." >&2
+    exit 1
+  fi
 else
-  rm -rf "${INSTALL_DIR}"
   git clone "${REPO_URL}" "${INSTALL_DIR}"
 fi
 

@@ -27,6 +27,9 @@ This installs Docker, clones the repo to `/opt/domum-core`, installs
 `domum-core`, and creates `/etc/domum-core/secrets`, `/var/lib/domum-core`,
 `/var/log/domum-core`.
 
+Order matters: install.sh refuses to overwrite a non-git `/opt/domum-core`,
+so restore data only *after* the installer has run.
+
 ### 2. Decrypt the recovery pack
 
 On a trusted machine (or the new Pi once you've copied the key securely):
