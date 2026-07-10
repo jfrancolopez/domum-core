@@ -40,27 +40,27 @@ load_cfg() {
   RESTIC_KEEP_MONTHLY="${RESTIC_KEEP_MONTHLY:-12}"
   RESTIC_KEEP_YEARLY="${RESTIC_KEEP_YEARLY:-3}"
   BACKUP_TARGETS="${BACKUP_TARGETS:-local hetzner}"
-  # Default source set: critical bind mounts + compose + config + service
-  # backup staging + rendered volume exports. Overridable per-target.
+  # Default source set. Each byte is stored ONCE, in restic's dedup-friendly
+  # raw form: the compose tree already contains every service bind mount, so
+  # listing them individually is redundant, and the gzipped service tars in
+  # service-backups/ are opaque to dedup (each rotation stored nearly in
+  # full). Local tar staging stays for fast same-host restores and the
+  # update backup gate — it just does not ride into restic, with two
+  # exceptions: MariaDB SQL dumps (the only artifact not reproducible from
+  # raw files) and named-volume exports (the only capture of those volumes).
   BACKUP_PATHS="${BACKUP_PATHS:-\
-$DOMUM_DIR/compose/automation/home-assistant \
-$DOMUM_DIR/compose/automation/mariadb/data \
-$DOMUM_DIR/compose/automation/mqtt \
-$DOMUM_DIR/compose/automation/zigbee2mqtt \
-$DOMUM_DIR/compose/automation/zwave-js-ui/store \
-$DOMUM_DIR/compose/automation/esphome \
-$DOMUM_DIR/compose/automation/music-assistant \
-$DOMUM_DIR/compose/networking/adguard \
-$DOMUM_DIR/compose/productivity/actual-budget/data \
-$DOMUM_DIR/compose/proxy/traefik \
 $DOMUM_DIR/compose \
 $DOMUM_DIR/config \
-$STATE_ROOT/service-backups \
+$STATE_ROOT/service-backups/mariadb \
+$STATE_ROOT/service-backups/volumes \
 $STATE_ROOT/recovery-pack}"
   # Named volumes exported (tar) into staging so they ride along in restic.
   BACKUP_VOLUMES="${BACKUP_VOLUMES:-nodered-data uptime-kuma-data traefik-letsencrypt}"
-  # Excludes: large disposable / regenerable data.
+  # Excludes: large disposable / regenerable data. mariadb/data is raw hot
+  # InnoDB copied while mariadbd runs — not a reliable restore source; the
+  # mariadb-dump SQL artifact above is the authoritative MariaDB backup.
   BACKUP_EXCLUDES="${BACKUP_EXCLUDES:-\
+$DOMUM_DIR/compose/automation/mariadb/data \
 */tts/* \
 *.db-wal \
 *.db-shm}"
@@ -258,9 +258,21 @@ restic_forget_for() {
   restic_for_target "$target" "${opts[@]}"
 }
 
+# heartbeat <all_ok> <succeeded targets...>
+# Aggregate file (back-compat, drives checkup's critical gate) + one file per
+# succeeded target so checkup can say WHICH destination is stale. The external
+# heartbeat URL is pinged only when every target succeeded — a partial run
+# must not look green to outside monitoring.
 heartbeat() {
+  local all_ok="$1"; shift
+  local t
   date -Iseconds > "$HEARTBEAT_FILE"
-  [[ -n "${BACKUP_HEARTBEAT_URL:-}" ]] && curl -fsS --max-time 10 -o /dev/null "$BACKUP_HEARTBEAT_URL" || true
+  for t in "$@"; do
+    date -Iseconds > "$STATE_ROOT/backups/last-success-$t"
+  done
+  if [[ "$all_ok" == "1" && -n "${BACKUP_HEARTBEAT_URL:-}" ]]; then
+    curl -fsS --max-time 10 -o /dev/null "$BACKUP_HEARTBEAT_URL" || true
+  fi
 }
 
 no_targets_notice() {
@@ -276,51 +288,82 @@ See docs/backups/overview.md.
 EOF
 }
 
+# Collect enabled targets into an array. Never test the list with
+# `enabled_backup_targets | grep -q .`: grep -q exits on the first match and
+# under pipefail the producer's SIGPIPE can fail the pipeline, making a
+# fully-configured host print the "no targets" notice and skip the run.
+collect_enabled_targets() {
+  # populates the caller's `targets` array (caller declares: local -a targets)
+  local t
+  targets=()
+  while IFS= read -r t; do targets+=("$t"); done < <(enabled_backup_targets)
+}
+
 do_daily_backup() {
-  local dry="${1:-0}" ran_any=0 target
+  local dry="${1:-0}" target
+  local -a targets=() failed=() succeeded=()
   log "=== backup run start (dry=$dry) ==="
   export_named_volumes "$dry"
 
-  if ! enabled_backup_targets | grep -q .; then
+  collect_enabled_targets
+  if (( ${#targets[@]} == 0 )); then
     no_targets_notice
     return 0
   fi
 
-  while IFS= read -r target; do
-    ran_any=1
-    restic_backup_to "$target" "$dry"
-  done < <(enabled_backup_targets)
+  # Per-target isolation: one unreachable target (NAS unmounted, Hetzner
+  # down) must never cancel the remaining targets' backup or retention.
+  for target in "${targets[@]}"; do
+    if restic_backup_to "$target" "$dry"; then
+      succeeded+=("$target")
+    else
+      failed+=("$target")
+      log "WARNING: backup to $target failed — continuing with remaining targets."
+    fi
+  done
 
   if (( dry == 0 )); then
-    while IFS= read -r target; do
+    for target in ${succeeded[@]+"${succeeded[@]}"}; do
       [[ "$(backup_target_value "$target" RETENTION daily)" == "none" ]] && continue
-      restic_forget_for "$target" 0
-    done < <(enabled_backup_targets)
-    heartbeat
+      restic_forget_for "$target" 0 \
+        || log "WARNING: retention (forget --prune) failed on $target."
+    done
+    if (( ${#succeeded[@]} > 0 )); then
+      local all_ok=1; (( ${#failed[@]} > 0 )) && all_ok=0
+      heartbeat "$all_ok" "${succeeded[@]}"
+    fi
   fi
 
-  if (( ran_any == 1 )); then log "=== backup run ok ==="; else log "=== no targets ran ==="; fi
+  if (( ${#failed[@]} > 0 )); then
+    log "=== backup run FAILED for: ${failed[*]} (succeeded: ${succeeded[*]:-none}) ==="
+    return 1
+  fi
+  log "=== backup run ok ==="
 }
 
 do_check() {
-  local target ran=0
-  if ! enabled_backup_targets | grep -q .; then no_targets_notice; return 0; fi
-  while IFS= read -r target; do
-    ran=1
+  local target rc=0
+  local -a targets=()
+  collect_enabled_targets
+  if (( ${#targets[@]} == 0 )); then no_targets_notice; return 0; fi
+  for target in "${targets[@]}"; do
     log "restic check on $target"
-    restic_for_target "$target" check
-  done < <(enabled_backup_targets)
-  (( ran == 1 )) || no_targets_notice
+    restic_for_target "$target" check \
+      || { rc=1; log "WARNING: restic check failed on $target — continuing."; }
+  done
+  return "$rc"
 }
 
 do_prune() {
-  local dry="${1:-0}" target ran=0
-  if ! enabled_backup_targets | grep -q .; then no_targets_notice; return 0; fi
-  while IFS= read -r target; do
-    ran=1
-    restic_forget_for "$target" "$dry"
-  done < <(enabled_backup_targets)
-  (( ran == 1 )) || no_targets_notice
+  local dry="${1:-0}" target rc=0
+  local -a targets=()
+  collect_enabled_targets
+  if (( ${#targets[@]} == 0 )); then no_targets_notice; return 0; fi
+  for target in "${targets[@]}"; do
+    restic_forget_for "$target" "$dry" \
+      || { rc=1; log "WARNING: retention failed on $target — continuing."; }
+  done
+  return "$rc"
 }
 
 list_snapshots() {

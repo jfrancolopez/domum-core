@@ -26,17 +26,25 @@ BACKUP_MAX_AGE_HOURS=48
 # ============================================================
 # SECTION: backup source set
 # ============================================================
-# These usually need no editing — the defaults in bin/domum-core-backup cover
-# all critical bind mounts + compose + config + service-backup staging +
-# rendered named-volume exports. Uncomment to override.
+# These usually need no editing — the defaults in bin/domum-core-backup store
+# each byte once: the compose tree (contains every service bind mount) +
+# config, plus the only staging artifacts restic cannot reproduce from raw
+# files (MariaDB SQL dumps, named-volume exports) and the recovery packs.
+# The other gzipped service tars stay local-only (opaque to restic dedup).
+# Uncomment to override.
 #
-# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups /var/lib/domum-core/recovery-pack"
+# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups/mariadb /var/lib/domum-core/service-backups/volumes /var/lib/domum-core/recovery-pack"
 #
 # Named docker volumes exported (tar) into staging so they ride along.
 # BACKUP_VOLUMES="nodered-data uptime-kuma-data traefik-letsencrypt"
 #
-# Excludes (large / disposable).
-# BACKUP_EXCLUDES="*/tts/* *.db-wal *.db-shm"
+# Excludes (large / disposable; raw hot InnoDB — the SQL dump is authoritative).
+# BACKUP_EXCLUDES="/opt/domum-core/compose/automation/mariadb/data */tts/* *.db-wal *.db-shm"
+#
+# Everything runs daily at 02:30 (RPO 24h, accepted in the DR runbook). If a
+# tighter RPO for Actual/HA is ever wanted, the right knob is a second small
+# timer running `domum-core actual backup` + `homeassistant backup` (staging
+# only, no restic) — do not add per-service restic schedules.
 
 # ============================================================
 # SECTION: backup targets (ALL DISABLED by default)

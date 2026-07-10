@@ -67,7 +67,9 @@ load_cfg() {
   LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
 
   BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-48}"
-  ACTUAL_QUIESCE="${ACTUAL_QUIESCE:-0}"
+  # Default ON: a sub-second docker pause at backup time beats a torn
+  # mid-write SQLite copy. Set 0 in the overlay to opt out.
+  ACTUAL_QUIESCE="${ACTUAL_QUIESCE:-1}"
   ACTUAL_KEEP="${ACTUAL_KEEP:-7}"
   HA_KEEP="${HA_KEEP:-7}"
   MARIADB_KEEP="${MARIADB_KEEP:-7}"
@@ -820,6 +822,17 @@ validate_backup_artifact() {
   return 0
 }
 
+# Services whose data dir holds a live SQLite DB: pause the container for
+# the seconds the tar takes so the copy is consistent. Vaultwarden is the
+# password manager — the one backup that must not turn out corrupt exactly
+# when it matters most. (Actual Budget has its own quiesce in actual_backup.)
+service_needs_sqlite_quiesce() {
+  case "$1" in
+    vaultwarden) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Tar a service's bind-mount dir into staging (used for services without a
 # bespoke quiesce step). Returns the artifact path on stdout.
 service_fs_backup() {
@@ -832,8 +845,22 @@ service_fs_backup() {
   ts="$(date +%Y%m%d-%H%M%S)"
   archive="$stage/${name}-${ts}.tar.gz"
   log "$name backup -> $archive"
-  run tar -C "$(dirname "$src")" -czf "$archive" "$(basename "$src")" \
-    || { warn "$name tar failed."; return 1; }
+
+  local paused=0 cn="" rc=0
+  if service_needs_sqlite_quiesce "$name" && service_running "$name"; then
+    cn="$(container_name_for "$name" || true)"
+    if [[ -n "$cn" ]]; then
+      log "Quiescing (docker pause) $cn for a consistent SQLite copy."
+      run docker pause "$cn" || true
+      paused=1
+    fi
+  fi
+  run tar -C "$(dirname "$src")" -czf "$archive" "$(basename "$src")" || rc=1
+  if (( paused == 1 )); then
+    run docker unpause "$cn" || warn "failed to unpause $cn — check it manually!"
+  fi
+  (( rc == 0 )) || { warn "$name tar failed."; return 1; }
+
   if (( DRY_RUN == 0 )); then
     validate_backup_artifact "$archive" || return 1
     prune_staging "$stage" "${name}-*.tar.gz" "${SERVICE_BACKUP_KEEP:-7}"
@@ -1300,7 +1327,15 @@ fresh_file_in_dir() {
 }
 
 restic_backup_fresh() {
-  local hb="$STATE_ROOT/backups/last-success"
+  # Aggregate heartbeat (any target succeeded); fall back to the newest
+  # per-target file (last-success-<target>) if the aggregate is missing.
+  local hb="$STATE_ROOT/backups/last-success" f
+  if [[ ! -f "$hb" ]]; then
+    for f in "$STATE_ROOT/backups"/last-success-*; do
+      [[ -f "$f" ]] || continue
+      [[ ! -f "$hb" || "$f" -nt "$hb" ]] && hb="$f"
+    done
+  fi
   [[ -f "$hb" ]] || return 1
   local age_h
   age_h=$(( ( $(date +%s) - $(stat -c %Y "$hb" 2>/dev/null || stat -f %m "$hb") ) / 3600 ))
@@ -2032,6 +2067,21 @@ run_checkup() {
     else
       checkup_add healthy "Last backup completed ${age_h}h ago."
     fi
+    # Per-target freshness (files written per succeeded target): the
+    # aggregate above stays the critical gate; a single stale destination
+    # while another is fresh is a warning — data is protected somewhere,
+    # but one destination needs attention.
+    local tf tname tvar tage
+    for tf in "$STATE_ROOT/backups"/last-success-*; do
+      [[ -f "$tf" ]] || continue
+      tname="${tf##*/last-success-}"
+      tvar="BACKUP_TARGET_$(uppercase_token "$tname")_ENABLED"
+      [[ "${!tvar:-0}" == "1" ]] || continue   # disabled/removed target: ignore stale file
+      tage=$(( ( $(date +%s) - $(stat -c %Y "$tf" 2>/dev/null || stat -f %m "$tf") ) / 3600 ))
+      if (( tage > BACKUP_MAX_AGE_HOURS )); then
+        checkup_add warning "Backup target '$tname' is ${tage}h stale (limit ${BACKUP_MAX_AGE_HOURS}h) — check that destination."
+      fi
+    done
   else
     checkup_add warning "No successful restic backup recorded yet."
   fi

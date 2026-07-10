@@ -9,19 +9,36 @@ install.
 ## What gets backed up
 
 `bin/domum-core-backup` backs up (see `BACKUP_PATHS` in
-`config/domum-backup.conf`):
+`config/domum-backup.conf`), storing each byte once in restic's
+dedup-friendly raw form:
 
-- all critical bind mounts (HA, MariaDB data, MQTT, Zigbee2MQTT, Z-Wave,
-  ESPHome, Music Assistant, AdGuard, Actual, Traefik config)
-- the whole `compose/` tree and `config/`
-- `/var/lib/domum-core/service-backups/` — so the Actual/HA/MariaDB artifacts
-  ride along
+- the whole `compose/` tree (contains every service bind mount: HA, MQTT,
+  Zigbee2MQTT, Z-Wave, ESPHome, Music Assistant, AdGuard, Actual,
+  Vaultwarden, Traefik config) and `config/`
+- `/var/lib/domum-core/service-backups/mariadb/` — the `mariadb-dump` SQL
+  artifacts, the authoritative MariaDB backup
+- `/var/lib/domum-core/service-backups/volumes/` — **named-volume exports**
+  (Node-RED, Uptime-Kuma, Traefik letsencrypt), the only capture of those
+  docker volumes
 - `/var/lib/domum-core/recovery-pack/` — the encrypted recovery packs
-- **named-volume exports** — Node-RED, Uptime-Kuma, Traefik
-  letsencrypt are tarred out of their docker volumes into staging first
 
-**Excluded:** DB WAL/SHM files, TTS caches, and other disposable paths
-configured in `BACKUP_EXCLUDES`.
+The rest of the service-backup staging (`/var/lib/domum-core/service-backups/`)
+stays **local-only**: it exists for fast same-host restores and the update
+backup gate, and its gzipped tars are opaque to restic dedup.
+
+**Excluded:** raw MariaDB InnoDB files (`compose/automation/mariadb/data` —
+a hot copy is not a reliable restore source; the SQL dump above is), DB
+WAL/SHM files, TTS caches, and other disposable paths in `BACKUP_EXCLUDES`.
+
+**Consistency:** services with live SQLite databases (Actual Budget,
+Vaultwarden) are quiesced with `docker pause` for the few seconds their tar
+takes during the nightly service backup — a barely-noticeable pause at 02:30
+in exchange for copies that cannot be torn mid-write. Opt out with
+`ACTUAL_QUIESCE=0` in the overlay for Actual.
+
+**Failure isolation:** every enabled target is attempted every run; a failed
+target is reported (run exits non-zero, `checkup` warns which destination is
+stale via `last-success-<target>` files) but never cancels the others.
 
 ## 1. Install restic
 
@@ -100,5 +117,9 @@ See `docs/backups/disaster-recovery.md`. Quick form:
 
 ```bash
 sudo domum-core-backup --snapshots
-sudo domum-core-backup --restore <snapshot-id> /tmp/restore local
+sudo domum-core-backup --restore <snapshot-id> /var/tmp/domum-restore local
 ```
+
+(restic recreates the original absolute paths under the target directory —
+see the disaster-recovery runbook for moving the tree into place. `/var/tmp`
+is disk-backed; `/tmp` is RAM-backed and too small.)
