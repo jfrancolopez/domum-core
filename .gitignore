@@ -11,6 +11,9 @@ logs/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 
+# Live ESPHome bind-mount config; backed up, never committed.
+compose/automation/esphome/
+
 # Local editor and AI agent workspace state
 nimbalyst-local/
 .nimbalyst/
