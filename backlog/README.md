@@ -77,6 +77,7 @@ Items A2–D of task 26 remain open.
 | 14 | [Docs index completeness pass](task-14-docs-index.md) | trivial | none |
 | 15 | [Unified logging convention](task-15-logging-convention.md) **[shared-philosophy]** | small | low |
 | 16 | [Git workflow conventions doc](task-16-git-conventions.md) **[shared-philosophy]** | small | none |
+| 35 | [Update/install must not depend on operator SSH identity](task-35-anonymous-fetch-resilience.md) | trivial-small | none |
 
 ### Phase 5 — Needs the operator (host access / maintenance window)
 
