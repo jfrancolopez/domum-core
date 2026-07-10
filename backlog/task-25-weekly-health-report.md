@@ -43,9 +43,59 @@ Subject: [domum-core] Weekly report — OK (2 warnings)   ← worst level in sub
 Format decision: **simple inline-styled HTML** (one `<table>` per section,
 green/amber/red status dots via colored ● characters work in plain text too).
 Implementation guard: build the plain-text version first; HTML is a wrapper
-around the same strings. If the HTML grows past ~100 lines of heredoc,
-ship plain text — readability of the code beats prettiness of the mail.
-No external templating, no images, no charts.
+around the same strings. No external templating, no images, no JS, no
+remote assets.
+
+## Round-3 requirements (operator, 2026-07-10): retro dashboard edition
+
+Audience and framing: readable on an **iPhone lock-screen-to-Mail flow and a
+laptop**, written in plain language a non-engineer household member could
+follow ("Backups: all 3 copies fresh ✓", not "restic heartbeat Δt=26h").
+Verdict stays in the subject line.
+
+### Additional content sections
+- **NVMe health** (`smartctl -A /dev/nvme0` — smartmontools is already in
+  doctor's/task-34 package list): wear (`Percentage Used`), data written
+  (TBW), temperature, spare — plus one derived plain sentence:
+  "2% worn after 8 months → roughly 9+ years of life at this rate."
+- **Power (measured, not guessed):** Pi 5 exposes PMIC rails via
+  `vcgencmd pmic_read_adc`; sum V×A across rails for board watts (~±15%,
+  label it "approx"). Optional cost line from `REPORT_KWH_RATE` +
+  `REPORT_CURRENCY` config keys (unset ⇒ omit the line). Fallback when
+  vcgencmd/PMIC absent: skip the section (never fake a load-based estimate
+  without labeling — simpler: just skip).
+- **One-line-per-week history + sparklines:** append one CSV row per run to
+  `$STATE_ROOT/report/history.csv` (date, disk%, mem%, temp, watts,
+  containers running, journal errors). Render 8-week Unicode sparklines
+  (`▁▂▃▄▅▆▇`) next to each metric. Trends with zero infrastructure — no
+  TSDB, no Grafana, and the sparklines ARE the retro aesthetic. Cap the CSV
+  (keep last ~120 rows).
+- **Image rot table** (consumes task 36 D5): per service, image build age +
+  tier threshold status — this is the "review this pin" nag surface.
+- **Requests per service — OPTIONAL, default OFF:** counting requires
+  enabling Traefik access logs = constant NVMe writes all week for one
+  low-decision number. Ship the section gated on
+  `REPORT_TRAEFIK_REQUESTS=0` + a doc note on the trade-off (enable
+  accessLog to a logrotated file; weekly awk per router). Recommend leaving
+  off; recorded here so it is not re-proposed.
+
+### Retro design spec (keep it email-safe)
+- Single column, `max-width: 600px` (native iPhone width; centered on
+  laptop). Tables for layout, ALL styles inline — no `<style>` blocks
+  beyond a minimal head fallback, no images, no webfonts.
+- Monospace stack: `"SF Mono", Menlo, Consolas, "Courier New", monospace`.
+- Palette: cream/paper background (`#f4efe6`), ink text (`#2b2b26`),
+  terminal-green accents (`#1f7a4d`), amber for warnings (`#b8860b`), red
+  only for criticals. Do NOT ship a dark background — dark-mode email
+  clients invert unpredictably; the cream palette survives both modes.
+- Masthead: ASCII text block, e.g.
+  `╔══ DOMUM-CORE // WEEKLY ══ 2026-07-12 ══╗` (box-drawing chars render
+  fine in Apple Mail/Gmail); section dividers with `─` runs; `●`/`▲`/`✗`
+  status glyphs.
+- Acceptance test: send to self, check Apple Mail (iPhone, light+dark) and
+  Gmail web — no horizontal scroll, glyphs intact, readable at arm's length.
+- Code guard stays: if the HTML wrapper exceeds ~150 lines of heredoc,
+  simplify the design, not the data.
 
 Anti-alert-fatigue rules:
 - Exactly one email per week. No "all clear" daily mails, no per-event mails.

@@ -1,4 +1,13 @@
-# Task 31 — Updates: apply exactly the aged candidate + add `updates rollback`
+# Task 31 — SUPERSEDED by task 36 (2026-07-10)
+
+> **Do not implement this task.** Its two features (digest-verified apply,
+> `updates rollback`) are absorbed as sections D2 and D4 of
+> `task-36-unattended-update-pipeline.md`, which redesigns the whole update
+> pipeline after the 2026-07-10 mariadb incident (pull-free check, scheduled
+> apply-auto, tier policy, rot-nagging). Kept for the background analysis
+> below.
+
+# Task 31 (historical) — Updates: apply exactly the aged candidate + add `updates rollback`
 
 ## Objective
 Close the remaining honesty gaps in the cautious-update model: (a) `updates

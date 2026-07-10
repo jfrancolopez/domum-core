@@ -61,14 +61,17 @@ Items A2–D of task 26 remain open.
 **Priority raised (2026-07-10):** the predicted incident happened — `apply`
 recreated mariadb onto a previously pulled `mariadb:latest` 12.3, which
 crash-looped on the old datadir and took Home Assistant down until the image
-was pinned back. Do 10 first (formalize the emergency pin), then 09
-(the warning that would have prevented it), then 31.
+was pinned back. Task 36 is the umbrella redesign (pull-free check,
+digest-verified apply, scheduled apply-auto, tier policy, image-age
+rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
+36 → 09 (now defense-in-depth).
 
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
 | 10 | [Pin critical stateful images (MariaDB, HA, Traefik-major)](task-10-pin-critical-images.md) | medium | medium |
+| 36 | [Unattended-safe update pipeline](task-36-unattended-update-pipeline.md) | med-large | medium |
 | 09 | [Warn on pending update candidates during apply](task-09-apply-warns-on-candidates.md) | small | low |
-| 31 | [Apply exactly the aged candidate + `updates rollback`](task-31-updates-apply-race-and-rollback.md) | medium | medium |
+| ~~31~~ | [superseded by 36](task-31-updates-apply-race-and-rollback.md) | — | — |
 
 ### Phase 4 — Hygiene & simplification
 
