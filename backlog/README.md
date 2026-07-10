@@ -25,7 +25,7 @@ foundation, without merging anything.
 | 20 | [Keep installed CLI/units in sync with the repo](task-20-installed-cli-stays-in-sync.md) | ✅ done (6ac428a) — on the Pi: re-run install.sh once to swap copies for symlinks | small | low |
 | 04 | [Add missing BACKUP_MUSICASSISTANT default](task-04-musicassistant-backup-default.md) | ✅ done (d75232e) — verify on Pi: `backups run --dry-run` shows a musicassistant line | trivial | low |
 | 32 | [Architecture principles + acceptance checklist doc](task-32-architecture-principles-doc.md) | ✅ done (53b7704) | small | none |
-| 37 | [CRITICAL: configure wizard stdin bug — silently disables services](task-37-configure-wizard-stdin-bug.md) | open — **do first; wizard unsafe until fixed** (live incident 2026-07-10) | small | low |
+| 37 | [CRITICAL: configure wizard stdin bug — silently disables services](task-37-configure-wizard-stdin-bug.md) | ✅ done (d6ac801) | small | low |
 
 Rationale: 19 removes the one line that can destroy a restore; 20 makes every
 later fix actually reach the production host (note: the 03 fix is live in git
