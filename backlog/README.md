@@ -82,6 +82,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 | 07 | [CI cleanup and alignment with sibling](task-07-ci-cleanup.md) **[shared-philosophy]** | small | low |
 | 08 | [Catalog-consistency smoke tests](task-08-catalog-smoke-tests.md) **[shared-philosophy]** | medium | low |
 | 30 | [Compose + gitignore hygiene batch](task-30-compose-hygiene.md) | small-med | low-med |
+| 38 | [Ignore ESPHome live config and secrets](task-38-ignore-esphome-live-config.md) | trivial | low |
 | 27 | [Rewrite install doc for NVMe / Debian 13](task-27-install-doc-rewrite.md) | small-med | none |
 | 12 | [Remove tracked traefik usersfile placeholder](task-12-remove-usersfile.md) | trivial | low |
 | 14 | [Docs index completeness pass](task-14-docs-index.md) | trivial | none |

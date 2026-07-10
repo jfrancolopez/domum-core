@@ -2705,11 +2705,22 @@ doctor_cmd() {
 # ===========================================================================
 
 # set_conf_key <file> <KEY> <value> — comment-preserving in-place upsert. If KEY
-# exists (even commented) it is replaced; otherwise appended. Quotes the value.
+# already has the requested active/commented value, it is left untouched;
+# otherwise the first existing definition is replaced or a quoted value is added.
 set_conf_key() {
-  local file="$1" key="$2" val="$3" tmp
+  local file="$1" key="$2" val="$3" tmp current_line current_val
   install -d -m 0750 "$(dirname "$file")"
   [[ -f "$file" ]] || : > "$file"
+
+  current_line="$(grep -m1 -E "^[[:space:]]*${key}=" "$file" || true)"
+  [[ -n "$current_line" ]] || current_line="$(grep -m1 -E "^[#[:space:]]*${key}=" "$file" || true)"
+  if [[ -n "$current_line" ]]; then
+    current_val="${current_line#*=}"
+    current_val="${current_val#\"}"; current_val="${current_val%\"}"
+    current_val="${current_val#\'}"; current_val="${current_val%\'}"
+    [[ "$current_val" == "$val" ]] && return 0
+  fi
+
   tmp="$(mktemp)"
   if grep -qE "^[#[:space:]]*${key}=" "$file"; then
     # Replace the first (active or commented) definition; awk avoids sed quoting pain.
@@ -2733,15 +2744,21 @@ redact() {
   esac
 }
 
+require_configure_tty() {
+  [[ -t 0 ]] || die "configure wizard needs an interactive terminal"
+}
+
 # ask <prompt> <current> — read a value, defaulting to current on empty input.
 ask() {
   local prompt="$1" current="$2" reply
+  require_configure_tty
   read -r -p "$prompt [$current]: " reply
   printf '%s' "${reply:-$current}"
 }
 
 ask_bool() {
   local prompt="$1" current="$2" reply
+  require_configure_tty
   read -r -p "$prompt (1/0) [$current]: " reply
   reply="${reply:-$current}"
   [[ "$reply" == "1" ]] && echo 1 || echo 0
@@ -2812,7 +2829,40 @@ configure_backup_current() {
   install -d -m 0750 "$dest"
   [[ -f "$CFG_FILE" ]] && install -m 0600 "$CFG_FILE" "$dest/"
   [[ -f "$BACKUP_CFG_FILE" ]] && install -m 0600 "$BACKUP_CFG_FILE" "$dest/"
+  CONFIG_BACKUP_DEST="$dest"
   log "Current config backed up to $dest"
+}
+
+configure_print_diff() {
+  local backup_dir="$1" diff_file changed=0
+  diff_file="$(mktemp)"
+
+  local file old label
+  for file in "$CFG_FILE" "$BACKUP_CFG_FILE"; do
+    old="$backup_dir/$(basename "$file")"
+    label="$(basename "$file")"
+    if [[ -f "$old" && -f "$file" ]]; then
+      if ! diff -u --label "before/$label" --label "after/$label" "$old" "$file" >> "$diff_file"; then
+        changed=1
+      fi
+    elif [[ -f "$old" || -f "$file" ]]; then
+      {
+        printf 'Only one copy exists for %s\n' "$label"
+        printf '  before: %s\n' "$old"
+        printf '  after:  %s\n' "$file"
+      } >> "$diff_file"
+      changed=1
+    fi
+  done
+
+  echo
+  echo "-- Config diff from pre-run backup --"
+  if (( changed == 0 )); then
+    echo "  No changes."
+  else
+    awk 'NR <= 200 { print } NR == 201 { print "... diff truncated after 200 lines ..."; exit }' "$diff_file"
+  fi
+  rm -f "$diff_file"
 }
 
 configure_write_defaults() {
@@ -2830,8 +2880,10 @@ configure_write_defaults() {
 }
 
 configure_wizard() {
+  require_configure_tty
   load_cfg
   configure_backup_current
+  local backup_dir="$CONFIG_BACKUP_DEST"
   echo "=== domum-core configure ==="
   echo "Press Enter to keep the current value shown in [brackets]."
   echo
@@ -2844,9 +2896,9 @@ configure_wizard() {
 
   echo "-- Services (1=on 0=off) --"
   local name enable_var _rest
-  while IFS='|' read -r name enable_var _rest; do
+  while IFS='|' read -r -u3 name enable_var _rest; do
     set_conf_key "$CFG_FILE" "$enable_var" "$(ask_bool "  $name" "${!enable_var:-0}")"
-  done < <(service_catalog)
+  done 3< <(service_catalog)
 
   echo "-- Backup --"
   set_conf_key "$CFG_FILE" BACKUP_MAX_AGE_HOURS "$(ask 'Backup freshness gate (hours)' "${BACKUP_MAX_AGE_HOURS:-48}")"
@@ -2864,14 +2916,14 @@ configure_wizard() {
 
   echo "-- Updates (per app) --"
   local svc token auto_key delay_key
-  while IFS= read -r svc; do
+  while IFS= read -r -u3 svc; do
     token="$(update_token_for "$svc")"
     auto_key="${token}_AUTO_UPDATE"
     delay_key="${token}_UPDATE_DELAY_DAYS"
     echo "  $(service_display_name "$svc"):"
     set_conf_key "$CFG_FILE" "$auto_key" "$(ask_bool '    Auto-update' "${!auto_key:-0}")"
     set_conf_key "$CFG_FILE" "$delay_key" "$(ask '    Delay days' "${!delay_key:-7}")"
-  done < <(enabled_services)
+  done 3< <(enabled_services)
 
   echo "-- Health Checks --"
   set_conf_key "$CFG_FILE" HEALTHCHECK_HOMEASSISTANT_HTTP "$(ask_bool '  Home Assistant HTTP URL check' "${HEALTHCHECK_HOMEASSISTANT_HTTP:-0}")"
@@ -2883,6 +2935,8 @@ configure_wizard() {
   set_conf_key "$CFG_FILE" ENABLE_SECURITY_PATCHES "$(ask_bool '  OS security patches' "${ENABLE_SECURITY_PATCHES:-1}")"
   set_conf_key "$CFG_FILE" ENABLE_AUTOREMOVE_OLD_KERNELS "$(ask_bool '  autoremove old kernels' "${ENABLE_AUTOREMOVE_OLD_KERNELS:-0}")"
 
+  echo
+  configure_print_diff "$backup_dir"
   echo
   log "Configuration written. Validate with: sudo domum-core configure --validate"
   log "Apply changes with: sudo domum-core apply"
