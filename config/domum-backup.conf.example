@@ -87,6 +87,7 @@ BACKUP_ZWAVE=1
 BACKUP_NODERED=1
 BACKUP_MQTT=1
 BACKUP_ESPHOME=1
+BACKUP_MUSICASSISTANT=1
 BACKUP_ADGUARD=1
 
 # ============================================================
