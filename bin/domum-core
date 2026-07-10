@@ -347,6 +347,25 @@ repo_update() {
   fi
   git -C "$DOMUM_DIR" reset --hard origin/main
   log "Repo updated."
+
+  # Installed unit files are copies (systemd reads /etc/systemd/system), so a
+  # repo update alone leaves them stale. If any installed unit drifted from
+  # the repo, re-run the install-maintenance copy: it only copies files and
+  # daemon-reloads — it never enables or disables anything.
+  local u dst drift=0 installed=0
+  for u in "$DOMUM_DIR"/systemd/domum-core-*.service "$DOMUM_DIR"/systemd/domum-core-*.timer; do
+    [[ -f "$u" ]] || continue
+    dst="/etc/systemd/system/$(basename "$u")"
+    [[ -f "$dst" ]] || continue
+    installed=1
+    cmp -s "$u" "$dst" || drift=1
+  done
+  if [[ "$drift" -eq 1 ]]; then
+    log "systemd/ changed upstream — refreshing installed maintenance units..."
+    install_maintenance_unit_files
+  elif [[ "$installed" -eq 0 ]]; then
+    log "No maintenance units installed; run 'domum-core schedule install-maintenance' to add them."
+  fi
 }
 
 # ---- service catalog: the single source of truth ---------------------------
@@ -842,6 +861,8 @@ run_service_backups() {
 #  Section: restic backups (delegates to bin/domum-core-backup)
 # ===========================================================================
 
+# /usr/local/bin entry is a symlink into the repo (install.sh); the repo
+# fallback covers hosts installed before symlinks or with the link removed.
 BACKUP_BIN_CANDIDATES=(/usr/local/bin/domum-core-backup "$DOMUM_DIR/bin/domum-core-backup")
 
 backup_bin() {
@@ -2446,13 +2467,11 @@ schedule_remove() {
   log "Night profile scheduling removed."
 }
 
-schedule_install_maintenance() {
-  need_root
-  load_cfg
-  ensure_state_dirs
-
+# Copy repo unit files into /etc/systemd/system and daemon-reload.
+# Copies only — never enables or disables anything. Shared by
+# `schedule install-maintenance` and the drift refresh in repo_update().
+install_maintenance_unit_files() {
   [[ -d "$DOMUM_DIR/systemd" ]] || die "Missing $DOMUM_DIR/systemd"
-  log "Installing maintenance unit/timer files (NOT enabling them)..."
   local f
   for f in "$DOMUM_DIR"/systemd/domum-core-*.service "$DOMUM_DIR"/systemd/domum-core-*.timer; do
     [[ -f "$f" ]] || continue
@@ -2460,6 +2479,15 @@ schedule_install_maintenance() {
     echo "  installed $(basename "$f")"
   done
   systemctl daemon-reload
+}
+
+schedule_install_maintenance() {
+  need_root
+  load_cfg
+  ensure_state_dirs
+
+  log "Installing maintenance unit/timer files (NOT enabling them)..."
+  install_maintenance_unit_files
 
   cat <<EOF
 

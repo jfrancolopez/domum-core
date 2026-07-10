@@ -1,7 +1,8 @@
 # domum-core CLI cheatsheet
 
 `domum-core` is the consolidated CLI. `domum` is a back-compat shim that execs
-`domum-core`. Install path: `/usr/local/bin/domum-core`.
+`domum-core`. Install path: `/usr/local/bin/domum-core` — a symlink into
+`/opt/domum-core/bin/`, so `domum-core update` updates the CLI itself.
 
 All commands run as root (`sudo`).
 
@@ -11,7 +12,7 @@ All commands run as root (`sudo`).
 |---|---|
 | `domum-core init` | Install Docker, create dirs, copy `*.conf.example` → `.conf` |
 | `domum-core apply` | Converge compose state from `config/domum.conf` toggles |
-| `domum-core update` | `git pull` (warns + confirms on local drift) |
+| `domum-core update` | `git pull` (warns + confirms on local drift); refreshes installed systemd units if they drifted |
 | `domum-core status [--counts]` | `compose ps`, storage, backup heartbeat; `--counts` adds per-category running/total |
 
 ## Health

@@ -47,12 +47,16 @@ else
   git clone "${REPO_URL}" "${INSTALL_DIR}"
 fi
 
-echo "[domum] Installing domum-core CLI to ${BIN_CORE}..."
-install -m 0755 "${INSTALL_DIR}/bin/domum-core" "${BIN_CORE}"
-install -m 0755 "${INSTALL_DIR}/bin/domum-core-backup" "${BIN_BACKUP}"
+echo "[domum] Linking domum-core CLI to ${BIN_CORE}..."
+# Symlinks (not copies) so `domum-core update` (git pull) updates the
+# installed CLI in the same step — no stale-copy window. Trade-off: a broken
+# repo state breaks the CLI immediately; acceptable because CI gates main.
+chmod 0755 "${INSTALL_DIR}"/bin/*
+ln -sf "${INSTALL_DIR}/bin/domum-core" "${BIN_CORE}"
+ln -sf "${INSTALL_DIR}/bin/domum-core-backup" "${BIN_BACKUP}"
 
-echo "[domum] Installing back-compat 'domum' shim -> domum-core..."
-install -m 0755 "${INSTALL_DIR}/bin/domum" "${BIN_SHIM}"
+echo "[domum] Linking back-compat 'domum' shim -> domum-core..."
+ln -sf "${INSTALL_DIR}/bin/domum" "${BIN_SHIM}"
 
 echo "[domum] Creating directories..."
 # Standardized secrets path is /etc/domum-core/secrets (was drifting to
