@@ -86,9 +86,9 @@ gitleaks — do not merge red CI.
   `backlog/README.md`.
 - User-facing changes update `docs/` in the same commit; new docs get an
   entry in `docs/README.md`.
-- Design philosophy: `docs/reference/architecture-principles.md` (once
-  backlog task 32 lands) — until then, the principles summary in
-  `backlog/README.md` governs.
+- Design philosophy and the per-change acceptance checklist:
+  `docs/reference/architecture-principles.md`. Run every change through its
+  checklist before committing.
 
 ## Stop and ask the operator when
 

@@ -145,12 +145,15 @@ in the same session.
 
 ## Ground rules for every task
 
-- Never rewrite working code for style alone.
-- Every change must pass: `bash -n bin/domum-core`, `shellcheck bin/*`,
-  `docker compose ... config -q` (see `.github/workflows/validate.yml`).
-- The Pi is a production host. Anything touching runtime behavior needs a
-  dry-run path and a rollback note before it merges.
+The design philosophy and per-change acceptance checklist live in
+[docs/reference/architecture-principles.md](../docs/reference/architecture-principles.md).
+Backlog-specific rules on top of it:
+
+- Every change must pass CI: `bash -n bin/domum-core`, `shellcheck bin/*`,
+  yamllint, `docker compose ... config -q` (see
+  `.github/workflows/validate.yml`).
 - Tasks are independent unless the **Dependencies** section says otherwise.
-- After merging anything in `bin/` or `systemd/`, remember the deploy step on
-  the host (`domum-core update` — and until task 20 lands, re-run
-  `install.sh` so `/usr/local/bin` copies refresh).
+- After merging anything in `bin/` or `systemd/`, deploy on the host with
+  `sudo domum-core update` (binaries are symlinks and installed units refresh
+  automatically since task 20; hosts installed before task 20 must re-run
+  `install.sh` once).

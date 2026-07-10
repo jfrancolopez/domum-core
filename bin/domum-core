@@ -14,6 +14,7 @@ set -euo pipefail
 # destructive action; never stop HA/MQTT/Zigbee2MQTT/Node-RED/Traefik/Actual/
 # AdGuard unless the command is explicit and config-gated; never delete
 # existing files; never rotate secrets automatically.
+# Full design philosophy: docs/reference/architecture-principles.md
 
 DOMUM_DIR="${DOMUM_DIR:-/opt/domum-core}"
 CFG_FILE="${CFG_FILE:-$DOMUM_DIR/config/domum.conf}"

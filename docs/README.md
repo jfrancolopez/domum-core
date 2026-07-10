@@ -37,6 +37,7 @@ designed to be explicit and backup-aware.
 
 ## Reference
 
+- [Architecture principles & acceptance checklist](reference/architecture-principles.md)
 - [Audit](reference/audit.md)
 - [Removed services](reference/removed-services.md)
 - [Add a new service](reference/add-new-service.md)
