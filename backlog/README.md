@@ -36,7 +36,7 @@ big recovery work is built against it.
 
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
-| 21 | [Backup pipeline correctness (isolation, source set, SQLite)](task-21-backup-pipeline-correctness.md) | medium | medium |
+| 21 | [Backup pipeline correctness (isolation, source set, SQLite)](task-21-backup-pipeline-correctness.md) ✅ done (c401be7) — host steps remain: `backups run --dry-run` path review, simulated target failure, restore spot-check (see task's testing plan) | medium | medium |
 | 33 | [Structured backup manifest (metadata)](task-33-backup-manifest-metadata.md) | small-med | low |
 | 26 | [Recovery docs overhaul + storage-replacement runbook](task-26-recovery-docs-overhaul.md) | medium | none |
 | 22 | [Guided restore: `domum-core restore`](task-22-guided-restore-command.md) | large | medium |
