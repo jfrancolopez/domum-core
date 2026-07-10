@@ -64,6 +64,12 @@ Implementation notes:
   the ad-hoc `service-inventory.txt` + `backup-targets.txt` over time (keep
   those files for one transition period, then remove — note in the task
   when implementing).
+  **Implementation note (2026-07-09):** transition period started — the pack
+  now carries `meta/BACKUP-MANIFEST.json` alongside both text files. Remove
+  `service-inventory.txt`/`backup-targets.txt` once the restore wizard
+  (task 22) consumes the manifest. Note: since task 21 shrank `BACKUP_PATHS`,
+  the manifest file is listed there explicitly so it still rides in every
+  snapshot.
 - `manifest_schema` is a plain integer with an "additive changes only" rule.
   No schema registry, no migration code — if a field must change meaning,
   bump the integer and teach the two consumers.

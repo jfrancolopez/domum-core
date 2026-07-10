@@ -902,6 +902,142 @@ backup_bin() {
   echo "$DOMUM_DIR/bin/domum-core-backup"
 }
 
+# ---- per-run backup manifest ------------------------------------------------
+# One JSON file describing what this run backed up, from what software state,
+# with per-artifact sha256. Overwritten each run — history lives in restic
+# snapshots, where the manifest rides along (it is in BACKUP_PATHS).
+# Consumers: restore verification (checksum list), the restore wizard
+# (summary + enabled-timer replay), the weekly report. A missing manifest is
+# always informational, never an error — old snapshots predate it.
+
+backup_manifest_file() { echo "$STATE_ROOT/service-backups/BACKUP-MANIFEST.json"; }
+
+json_str() {
+  local s="$1"
+  s="${s//\\/\\\\}"; s="${s//\"/\\\"}"
+  s="${s//$'\n'/ }"; s="${s//$'\t'/ }"
+  printf '%s' "$s"
+}
+
+# One line per enabled service: "<name>\t<running image digest | (not running)>".
+# Shared by the manifest and the recovery pack's service inventory.
+service_inventory_lines() {
+  local svc cid
+  while IFS= read -r svc; do
+    cid="$(container_for "$svc" || true)"
+    if [[ -n "$cid" ]]; then
+      printf '%s\t%s\n' "$svc" "$(docker inspect --format '{{range .RepoDigests}}{{.}} {{end}}{{.Image}}' "$cid" 2>/dev/null || echo unknown)"
+    else
+      printf '%s\t(not running)\n' "$svc"
+    fi
+  done < <(enabled_services)
+}
+
+# Emit one artifact object (no trailing comma; caller manages separators).
+backup_manifest_artifact_json() {
+  local abs="$1" rel="$2"
+  printf '    {"path": "%s", "size": %s, "sha256": "%s"}' \
+    "$(json_str "$rel")" \
+    "$(to_int "$(file_size "$abs")")" \
+    "$(sha256_of_file "$abs" || echo unknown)"
+}
+
+manifest_enabled_targets() {
+  grep -oE '^BACKUP_TARGET_[A-Z0-9]+_ENABLED=1' "$BACKUP_CFG_FILE" 2>/dev/null \
+    | sed -E 's/^BACKUP_TARGET_([A-Z0-9]+)_ENABLED=1/\1/' | tr '[:upper:]' '[:lower:]'
+}
+
+write_backup_manifest() {
+  local out tmp
+  out="$(backup_manifest_file)"
+  tmp="${out}.tmp"
+  local commit dirty os_rel
+  commit="$(git -C "$DOMUM_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+  if git -C "$DOMUM_DIR" diff --quiet 2>/dev/null \
+     && git -C "$DOMUM_DIR" diff --cached --quiet 2>/dev/null; then
+    dirty=false
+  else
+    dirty=true
+  fi
+  os_rel="$(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-unknown}" || echo unknown)"
+
+  {
+    printf '{\n'
+    printf '  "manifest_schema": 1,\n'
+    printf '  "created_at": "%s",\n' "$(json_str "$(date -Iseconds)")"
+    printf '  "host": "%s",\n' "$(json_str "$(hostname)")"
+    printf '  "git_commit": "%s",\n' "$(json_str "$commit")"
+    printf '  "git_dirty": %s,\n' "$dirty"
+    printf '  "os_release": "%s",\n' "$(json_str "$os_rel")"
+    printf '  "kernel": "%s",\n' "$(json_str "$(uname -r)")"
+    printf '  "docker_version": "%s",\n' "$(json_str "$(docker --version 2>/dev/null || echo unknown)")"
+    printf '  "restic_version": "%s",\n' "$(json_str "$(restic version 2>/dev/null | head -n1 || echo unknown)")"
+
+    printf '  "enabled_services": [\n'
+    local first=1 svc image
+    while IFS=$'\t' read -r svc image; do
+      (( first == 0 )) && printf ',\n'
+      printf '    {"name": "%s", "image": "%s"}' "$(json_str "$svc")" "$(json_str "$image")"
+      first=0
+    done < <(service_inventory_lines)
+    printf '\n  ],\n'
+
+    printf '  "backup_flags": {'
+    first=1
+    local name _ev _cat _class bvar _rel _probe
+    while IFS='|' read -r name _ev _cat _class bvar _rel _probe; do
+      [[ "$bvar" == "-" || -z "$bvar" ]] && continue
+      (( first == 0 )) && printf ', '
+      printf '"%s": %s' "$(json_str "$bvar")" "$(to_int "${!bvar:-0}")"
+      first=0
+    done < <(service_catalog)
+    printf '},\n'
+
+    # Enabled timers: the host state a rebuild must recreate (disposable OS).
+    local -a timers=()
+    local t
+    while IFS= read -r t; do [[ -n "$t" ]] && timers+=("$t"); done < <(
+      systemctl list-unit-files 'domum-core-*.timer' --state=enabled --no-legend 2>/dev/null \
+        | awk '{print $1}'
+    )
+    printf '  "enabled_timers": %s,\n' "$(json_array_from_items ${timers[@]+"${timers[@]}"})"
+
+    local -a tgts=()
+    while IFS= read -r t; do [[ -n "$t" ]] && tgts+=("$t"); done < <(manifest_enabled_targets)
+    printf '  "targets": %s,\n' "$(json_array_from_items ${tgts[@]+"${tgts[@]}"})"
+
+    # Artifacts: the newest file per service staging dir (this run's, when the
+    # run succeeded) plus every named-volume export (overwritten per run).
+    printf '  "artifacts": [\n'
+    first=1
+    local d f
+    for d in "$STATE_ROOT/service-backups"/*/; do
+      [[ -d "$d" ]] || continue
+      if [[ "$(basename "$d")" == "volumes" ]]; then
+        for f in "$d"*.tar.gz; do
+          [[ -f "$f" ]] || continue
+          (( first == 0 )) && printf ',\n'
+          backup_manifest_artifact_json "$f" "volumes/$(basename "$f")"
+          first=0
+        done
+        continue
+      fi
+      # shellcheck disable=SC2012
+      f="$(ls -1t "$d" 2>/dev/null | head -n1)"
+      [[ -n "$f" && -f "$d$f" ]] || continue
+      (( first == 0 )) && printf ',\n'
+      backup_manifest_artifact_json "$d$f" "$(basename "$d")/$f"
+      first=0
+    done
+    printf '\n  ]\n'
+    printf '}\n'
+  } > "$tmp"
+
+  mv "$tmp" "$out"
+  chmod 640 "$out"
+  log "Backup manifest written: $out"
+}
+
 backups_cmd() {
   need_root
   load_cfg
@@ -917,9 +1053,13 @@ backups_cmd() {
       #      flag-driven from the catalog (BACKUP_<SERVICE>).
       log "Stage 1: service-level backups..."
       run_service_backups "$dry" || { svc_rc=1; warn "One or more service-level backups failed."; }
-      # 3. Metadata: which services were captured this run.
+      # 3. Metadata: which services were captured this run + the per-run
+      #    manifest (rides into restic via BACKUP_PATHS).
       if (( dry == 0 )); then
         enabled_services > "$STATE_ROOT/backups/last-services.txt" 2>/dev/null || true
+        write_backup_manifest || warn "Failed to write backup manifest."
+      else
+        log "[dry-run] would write backup manifest: $(backup_manifest_file)"
       fi
       # 4. restic push.
       log "Stage 4: restic backup..."
@@ -1166,15 +1306,7 @@ EOF
   # Service inventory + last container image digests.
   {
     echo "# enabled services + running image digest"
-    local svc cid
-    while IFS= read -r svc; do
-      cid="$(container_for "$svc" || true)"
-      if [[ -n "$cid" ]]; then
-        printf '%s\t%s\n' "$svc" "$(docker inspect --format '{{range .RepoDigests}}{{.}} {{end}}{{.Image}}' "$cid" 2>/dev/null || echo unknown)"
-      else
-        printf '%s\t(not running)\n' "$svc"
-      fi
-    done < <(enabled_services)
+    service_inventory_lines
   } > "$stage_dir/meta/service-inventory.txt"
 
   # Backup target URLs (NOT passwords).
@@ -1182,6 +1314,13 @@ EOF
     echo "# restic repository URLs (passwords are NOT included)"
     grep -E '^BACKUP_TARGET_[A-Z]+_(REPOSITORY|ENABLED|TYPE)=' "$BACKUP_CFG_FILE" 2>/dev/null || true
   } > "$stage_dir/meta/backup-targets.txt"
+
+  # Per-run backup manifest from the last `backups run` (task 33). The two
+  # text files above are kept for one transition period; the manifest
+  # supersedes both and will replace them.
+  if [[ -f "$(backup_manifest_file)" ]]; then
+    install -m 0600 "$(backup_manifest_file)" "$stage_dir/meta/BACKUP-MANIFEST.json"
+  fi
 
   recovery_pack_restore_md "$stage_dir"
   recovery_pack_manifest "$stage_dir"

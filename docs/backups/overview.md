@@ -26,6 +26,25 @@ The rest of the service-backup staging (`/var/lib/domum-core/service-backups/`)
 stays **local-only**: it exists for fast same-host restores and the update
 backup gate, and its gzipped tars are opaque to restic dedup.
 
+## The backup manifest
+
+Every `backups run` writes
+`/var/lib/domum-core/service-backups/BACKUP-MANIFEST.json` (schema v1,
+additive changes only), which rides inside each restic snapshot and into the
+recovery pack's `meta/`. It records what was backed up and from what software
+state: git commit, OS/kernel/docker/restic versions, enabled services with
+image digests, per-service backup flags, **enabled systemd timers** (host
+state a rebuild must recreate), configured targets, and each current staging
+artifact's size + sha256 for restore-time integrity checks. Read it from a
+snapshot without any domum tooling:
+
+```bash
+restic dump latest /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json | jq .
+```
+
+Snapshots older than the manifest simply don't have one — consumers treat
+that as informational, never an error.
+
 **Excluded:** raw MariaDB InnoDB files (`compose/automation/mariadb/data` —
 a hot copy is not a reliable restore source; the SQL dump above is), DB
 WAL/SHM files, TTS caches, and other disposable paths in `BACKUP_EXCLUDES`.

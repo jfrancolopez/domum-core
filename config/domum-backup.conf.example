@@ -33,7 +33,7 @@ BACKUP_MAX_AGE_HOURS=48
 # The other gzipped service tars stay local-only (opaque to restic dedup).
 # Uncomment to override.
 #
-# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups/mariadb /var/lib/domum-core/service-backups/volumes /var/lib/domum-core/recovery-pack"
+# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups/mariadb /var/lib/domum-core/service-backups/volumes /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json /var/lib/domum-core/recovery-pack"
 #
 # Named docker volumes exported (tar) into staging so they ride along.
 # BACKUP_VOLUMES="nodered-data uptime-kuma-data traefik-letsencrypt"
