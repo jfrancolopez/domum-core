@@ -51,15 +51,28 @@ sudo cp config/domum-backup.conf /opt/domum-core/config/
 
 ### 4. Restore service data from restic
 
+restic recreates the **original absolute paths under the target directory**,
+so never restore straight onto `/opt/domum-core` (you would get
+`/opt/domum-core/opt/domum-core/...`). Restore to a staging directory first
+(`/var/tmp` is disk-backed; `/tmp` is RAM and too small for this):
+
 ```bash
 sudo apt-get install -y restic
 sudo domum-core-backup --snapshots
-sudo domum-core-backup --restore latest /opt/domum-core local   # or hetzner
+sudo domum-core-backup --restore latest /var/tmp/domum-restore local   # or hetzner
 ```
 
-restic restores the bind mounts under `compose/...`, the named-volume tarballs
-under `/var/lib/domum-core/service-backups/volumes/`, and the service backup
-staging dirs. Re-import named volumes:
+The staging tree now holds `opt/domum-core/...` (compose bind mounts, config)
+and `var/lib/domum-core/...` (service backups, volume tarballs, recovery
+packs). Move it into place, then clean up:
+
+```bash
+sudo rsync -aHAX /var/tmp/domum-restore/opt/domum-core/ /opt/domum-core/
+sudo rsync -aHAX /var/tmp/domum-restore/var/lib/domum-core/ /var/lib/domum-core/
+sudo rm -rf /var/tmp/domum-restore
+```
+
+Re-import named volumes:
 
 ```bash
 for v in nodered-data uptime-kuma-data traefik-letsencrypt; do
