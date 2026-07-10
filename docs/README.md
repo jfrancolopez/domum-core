@@ -17,6 +17,7 @@ designed to be explicit and backup-aware.
 - [Container updates](operations/updates.md)
 - [Security patches](operations/security-patches.md)
 - [Maintenance timers](operations/maintenance-timers.md)
+- [Storage replacement](operations/storage-replacement.md)
 
 ## Backups
 
@@ -25,6 +26,7 @@ designed to be explicit and backup-aware.
 - [Recovery pack](backups/recovery-pack.md)
 - [Gmail recovery email](backups/gmail-recovery.md)
 - [Disaster recovery](backups/disaster-recovery.md)
+- [Migrating between hosts](backups/migrating-between-hosts.md)
 
 ## Services
 

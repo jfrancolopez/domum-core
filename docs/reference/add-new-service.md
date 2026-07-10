@@ -14,6 +14,34 @@ compose/<category>/<service-name>.yml
 Use the existing fragments as examples and prefer bind mounts under
 `/opt/domum-core/compose/<category>/<service-name>/` for persistent state.
 
+Skeleton (one service per file, no hardcoded IPs, secrets stay in
+`/etc/domum-core/secrets`):
+
+```yaml
+services:
+  service-name:
+    image: IMAGE:TAG
+    container_name: service-name
+    restart: unless-stopped
+    networks:
+      - domum-proxy      # only if exposed via Traefik
+      - domum-internal
+    volumes:
+      - ./service-name:/config
+    # If exposing via HTTPS:
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.http.routers.service-name.rule=Host(`service.example.com`)
+    #   - traefik.http.routers.service-name.entrypoints=websecure
+    #   - traefik.http.routers.service-name.tls.certresolver=cf
+
+networks:
+  domum-proxy:
+    external: true
+  domum-internal:
+    external: true
+```
+
 ## 2. Add Configuration Defaults
 
 Add an `ENABLE_<SERVICE>` toggle to `config/domum.conf.example`. Add

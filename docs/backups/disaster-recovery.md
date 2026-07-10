@@ -17,7 +17,9 @@ on new hardware.
 
 ### 1. Base OS + Docker
 
-Flash Raspberry Pi OS (64-bit), boot, set hostname/network, then:
+Flash **Debian 13 Lite (arm64)** to the NVMe drive (production boots natively
+from NVMe — see [install](../getting-started/install.md) for imaging and
+EEPROM boot-order steps), boot, set hostname/network, then:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
@@ -110,15 +112,23 @@ sudo docker compose -f compose/base.yml -f compose/automation/zigbee2mqtt.yml \
 sudo domum-core apply
 ```
 
-> **USB radios:** Zigbee/Z-Wave dongle device paths (`/dev/serial/by-id/...`)
-> differ on new hardware. Check the z2m and zwave compose fragments and update
-> the device path before bringing those services up.
+> **USB radios:** `/dev/serial/by-id/...` paths follow the **dongle** (they
+> are derived from its USB vendor/product/serial), not the Pi or the port —
+> the same dongles keep the same paths on a new Pi. Only edit the z2m/zwave
+> compose fragments if you replaced a radio itself.
 
 ### 7. Validate
 
 ```bash
 sudo domum-core checkup
 ```
+
+> **Tailscale (expected, by design):** `data/tailscale` is intentionally not
+> backed up — node keys are re-issuable, so the omission is designed loss,
+> not a hole. If `ENABLE_TAILSCALE=1`, re-authenticate after rebuild
+> (~2 minutes): generate an auth key in the Tailscale admin console and
+> restart the container with it, or run
+> `docker exec tailscale tailscale up` and follow the login URL.
 
 ### Abort / rollback
 
@@ -131,3 +141,7 @@ again. Nothing in the restore path overwrites data in place.
 This runbook works for: a new Pi 5, a temporary Linux box, or any other Docker
 host. The only host-specific details are USB radio device paths and any
 hardware-accelerated transcoding (not used by the core stack).
+
+For *planned* drive swaps or moving the NVMe to a new Pi (old drive healthy),
+the [storage replacement runbook](../operations/storage-replacement.md) is
+faster — but rebuild via this runbook remains the recovery path.
