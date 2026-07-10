@@ -38,7 +38,7 @@ big recovery work is built against it.
 |---|------|-----------|------|
 | 21 | [Backup pipeline correctness (isolation, source set, SQLite)](task-21-backup-pipeline-correctness.md) ✅ done (c401be7) — host steps remain: `backups run --dry-run` path review, simulated target failure, restore spot-check (see task's testing plan) | medium | medium |
 | 33 | [Structured backup manifest (metadata)](task-33-backup-manifest-metadata.md) ✅ done (e6090de) — host check: `jq .` the manifest after next `backups run`; `restic dump latest` it | small-med | low |
-| 26 | [Recovery docs overhaul + storage-replacement runbook](task-26-recovery-docs-overhaul.md) | medium | none |
+| 26 | [Recovery docs overhaul + storage-replacement runbook](task-26-recovery-docs-overhaul.md) ✅ done (31b047f; A1 in 8c610f0) | medium | none |
 | 22 | [Guided restore: `domum-core restore`](task-22-guided-restore-command.md) | large | medium |
 | 23 | [Automated restore verification (monthly) + annual fire drill](task-23-restore-verification.md) | medium | low |
 | 24 | [Multi-destination backups: Buffalo/Unraid/USB](task-24-multi-destination-backups.md) | medium | low-med |
