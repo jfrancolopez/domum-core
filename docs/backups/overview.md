@@ -90,22 +90,22 @@ recovery pack.)
 
 ## 4. Hetzner SFTP key (offsite target)
 
-```bash
-ssh-keygen -t ed25519 -f /etc/domum-core/secrets/hetzner_storagebox_ed25519 -N ''
-# upload the .pub to the Storage Box, then pin the host key:
-ssh-keyscan -p 23 uXXXXXX.your-storagebox.de \
-  | sudo tee /etc/domum-core/secrets/hetzner_storagebox_known_hosts >/dev/null
-```
+Use the copy-paste runbook in [Hetzner Storage Box backups](hetzner.md). It
+covers the restic password, SSH key, Storage Box public-key upload, known-host
+pinning, repository initialization, first backup, verification, and timers.
 
-Set `BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"`.
-See `docs/backups/hetzner.md` for the full Hetzner setup.
+Canonical repository form:
+
+```bash
+BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"
+```
 
 ## 5. Enable + initialize
 
 ```bash
-# set BACKUP_TARGET_LOCAL_ENABLED=1 (and/or HETZNER) in domum-backup.conf
-sudo domum-core backups init local
+# set BACKUP_TARGET_<NAME>_ENABLED=1 in domum-backup.conf first
 sudo domum-core backups init hetzner
+sudo domum-core backups init local      # only if LOCAL is enabled too
 ```
 
 ## 6. Dry run, then for real
@@ -115,6 +115,7 @@ sudo domum-core backups run --dry-run
 sudo domum-core backups run
 sudo domum-core backups verify
 sudo domum-core backups snapshots
+sudo domum-core checkup
 ```
 
 ## 7. Enable the timers
@@ -123,6 +124,7 @@ sudo domum-core backups snapshots
 sudo domum-core schedule install-maintenance
 sudo systemctl enable --now domum-core-backups.timer
 sudo systemctl enable --now domum-core-backup-verify.timer
+sudo systemctl enable --now domum-core-recovery-pack.timer
 ```
 
 ## Retention

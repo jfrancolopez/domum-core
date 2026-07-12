@@ -59,8 +59,8 @@ BACKUP_TARGET_LOCAL_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_local
 BACKUP_TARGET_LOCAL_RETENTION="daily"     # daily | none
 # BACKUP_TARGET_LOCAL_INCLUDE_PATHS=""    # override source set for this target
 
-# ---- Target: HETZNER (Storage Box B11, via SFTP) ----
-# Repo form: sftp:<user>@<host>:<path>   e.g. sftp:u123456@u123456.your-storagebox.de:domum-core
+# ---- Target: HETZNER (Storage Box via SFTP) ----
+# Repo form: sftp:<user>@<host>:/./<path>   e.g. sftp:u123456@u123456.your-storagebox.de:/./domum-core-restic
 BACKUP_TARGET_HETZNER_ENABLED=0
 BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"
 BACKUP_TARGET_HETZNER_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_hetzner"
