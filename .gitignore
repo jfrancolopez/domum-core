@@ -11,6 +11,10 @@ logs/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 
+# Live AdGuard config includes local setup state and password hashes.
+compose/networking/adguard/conf/
+compose/networking/adguard/work/
+
 # Live ESPHome bind-mount config; backed up, never committed.
 compose/automation/esphome/
 

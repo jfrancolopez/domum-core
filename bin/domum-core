@@ -90,6 +90,11 @@ load_cfg() {
   BACKUP_MUSICASSISTANT="${BACKUP_MUSICASSISTANT:-1}"
   BACKUP_ADGUARD="${BACKUP_ADGUARD:-1}"
 
+  # Tailscale is optional remote transport for this host. Keep host DNS under
+  # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
+  TAILSCALE_ACCEPT_DNS="${TAILSCALE_ACCEPT_DNS:-0}"
+  ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}"
+
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
   RECOVERY_PACK_AGE_PUBKEY_FILE="${RECOVERY_PACK_AGE_PUBKEY_FILE:-$SECRETS_DIR/recovery-age.pub}"
   RECOVERY_PACK_DEST="${RECOVERY_PACK_DEST:-$STATE_ROOT/recovery-pack}"
@@ -331,6 +336,45 @@ install_docker() {
   log "Docker installed."
 }
 
+install_tailscale_host() {
+  [[ "${ENABLE_TAILSCALE:-0}" == "1" ]] || return 0
+
+  log "Ensuring host Tailscale..."
+  if ! cmd_exists tailscale; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    apt-get install -y --no-install-recommends ca-certificates curl
+
+    install -d -m 0755 /usr/share/keyrings
+    local codename
+    codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
+    if [[ ! -f /usr/share/keyrings/tailscale-archive-keyring.gpg ]]; then
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${codename}.noarmor.gpg" \
+        -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+    fi
+    if [[ ! -f /etc/apt/sources.list.d/tailscale.list ]]; then
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${codename}.tailscale-keyring.list" \
+        -o /etc/apt/sources.list.d/tailscale.list
+    fi
+
+    apt-get update -y
+    apt-get install -y --no-install-recommends tailscale
+  fi
+
+  if cmd_exists systemctl; then
+    systemctl enable --now tailscaled
+  fi
+
+  if [[ "${TAILSCALE_ACCEPT_DNS:-0}" != "1" ]]; then
+    if tailscale status >/dev/null 2>&1; then
+      tailscale set --accept-dns=false >/dev/null \
+        || warn "Could not set Tailscale accept-dns=false; run: sudo tailscale up --accept-dns=false"
+    else
+      log "Tailscale installed; authenticate with: sudo tailscale up --accept-dns=false"
+    fi
+  fi
+}
+
 ensure_dirs() {
   mkdir -p "$DOMUM_DIR/data" "$DOMUM_DIR/logs"
 }
@@ -401,7 +445,6 @@ adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compos
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
 obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
-tailscale|ENABLE_TAILSCALE|security|infrastructure|-|compose/security/tailscale.yml|-
 EOF
 }
 
@@ -441,6 +484,7 @@ export_env_for_compose() {
   export DOMUM_EMAIL="${DOMUM_EMAIL:-admin@ladomum.com}"
   export DOMUM_LAN_IP="${DOMUM_LAN_IP:-}"
   export DOMUM_TS_IP="${DOMUM_TS_IP:-}"
+  export ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}"
 
   # Optional-service interpolation (safe defaults; compose has its own too).
   export VAULTWARDEN_DOMAIN="${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}"
@@ -489,6 +533,7 @@ init_host() {
     install -m 0640 "${BACKUP_CFG_FILE}.example" "$BACKUP_CFG_FILE"
   fi
   load_cfg
+  install_tailscale_host
   ensure_state_dirs
 
   if [[ ! -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
@@ -509,6 +554,7 @@ EOF
 apply() {
   need_root
   load_cfg
+  install_tailscale_host
   ensure_networks
   export_env_for_compose
   install_docker
@@ -663,7 +709,9 @@ actual_backup() {
   if (( paused == 1 )); then
     local cn
     cn="$(container_name_for actual-budget || true)"
-    [[ -n "$cn" ]] && run docker unpause "$cn" || true
+    if [[ -n "$cn" ]]; then
+      run docker unpause "$cn" || true
+    fi
   fi
   (( rc == 0 )) || die "Actual backup tar failed."
 
@@ -2579,11 +2627,18 @@ run_checkup() {
   cmd_exists age || checkup_add warning "age binary missing — recovery-pack create will need it (apt-get install -y age)."
 
   # --- Tailscale (if enabled) ---
-  if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]] && cmd_exists tailscale; then
-    if tailscale status >/dev/null 2>&1; then
+  if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]; then
+    if ! cmd_exists tailscale; then
+      checkup_add warning "Tailscale is enabled but the host tailscale CLI is missing."
+      checkup_add action "sudo domum-core init"
+    elif cmd_exists systemctl && ! systemctl is-active --quiet tailscaled; then
+      checkup_add warning "Tailscale is enabled but tailscaled is not active."
+      checkup_add action "sudo systemctl enable --now tailscaled"
+    elif tailscale status >/dev/null 2>&1; then
       checkup_add healthy "Tailscale is up."
     else
       checkup_add warning "Tailscale is enabled but not connected."
+      checkup_add action "sudo tailscale up --accept-dns=false"
     fi
   fi
 
@@ -2772,6 +2827,7 @@ configure_show() {
   echo
   local k
   for k in DOMUM_DOMAIN DOMUM_EMAIL DOMUM_LAN_IP DOMUM_TS_IP \
+           ADGUARD_WEB_PORT TAILSCALE_ACCEPT_DNS \
            ENABLE_HOME_ASSISTANT ENABLE_MQTT ENABLE_ZIGBEE2MQTT ENABLE_ZWAVE \
            ENABLE_ESP_HOME ENABLE_NODERED ENABLE_MA ENABLE_MARIADB \
            ENABLE_ADGUARD_HOME ENABLE_ACTUAL_BUDGET ENABLE_VAULTWARDEN \
@@ -2893,6 +2949,8 @@ configure_wizard() {
   set_conf_key "$CFG_FILE" DOMUM_EMAIL  "$(ask 'ACME / contact email' "${DOMUM_EMAIL:-}")"
   set_conf_key "$CFG_FILE" DOMUM_LAN_IP "$(ask 'LAN IP' "${DOMUM_LAN_IP:-}")"
   set_conf_key "$CFG_FILE" DOMUM_TS_IP  "$(ask 'Tailscale IP' "${DOMUM_TS_IP:-}")"
+  set_conf_key "$CFG_FILE" ENABLE_TAILSCALE "$(ask_bool 'Host Tailscale remote access' "${ENABLE_TAILSCALE:-0}")"
+  set_conf_key "$CFG_FILE" TAILSCALE_ACCEPT_DNS "$(ask_bool '  allow Tailscale to manage host DNS' "${TAILSCALE_ACCEPT_DNS:-0}")"
 
   echo "-- Services (1=on 0=off) --"
   local name enable_var _rest

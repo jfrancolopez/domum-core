@@ -50,7 +50,6 @@ jobs:
       DOMUM_LAN_IP: 127.0.0.1
       DOMUM_TS_IP: 127.0.0.1
       CF_DNS_API_TOKEN: ci-dummy
-      TS_AUTHKEY: ci-dummy
       DOMUM_MARIADB_ENV_FILE: ${{ github.workspace }}/.ci/mariadb.env
     steps:
       - uses: actions/checkout@v4

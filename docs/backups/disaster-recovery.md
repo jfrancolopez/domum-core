@@ -153,12 +153,13 @@ sudo domum-core apply
 sudo domum-core checkup
 ```
 
-> **Tailscale (expected, by design):** `data/tailscale` is intentionally not
-> backed up — node keys are re-issuable, so the omission is designed loss,
-> not a hole. If `ENABLE_TAILSCALE=1`, re-authenticate after rebuild
-> (~2 minutes): generate an auth key in the Tailscale admin console and
-> restart the container with it, or run
-> `docker exec tailscale tailscale up` and follow the login URL.
+> **Tailscale (expected, by design):** Tailscale node keys are intentionally not
+> backed up. They are re-issuable, so the omission is designed loss, not a
+> hole. If `ENABLE_TAILSCALE=1`, `sudo domum-core init` installs and enables the
+> host `tailscaled` service. Re-authenticate after rebuild with
+> `sudo tailscale up --accept-dns=false` or with an ephemeral auth key. Keep
+> `accept-dns=false` so LAN HTTPS and certificate renewal do not depend on
+> Tailscale DNS.
 
 ### Abort / rollback
 

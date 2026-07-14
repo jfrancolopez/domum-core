@@ -32,6 +32,7 @@ designed to be explicit and backup-aware.
 
 - [Home Assistant](services/home-assistant.md)
 - [AdGuard Tailscale DNS](services/adguard-tailscale-dns.md)
+- [Tailscale](services/tailscale.md)
 - [Actual Budget](services/actual-budget.md)
 - [Vaultwarden](services/vaultwarden.md)
 - [Obsidian Sync](services/obsidian-sync.md)

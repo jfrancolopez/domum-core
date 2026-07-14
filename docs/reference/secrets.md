@@ -14,7 +14,7 @@ drift is fixed.
 | `cloudflare_api_token` | Traefik DNS-01 ACME |
 | `mariadb/mariadb.env` | MariaDB container env (`MARIADB_ROOT_PASSWORD`, etc.) |
 | `traefik_dashboard_users` | Traefik dashboard basic-auth |
-| `tailscale_authkey` | Tailscale (if enabled) |
+| `tailscale_authkey` | Optional one-time Tailscale re-authentication |
 | `restic_password_local` | restic key for the LOCAL backup target |
 | `restic_password_hetzner` | restic key for the HETZNER backup target |
 | `hetzner_storagebox_ed25519` | SSH key for the Hetzner Storage Box |

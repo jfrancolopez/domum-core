@@ -19,7 +19,7 @@ services:
       - traefik.http.routers.dns.tls=true
       - traefik.http.routers.dns.tls.certresolver=cf
       - traefik.http.routers.dns.middlewares=forwardedHeaders@file
-      - traefik.http.services.dns.loadbalancer.server.port=80
+      - traefik.http.services.dns.loadbalancer.server.port=${ADGUARD_WEB_PORT:-3000}
     profiles:
       - core
 

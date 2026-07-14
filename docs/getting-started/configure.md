@@ -30,6 +30,10 @@ The wizard covers:
 - Health Checks
 - Timers
 
+`ENABLE_TAILSCALE=1` manages the host `tailscaled` service, not a Docker
+container. Keep `TAILSCALE_ACCEPT_DNS=0` unless you intentionally want Tailscale
+to replace the Pi's resolver configuration.
+
 Updates are configured app-by-app:
 
 ```text

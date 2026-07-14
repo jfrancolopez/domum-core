@@ -1,16 +1,42 @@
 # AdGuard + Tailscale DNS
 
-AdGuard Home on domum-core is not the primary home DNS server. Its role is remote DNS for
-Tailscale clients: Split DNS, VPN name resolution, and controlled filtering when away from
-home.
+AdGuard Home on domum-core is optional. Its only intended role is split DNS for
+Tailscale clients when away from home. It is not the primary LAN resolver.
 
-Keep the home LAN router or existing DNS path as the primary resolver unless you
-intentionally migrate that responsibility. For Tailscale, point the tailnet DNS settings at
-the domum-core Tailscale IP and configure split domains for internal names.
+The normal LAN path is:
 
-Validate from a Tailscale client:
+- UniFi DNS answers `*.ladomum.com` with the domum-core LAN IP.
+- Clients connect directly to Traefik on the LAN.
+- Traefik serves Let's Encrypt certificates for HTTPS.
+
+The optional Tailscale path is:
+
+- Tailscale routes remote clients to the domum-core Tailscale IP.
+- Tailscale split DNS for `ladomum.com` points at AdGuard on domum-core.
+- AdGuard rewrites `*.ladomum.com` to the domum-core Tailscale IP.
+
+Recommended AdGuard DNS rewrites:
+
+```text
+*.ladomum.com -> 100.121.26.52
+ladomum.com   -> 100.121.26.52
+```
+
+Keep UniFi LAN DNS as:
+
+```text
+*.ladomum.com -> 10.0.10.2
+```
+
+AdGuard starts its setup UI on port `3000` before initialization. The compose
+file exposes that UI through Traefik with `ADGUARD_WEB_PORT=3000`. During setup,
+keep the admin web interface on port `3000`, or set `ADGUARD_WEB_PORT` to the
+chosen port and re-run `sudo domum-core apply`. Configure AdGuard DNS to listen
+on `0.0.0.0:53`.
+
+Validate from domum-core or a Tailscale client:
 
 ```bash
-nslookup homeassistant.ladomum.com <domum-core-tailscale-ip>
+nslookup budget.ladomum.com 100.121.26.52
 tailscale status
 ```

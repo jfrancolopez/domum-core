@@ -18,3 +18,6 @@ rules:
 ignore: |
   nimbalyst-local/
   .claude/
+  compose/automation/home-assistant/blueprints/
+  compose/automation/home-assistant/custom_components/
+  compose/automation/home-assistant/secrets.yaml

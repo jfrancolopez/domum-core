@@ -1,22 +1,41 @@
 # DNS plan for ladomum.com
 
 Traefik serves HTTPS for services like:
+
 - ha.ladomum.com
-- status.ladomum.com
+- budget.ladomum.com
+- dns.ladomum.com
 - z2m.ladomum.com
 
-Your clients must resolve those names to the Traefik host.
+Clients must resolve those names to the Traefik host.
 
-LAN options (pick one):
-1) AdGuard Home (enable ENABLE_ADGUARD_HOME=1)
-   - Create DNS rewrites or local records: *.ladomum.com -> Traefik LAN IP
-2) Existing router DNS
-   - Create host overrides or local DNS zone.
+## LAN
 
-Tailscale options:
-- Use Tailscale DNS settings (admin console) to set a split DNS rule for ladomum.com
-- Point it to your AdGuard Home or directly to the Traefik host if you use host records.
+UniFi is the primary LAN DNS authority. Keep host records, CNAMEs, or wildcard
+records there so local clients resolve service names to the domum-core LAN IP:
 
-Start simple:
-- Use LAN DNS for home devices.
-- Use Tailscale DNS for remote devices.
+```text
+*.ladomum.com -> 10.0.10.2
+```
+
+This is the reliable always-on path. LAN HTTPS must not depend on Tailscale or
+AdGuard.
+
+## Certificates
+
+Traefik uses Let's Encrypt DNS-01 through Cloudflare. The ACME resolver uses
+public recursive DNS servers so renewal does not depend on UniFi, AdGuard, or
+Tailscale DNS.
+
+## Tailscale
+
+Tailscale is optional remote access. When enabled, point Tailscale split DNS for
+`ladomum.com` at the domum-core Tailscale IP and configure AdGuard DNS rewrites:
+
+```text
+*.ladomum.com -> 100.121.26.52
+ladomum.com   -> 100.121.26.52
+```
+
+Host Tailscale must run with `--accept-dns=false`. The Pi keeps its normal LAN
+resolver path, and Tailscale never becomes a dependency for local HTTPS.

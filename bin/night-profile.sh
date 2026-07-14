@@ -29,7 +29,6 @@ if [[ "${ENABLE_NODERED:-0}" == "1" ]]; then compose_args+=(-f "$DOMUM_DIR/compo
 if [[ "${ENABLE_ESP_HOME:-0}" == "1" ]]; then compose_args+=(-f "$DOMUM_DIR/compose/automation/esphome.yml"); fi
 if [[ "${ENABLE_UPTIME_KUMA:-0}" == "1" ]]; then compose_args+=(-f "$DOMUM_DIR/compose/monitoring/uptime-kuma.yml"); fi
 if [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]; then compose_args+=(-f "$DOMUM_DIR/compose/networking/adguard-home.yml"); fi
-if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]; then compose_args+=(-f "$DOMUM_DIR/compose/security/tailscale.yml"); fi
 
 cmd="${1:-}"
 case "$cmd" in
