@@ -15,10 +15,24 @@ Commands:
 
 ```bash
 sudo domum-core recovery-pack create
+sudo domum-core recovery-pack email-test
 sudo domum-core recovery-pack send-latest --dry-run
 sudo domum-core recovery-pack send-latest
-sudo domum-core recovery-pack email-test
 ```
 
 `email-test` sends a tiny encrypted attachment so SMTP and decryption can be verified
 without sending a full recovery pack.
+
+Download the test attachment to the machine that has the AGE private key and
+decrypt it:
+
+```bash
+age -d -i recovery-age.key domum-email-test.age > recovery-email-test.txt
+```
+
+For a real recovery pack attachment:
+
+```bash
+age -d -i recovery-age.key recovery-pack-YYYYMMDD-HHMMSS.tar.age > recovery-pack.tar
+tar -tzf recovery-pack.tar
+```

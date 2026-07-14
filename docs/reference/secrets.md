@@ -35,6 +35,11 @@ age-keygen -o recovery-age.key          # private key — store offline (passwor
 grep 'public key' recovery-age.key      # copy the age1... line
 ```
 
+The `recovery-age.key` file is the private key. Save its full contents in your
+password manager or another offline location. The line that starts with
+`AGE-SECRET-KEY-` is the secret material. The `age1...` value printed in the
+comment is the public key.
+
 Put **only the public key** on the Pi:
 
 ```bash
@@ -45,6 +50,23 @@ sudo chmod 644 /etc/domum-core/secrets/recovery-age.pub
 `domum-core recovery-pack create` refuses (with instructions) if the public key
 is missing, and **never auto-generates or rotates** keys. The private key is the
 only way to decrypt a recovery pack — losing it makes every pack unreadable.
+
+If the private key is lost, generate a new keypair, replace
+`/etc/domum-core/secrets/recovery-age.pub` with the new public key, and create a
+new recovery pack. Old recovery packs encrypted to the lost key remain
+unreadable.
+
+Test a downloaded recovery-pack email attachment on the machine that has the
+private key:
+
+```bash
+age -d -i recovery-age.key recovery-pack-YYYYMMDD-HHMMSS.tar.age > recovery-pack.tar
+tar -tzf recovery-pack.tar
+```
+
+If `tar -tzf` lists files, the AGE private key can decrypt the recovery pack.
+Keep both the AGE private key and the Hetzner restic password in secure notes;
+they protect different recovery steps.
 
 ## Rules
 

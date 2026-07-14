@@ -120,8 +120,12 @@ pinning, repository initialization, first backup, verification, and timers.
 Canonical repository form:
 
 ```bash
-BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:/./domum-core-restic"
+BACKUP_TARGET_HETZNER_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:domum-core-restic"
 ```
+
+The path is relative on purpose. Hetzner Storage Box port `23` only allows
+writes below the login root; absolute paths such as `:/./domum-core-restic`
+fail during `restic init`.
 
 ## 5. Enable + initialize
 

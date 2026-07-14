@@ -14,7 +14,7 @@ There are two kinds of values in this guide:
 | Hetzner Storage Box host | inside `BACKUP_TARGET_HETZNER_REPOSITORY` in `/opt/domum-core/config/domum-backup.conf` |
 | restic repository password | `/etc/domum-core/secrets/restic_password_hetzner` |
 | SSH private key for unattended SFTP | `/etc/domum-core/secrets/hetzner_storagebox_ed25519` |
-| SSH public key | pasted into the Hetzner Storage Box user/subaccount settings |
+| SSH public key | installed on the Storage Box user/subaccount with `install-ssh-key` |
 | pinned SSH host key | `/etc/domum-core/secrets/hetzner_storagebox_known_hosts` |
 | Hetzner web/account password | not stored by domum-core |
 
@@ -30,11 +30,13 @@ actually use.
 ```bash
 HETZNER_USER="uXXXXXX"
 HETZNER_HOST="uXXXXXX.your-storagebox.de"
-HETZNER_REPO="sftp:${HETZNER_USER}@${HETZNER_HOST}:/./domum-core-restic"
+HETZNER_REPO="sftp:${HETZNER_USER}@${HETZNER_HOST}:domum-core-restic"
 ```
 
-The `/./` path form is intentional. It pins restic to
-`domum-core-restic` below the Storage Box login root.
+The repository path is intentionally relative. Hetzner Storage Box only allows
+writes below the login root (`/home` on port `23`). Do not use
+`:/./domum-core-restic` here: restic treats that as `/domum-core-restic` and
+repository initialization fails with `SSH_FX_FAILURE`.
 
 ## 1. Install local tools
 
@@ -68,7 +70,7 @@ sudo ssh-keygen -t ed25519 \
   -f /etc/domum-core/secrets/hetzner_storagebox_ed25519 \
   -N '' \
   -C 'domum-core-hetzner-backups'
-sudo chown root:root /etc/domum-core/secrets/hetzner_storagebox_ed25519*
+sudo chown root:root /etc/domum-core/secrets/hetzner_storagebox_ed25519 /etc/domum-core/secrets/hetzner_storagebox_ed25519.pub
 sudo chmod 600 /etc/domum-core/secrets/hetzner_storagebox_ed25519
 sudo chmod 644 /etc/domum-core/secrets/hetzner_storagebox_ed25519.pub
 ```
@@ -79,9 +81,13 @@ Show the public key:
 sudo sed -n '1p' /etc/domum-core/secrets/hetzner_storagebox_ed25519.pub
 ```
 
-Copy that one public-key line into Hetzner for the Storage Box user or
-subaccount selected in step 0. Use Hetzner Robot / Storage Box access settings,
-or the equivalent SSH-key management screen for your account.
+If you use `zsh`, keep the explicit `chown` paths above. A glob such as
+`hetzner_storagebox_ed25519*` can fail with `zsh: no matches found` when sudo
+and shell expansion disagree.
+
+The public key is installed after the host key is pinned in the next step. The
+Hetzner Console SSH-key page for cloud servers is not enough for Storage Box
+SFTP access.
 
 ## 5. Pin the Storage Box host key
 
@@ -97,7 +103,31 @@ Compare the printed fingerprint with Hetzner's Storage Box host-key fingerprint
 shown in your Hetzner account. Do not disable `StrictHostKeyChecking` to make a
 failed connection work.
 
-## 6. Test SFTP login
+## 6. Install the public key on the Storage Box
+
+Hetzner Storage Box may not show an SSH-key field in the UI. Install the public
+key with the Storage Box password once:
+
+```bash
+sudo ssh -p 23 \
+  -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/etc/domum-core/secrets/hetzner_storagebox_known_hosts \
+  "${HETZNER_USER}@${HETZNER_HOST}" \
+  install-ssh-key < /etc/domum-core/secrets/hetzner_storagebox_ed25519.pub
+```
+
+Expected output includes both formats:
+
+```text
+Key No. 1 (ssh-ed25519 domum-core-hetzner-backups) was installed in RFC4716 format
+Key No. 1 (ssh-ed25519 domum-core-hetzner-backups) was installed in OpenSSH format
+```
+
+This password is the Storage Box user's password. It is not stored by
+domum-core. Future backups use the SSH key and restic password file instead of
+prompting interactively.
+
+## 7. Test SFTP login
 
 ```bash
 printf 'pwd\nbye\n' | sudo sftp \
@@ -114,13 +144,19 @@ printf 'pwd\nbye\n' | sudo sftp \
 Success looks like an SFTP connection that prints the remote working directory
 and exits after `bye`.
 
-## 7. Configure the Hetzner target
+Because this test sets `PasswordAuthentication=no`, success proves key auth is
+working and scheduled backups should not prompt for the Storage Box password.
+
+## 8. Configure the Hetzner target
 
 This is the permanent place for your Hetzner user and host:
 
 ```bash
-sudoedit /opt/domum-core/config/domum-backup.conf
+sudo env TERM=xterm-256color nano /opt/domum-core/config/domum-backup.conf
 ```
+
+Use another root editor such as `sudo nvim` if preferred. `sudoedit` can refuse
+to edit this file when the repository directory is writable by your user.
 
 Paste the block below over the existing Hetzner section. If Hetzner is your
 only target, `BACKUP_TARGETS="hetzner"` is correct. If you also use a local
@@ -147,7 +183,7 @@ Validate that the config still parses:
 sudo domum-core configure --validate
 ```
 
-## 8. Initialize the restic repository
+## 9. Initialize the restic repository
 
 ```bash
 sudo domum-core backups init hetzner
@@ -158,7 +194,7 @@ Success looks like `Repository ready` and a metadata file under
 
 If the command says the repository is already initialized, that is fine.
 
-## 9. Create a fresh recovery pack
+## 10. Create a fresh recovery pack
 
 The recovery pack carries config and secrets needed after a disaster. Creating
 one before the first real Hetzner backup makes the pack ride into the offsite
@@ -174,7 +210,7 @@ If the command asks for an AGE public key, follow [Recovery pack](recovery-pack.
 and [AGE keypair for the recovery pack](../reference/secrets.md#age-keypair-for-the-recovery-pack),
 then rerun this step.
 
-## 10. Run the first backup
+## 11. Run the first backup
 
 ```bash
 sudo domum-core backups run --dry-run
@@ -191,7 +227,7 @@ Success criteria:
 - `backups verify` completes without a restic check error.
 - `checkup` reports at least one restic target enabled and a fresh backup.
 
-## 11. Enable scheduled backups
+## 12. Enable scheduled backups
 
 Install the maintenance unit files. This copies unit files only; it does not
 enable timers by itself.
@@ -217,6 +253,50 @@ sudo systemctl enable --now domum-core-recovery-pack.timer
 systemctl list-timers 'domum-core-*'
 ```
 
+Success looks like a future `domum-core-backups.timer` entry. A later
+`backups snapshots` should show an additional snapshot created by the timer.
+
+## 13. Enable Hetzner automatic snapshots
+
+Storage Box snapshots are not a replacement for restic backups, and they are not
+an encryption feature. They are useful protection against accidental deletion or
+corruption of the encrypted restic repository.
+
+Recommended BX11 automatic snapshot settings:
+
+| Setting | Value |
+|---|---|
+| Interval | Daily |
+| Max amount | 10 |
+| Execution time (UTC) | `10:00` |
+| Day of month | Leave empty / not used for daily snapshots |
+
+`10:00 UTC` is intentionally after the local `02:30` backup timer, its random
+delay, and the weekly recovery/verify timers. It is also safer across daylight
+saving time than trying to target exactly `05:00` local time.
+
+Hetzner snapshots live on the same Storage Box and consume Storage Box capacity
+as data changes. Restoring a snapshot rolls the Storage Box back to that point
+and can remove newer files and newer snapshots, so restore snapshots only during
+an actual recovery procedure.
+
+## Security model
+
+The Storage Box should be treated as remote storage, not as the encryption
+boundary. The backup contents are protected by restic encryption before they are
+sent to Hetzner.
+
+- Someone with Storage Box read access but without the restic password should
+  not be able to read backed-up files.
+- Someone with Storage Box write/delete access can still delete or corrupt the
+  repository. Hetzner snapshots reduce that risk.
+- Someone with root access on the Pi can read live data and the restic password
+  file, so they can decrypt backups. That is inherent to unattended backups.
+- Save `/etc/domum-core/secrets/restic_password_hetzner` off-box. Without it,
+  the restic repository cannot be restored.
+- Save the AGE private key off-box. Without it, recovery-pack `.age` files
+  cannot be decrypted.
+
 ## Daily operations
 
 Use these commands to inspect the setup later:
@@ -228,10 +308,26 @@ sudo domum-core backups prune --dry-run
 sudo domum-core checkup
 ```
 
+How to read the output:
+
+- `backups snapshots` lists restic snapshots. A new row after the nightly timer
+  proves scheduled offsite backups are running.
+- `backups history` records the service-backup phase and restic phase exit
+  codes. `service_rc=0 restic_rc=0` means both phases succeeded.
+- `backups prune --dry-run` shows which snapshots retention would keep or
+  remove without deleting anything.
+- `backups verify` runs `restic check` against the remote repository.
+- `checkup` should report at least one enabled restic target and a fresh backup.
+
 ## Troubleshooting
 
 `Permission denied (publickey)` means the public key is missing from Hetzner or
-was added to the wrong Storage Box user or subaccount. Recheck step 4.
+was added to the wrong Storage Box user or subaccount. Re-run step 6 for the
+same user configured in `BACKUP_TARGET_HETZNER_REPOSITORY`.
+
+`Permission denied (publickey,password)` during the key-only SFTP test means the
+Storage Box did not accept the SSH key. The Hetzner Cloud Console SSH-key list
+does not authorize Storage Box SFTP by itself; use `install-ssh-key`.
 
 `Host key verification failed` means the pinned known-hosts file does not match
 the server you reached. Recheck the host name and fingerprint in step 5.
@@ -242,6 +338,15 @@ created its repository yet. Run:
 ```bash
 sudo domum-core backups init hetzner
 ```
+
+`MkdirAll /domum-core-restic/locks: sftp: "Failure" (SSH_FX_FAILURE)` means the
+repository path is absolute. Use `sftp:uXXXXXX@uXXXXXX.your-storagebox.de:domum-core-restic`,
+not `:/./domum-core-restic`.
+
+Older versions of `domum-core configure --validate` may falsely reject real
+`uXXXXXX.your-storagebox.de` hostnames as placeholders. The repository path is
+valid when it uses your real `uNNNNNN` user and the relative `:domum-core-restic`
+path.
 
 A stale Hetzner warning in `checkup` means another target may still be fresh,
 but the offsite destination needs attention. Inspect the last backup run:

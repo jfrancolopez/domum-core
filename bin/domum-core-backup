@@ -35,6 +35,7 @@ load_cfg() {
   fi
   STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
   LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+  RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$STATE_ROOT/cache/restic}"
   RESTIC_KEEP_DAILY="${RESTIC_KEEP_DAILY:-7}"
   RESTIC_KEEP_WEEKLY="${RESTIC_KEEP_WEEKLY:-5}"
   RESTIC_KEEP_MONTHLY="${RESTIC_KEEP_MONTHLY:-12}"
@@ -72,6 +73,7 @@ $DOMUM_DIR/compose/automation/mariadb/data \
 ensure_dirs() {
   install -d -m 0750 "$LOG_DIR"
   install -d -m 0750 "$REPO_META_DIR"
+  install -d -m 0750 "$RESTIC_CACHE_DIR"
   install -d -m 0750 "$STATE_ROOT/service-backups/volumes"
   LOG_FILE="$LOG_DIR/backup.log"
   HEARTBEAT_FILE="$STATE_ROOT/backups/last-success"
@@ -188,7 +190,7 @@ restic_for_target() {
     fi
     export RESTIC_PASSWORD_FILE="$pw_file"
     export RESTIC_REPOSITORY="$repository"
-    local -a restic_cmd=(restic)
+    local -a restic_cmd=(restic --cache-dir "$RESTIC_CACHE_DIR")
     if [[ "$repository" == sftp:* ]]; then
       sftp_command_opt="$(sftp_command_option_for_target "$target")"
       restic_cmd+=(-o "$sftp_command_opt")

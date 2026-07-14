@@ -2232,6 +2232,18 @@ images_in_use() {
   done | sort -u
 }
 
+pruneable_dangling_images() {
+  local inuse_tmp id
+  inuse_tmp="$(mktemp)"
+  images_in_use > "$inuse_tmp"
+  while IFS= read -r id; do
+    [[ -n "$id" ]] || continue
+    grep -Fxq "$id" "$inuse_tmp" && continue
+    printf '%s\n' "$id"
+  done < <(docker images --no-trunc --filter dangling=true -q 2>/dev/null | sort -u)
+  rm -f "$inuse_tmp"
+}
+
 cleanup_images() {
   need_root
   load_cfg
@@ -2246,17 +2258,8 @@ cleanup_images() {
     shift
   done
 
-  local -a candidates=() inuse_tmp
-  inuse_tmp="$(mktemp)"
-  images_in_use > "$inuse_tmp"
-
-  local id
-  while IFS= read -r id; do
-    [[ -n "$id" ]] || continue
-    grep -Fxq "$id" "$inuse_tmp" && continue
-    candidates+=("$id")
-  done < <(docker images --filter dangling=true -q 2>/dev/null | sort -u)
-  rm -f "$inuse_tmp"
+  local -a candidates=()
+  mapfile -t candidates < <(pruneable_dangling_images)
 
   if (( ${#candidates[@]} == 0 )); then
     log "No pruneable (dangling, unused) images found."
@@ -2264,11 +2267,12 @@ cleanup_images() {
   fi
 
   echo "Dangling images not referenced by any container:"
-  local total=0 size
+  local total=0 size display
   for id in "${candidates[@]}"; do
     size="$(docker image inspect "$id" --format '{{.Size}}' 2>/dev/null || echo 0)"
     total=$(( total + size ))
-    printf '  %s %s\n' "$id" "$(docker image inspect "$id" --format '{{.RepoTags}}' 2>/dev/null || echo '[]')"
+    display="${id#sha256:}"
+    printf '  %.12s %s\n' "$display" "$(docker image inspect "$id" --format '{{.RepoTags}}' 2>/dev/null || echo '[]')"
   done
   printf 'Total: %d image(s), ~%d MiB\n' "${#candidates[@]}" "$(( total / 1024 / 1024 ))"
 
@@ -2693,7 +2697,7 @@ run_checkup() {
 
   # --- dangling images ---
   local dangling
-  dangling="$(to_int "$(docker images --filter dangling=true -q 2>/dev/null | wc -l)")"
+  dangling="$(to_int "$(pruneable_dangling_images | wc -l)")"
   (( dangling > 0 )) && { checkup_add warning "${dangling} dangling Docker images can be pruned."; checkup_add action "sudo domum-core cleanup images --dry-run"; }
 
   # --- pending apt updates ---
@@ -2932,7 +2936,7 @@ configure_validate() {
     if [[ -z "$repo" ]]; then
       echo "[!] $target backup target is enabled but $repo_var is empty"
       issues=1
-    elif [[ "$repo" == *XXXXXX* || "$repo" == *your-storagebox* || "$repo" == *your-bucket* ]]; then
+    elif [[ "$repo" == *XXXXXX* || "$repo" == *your-bucket* ]]; then
       echo "[!] $repo_var still contains a placeholder value: $repo"
       issues=1
     fi
@@ -2949,6 +2953,10 @@ configure_validate() {
 
     if [[ "$repo" == sftp:* ]]; then
       [[ "$repo" == sftp:*@*:* ]] || { echo "[!] $repo_var is not a valid SFTP repo string: $repo"; issues=1; }
+      if [[ "$token" == "HETZNER" && "$repo" == sftp:*@*.your-storagebox.de:/* ]]; then
+        echo "[!] Hetzner Storage Box restic path must be relative: use sftp:uXXXXXX@uXXXXXX.your-storagebox.de:domum-core-restic"
+        issues=1
+      fi
       key_var="BACKUP_TARGET_${token}_SFTP_KEY_FILE"
       key_file="${!key_var:-}"
       if [[ -z "$key_file" ]]; then
