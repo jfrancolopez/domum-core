@@ -50,6 +50,29 @@ uppercase_token() {
   printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
 }
 
+adguard_detect_web_port() {
+  local cfg="$DOMUM_DIR/compose/networking/adguard/conf/AdGuardHome.yaml" port
+  if [[ -f "$cfg" ]]; then
+    port="$(awk '
+      /^[[:space:]]*address:[[:space:]]*/ {
+        value=$0
+        sub(/^[[:space:]]*address:[[:space:]]*/, "", value)
+        gsub(/[ "]/, "", value)
+        n=split(value, parts, ":")
+        if (parts[n] ~ /^[0-9]+$/) {
+          print parts[n]
+          exit
+        }
+      }
+    ' "$cfg")"
+    if [[ "$port" =~ ^[0-9]+$ ]]; then
+      printf '%s\n' "$port"
+      return 0
+    fi
+  fi
+  printf '3000\n'
+}
+
 # ---- config ----------------------------------------------------------------
 
 load_cfg() {
@@ -93,7 +116,7 @@ load_cfg() {
   # Tailscale is optional remote transport for this host. Keep host DNS under
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
   TAILSCALE_ACCEPT_DNS="${TAILSCALE_ACCEPT_DNS:-0}"
-  ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}"
+  ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-$(adguard_detect_web_port)}"
 
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
   RECOVERY_PACK_AGE_PUBKEY_FILE="${RECOVERY_PACK_AGE_PUBKEY_FILE:-$SECRETS_DIR/recovery-age.pub}"
@@ -2478,6 +2501,18 @@ run_checkup() {
       checkup_add healthy "$svc is running${health:+ ($health)}."
     fi
   done < <(enabled_services)
+
+  if [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]; then
+    local adguard_cid adguard_label_port
+    adguard_cid="$(container_for adguard-home || true)"
+    if [[ -n "$adguard_cid" ]]; then
+      adguard_label_port="$(docker inspect --format '{{ index .Config.Labels "traefik.http.services.dns.loadbalancer.server.port" }}' "$adguard_cid" 2>/dev/null || true)"
+      if [[ -n "$adguard_label_port" && "$adguard_label_port" != "$ADGUARD_WEB_PORT" ]]; then
+        checkup_add warning "AdGuard web UI is configured on port $ADGUARD_WEB_PORT but Traefik points to $adguard_label_port."
+        checkup_add action "sudo domum-core apply"
+      fi
+    fi
+  fi
 
   # --- HTTP / port probes (best-effort and explicitly configured) ---
   if cmd_exists curl; then

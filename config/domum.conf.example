@@ -45,7 +45,9 @@ ENABLE_MA=1
 # ============================================================
 ENABLE_ADGUARD_HOME=1
 ADGUARD_ROLE="tailscale-split-dns"
-ADGUARD_WEB_PORT=3000
+# Optional override. Leave unset so domum-core detects AdGuard setup port 3000
+# before initialization and the configured web port after setup.
+# ADGUARD_WEB_PORT=3000
 
 # ============================================================
 # Productivity / optional

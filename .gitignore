@@ -11,6 +11,9 @@ logs/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 
+# Live generated app config with credentials/password hashes.
+compose/productivity/obsidian-sync/etc/docker.ini
+
 # Live AdGuard config includes local setup state and password hashes.
 compose/networking/adguard/conf/
 compose/networking/adguard/work/
@@ -28,3 +31,4 @@ codex/
 # Live backup/recovery config — only the .example is committed.
 config/domum.conf
 config/domum-backup.conf
+config/*.conf.save

@@ -21,3 +21,5 @@ ignore: |
   compose/automation/home-assistant/blueprints/
   compose/automation/home-assistant/custom_components/
   compose/automation/home-assistant/secrets.yaml
+  compose/networking/adguard/conf/
+  compose/networking/adguard/work/
