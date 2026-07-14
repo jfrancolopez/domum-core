@@ -6,10 +6,26 @@ Storage Box port `23` with SSH key authentication.
 Run these steps on the production Pi. Do not put Storage Box passwords, restic
 passwords, or SSH keys in git.
 
-## 0. Fill these values
+There are two kinds of values in this guide:
 
-Set these variables in the shell you will use for the steps below. Replace the
-example user with the Storage Box user or subaccount you actually use.
+| Value | Permanent location |
+|---|---|
+| Hetzner Storage Box user | inside `BACKUP_TARGET_HETZNER_REPOSITORY` in `/opt/domum-core/config/domum-backup.conf` |
+| Hetzner Storage Box host | inside `BACKUP_TARGET_HETZNER_REPOSITORY` in `/opt/domum-core/config/domum-backup.conf` |
+| restic repository password | `/etc/domum-core/secrets/restic_password_hetzner` |
+| SSH private key for unattended SFTP | `/etc/domum-core/secrets/hetzner_storagebox_ed25519` |
+| SSH public key | pasted into the Hetzner Storage Box user/subaccount settings |
+| pinned SSH host key | `/etc/domum-core/secrets/hetzner_storagebox_known_hosts` |
+| Hetzner web/account password | not stored by domum-core |
+
+## 0. Set temporary shell helpers
+
+These variables are only helpers for copy-paste commands in this terminal
+session. They do not save anything permanently. The permanent config edit
+happens in step 7.
+
+Replace the example user and host with the Storage Box user or subaccount you
+actually use.
 
 ```bash
 HETZNER_USER="uXXXXXX"
@@ -100,6 +116,16 @@ and exits after `bye`.
 
 ## 7. Configure the Hetzner target
 
+This is the permanent place for your Hetzner user and host:
+
+```bash
+sudoedit /opt/domum-core/config/domum-backup.conf
+```
+
+Paste the block below over the existing Hetzner section. If Hetzner is your
+only target, `BACKUP_TARGETS="hetzner"` is correct. If you also use a local
+NAS/disk target, keep `BACKUP_TARGETS="local hetzner"`.
+
 Print a ready-to-paste config block using the variables from step 0:
 
 ```bash
@@ -113,14 +139,6 @@ printf '%s\n' \
   'BACKUP_TARGET_HETZNER_SFTP_KEY_FILE="/etc/domum-core/secrets/hetzner_storagebox_ed25519"' \
   'BACKUP_TARGET_HETZNER_SFTP_KNOWN_HOSTS_FILE="/etc/domum-core/secrets/hetzner_storagebox_known_hosts"' \
   'BACKUP_TARGET_HETZNER_SFTP_PORT="23"'
-```
-
-Open the live backup config and paste that block over the existing Hetzner
-section. Keep `local` in `BACKUP_TARGETS` if you also use it; otherwise
-`hetzner` alone is fine.
-
-```bash
-sudoedit /opt/domum-core/config/domum-backup.conf
 ```
 
 Validate that the config still parses:

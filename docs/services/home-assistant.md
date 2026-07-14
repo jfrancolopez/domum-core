@@ -24,8 +24,13 @@ What it does:
    `/var/lib/domum-core/service-backups/mariadb/mariadb-all-*.sql.gz`. **This
    doubles as the MariaDB backup.**
 
-It **never** stops or restarts Home Assistant. Both artifacts are swept into
-restic via the staging path. Retention: `HA_KEEP` / `MARIADB_KEEP` (default 7).
+It **never** stops or restarts Home Assistant.
+
+For offsite disaster recovery, restic backs up the live HA config directory
+under `/opt/domum-core/compose/automation/home-assistant` and the MariaDB SQL
+dump under `/var/lib/domum-core/service-backups/mariadb`. The HA `.tar.gz`
+archive is local staging by default for fast same-host restores and the update
+backup gate. Retention: `HA_KEEP` / `MARIADB_KEEP` (default 7).
 
 > HA's own built-in `.tar` backup (Supervisor) is not available in the bare
 > container install, so we do not depend on it.

@@ -101,9 +101,9 @@ BACKUP_ADGUARD=1
 # ============================================================
 # SECTION: per-service backup tuning
 # ============================================================
-# Actual Budget: optional short `docker pause` around the tar for a consistent
-# SQLite copy. Default OFF (no downtime). Set to 1 to opt in.
-ACTUAL_QUIESCE=0
+# Actual Budget: short `docker pause` around the local tar for a consistent
+# SQLite copy. Set to 0 to opt out of the seconds-long pause.
+ACTUAL_QUIESCE=1
 ACTUAL_KEEP=7
 HA_KEEP=7
 MARIADB_KEEP=7

@@ -114,17 +114,25 @@ for v in nodered-data uptime-kuma-data traefik-letsencrypt; do
 done
 ```
 
-### 6. Manual: restore Actual + Home Assistant
+### 6. Manual: confirm Actual + Home Assistant data
 
-Follow the printed plans (non-destructive):
+The restic restore in step 5 already restored the offsite copies of:
 
-```bash
-sudo domum-core actual restore-plan
-sudo domum-core homeassistant restore-plan
-```
+- Actual Budget data:
+  `/opt/domum-core/compose/productivity/actual-budget/data`
+- Home Assistant config:
+  `/opt/domum-core/compose/automation/home-assistant`
+- Home Assistant recorder/history:
+  `/var/lib/domum-core/service-backups/mariadb/mariadb-all-*.sql.gz`
 
-The HA recorder history is in the MariaDB dump
-(`/var/lib/domum-core/service-backups/mariadb/mariadb-all-*.sql.gz`).
+Do not expect the Actual or Home Assistant `.tar.gz` service archives to exist
+after an offsite-only restore. Those archives are local staging by default.
+Use `sudo domum-core actual restore-plan` or
+`sudo domum-core homeassistant restore-plan` only when those local archives are
+present and you intentionally want to restore from them.
+
+The SQL dump is loaded in step 7 after MariaDB starts and before Home Assistant
+is converged.
 
 ### 7. Manual: bring services up in safe order
 
@@ -134,6 +142,10 @@ cd /opt/domum-core
 sudo docker compose -f compose/base.yml -f compose/networking/adguard-home.yml up -d
 # database
 sudo docker compose -f compose/base.yml -f compose/automation/mariadb.yml up -d
+# load Home Assistant recorder/history before Home Assistant starts
+gunzip -c /var/lib/domum-core/service-backups/mariadb/mariadb-all-YYYYMMDD-HHMMSS.sql.gz | \
+  sudo docker exec -i $(sudo docker ps -qf name=mariadb) \
+  sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"'
 # messaging + radios
 sudo docker compose -f compose/base.yml -f compose/automation/mqtt.yml up -d
 sudo docker compose -f compose/base.yml -f compose/automation/zigbee2mqtt.yml \

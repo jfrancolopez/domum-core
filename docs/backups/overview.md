@@ -8,23 +8,43 @@ install.
 
 ## What gets backed up
 
-`bin/domum-core-backup` backs up (see `BACKUP_PATHS` in
-`config/domum-backup.conf`), storing each byte once in restic's
-dedup-friendly raw form:
+A Hetzner/restic backup is not just the compose YAML files. The default
+`BACKUP_PATHS` in `bin/domum-core-backup` includes whole directory trees:
 
-- the whole `compose/` tree (contains every service bind mount: HA, MQTT,
-  Zigbee2MQTT, Z-Wave, ESPHome, Music Assistant, AdGuard, Actual,
-  Vaultwarden, Traefik config) and `config/`
-- `/var/lib/domum-core/service-backups/mariadb/` — the `mariadb-dump` SQL
-  artifacts, the authoritative MariaDB backup
-- `/var/lib/domum-core/service-backups/volumes/` — **named-volume exports**
-  (Node-RED, Uptime-Kuma, Traefik letsencrypt), the only capture of those
-  docker volumes
-- `/var/lib/domum-core/recovery-pack/` — the encrypted recovery packs
+| Offsite restic path | What it protects |
+|---|---|
+| `/opt/domum-core/compose` | Service bind mounts and compose fragments |
+| `/opt/domum-core/config` | Live domum-core config, including backup target metadata |
+| `/var/lib/domum-core/service-backups/mariadb` | MariaDB SQL dumps, the authoritative database backup |
+| `/var/lib/domum-core/service-backups/volumes` | Docker named-volume exports |
+| `/var/lib/domum-core/service-backups/BACKUP-MANIFEST.json` | Per-run backup manifest |
+| `/var/lib/domum-core/recovery-pack` | AGE-encrypted recovery packs containing config and small secret files |
 
-The rest of the service-backup staging (`/var/lib/domum-core/service-backups/`)
-stays **local-only**: it exists for fast same-host restores and the update
-backup gate, and its gzipped tars are opaque to restic dedup.
+Because `/opt/domum-core/compose` is a whole directory tree, the offsite backup
+includes the live data directories under it:
+
+| Service | Data included in restic |
+|---|---|
+| Actual Budget | `/opt/domum-core/compose/productivity/actual-budget/data` |
+| Home Assistant | `/opt/domum-core/compose/automation/home-assistant` |
+| Home Assistant recorder/history | MariaDB SQL dump under `/var/lib/domum-core/service-backups/mariadb` |
+| Vaultwarden | `/opt/domum-core/compose/security/vaultwarden/data` |
+| Obsidian Sync | `/opt/domum-core/compose/productivity/obsidian-sync/data` and `etc` |
+| MQTT | `/opt/domum-core/compose/automation/mqtt` |
+| Zigbee2MQTT | `/opt/domum-core/compose/automation/zigbee2mqtt` |
+| Z-Wave JS UI | `/opt/domum-core/compose/automation/zwave-js-ui/store` |
+| ESPHome | `/opt/domum-core/compose/automation/esphome` |
+| Music Assistant | `/opt/domum-core/compose/automation/music-assistant` |
+| AdGuard Home | `/opt/domum-core/compose/networking/adguard` |
+| Node-RED | named-volume export `nodered-data.tar.gz` |
+| Uptime Kuma | named-volume export `uptime-kuma-data.tar.gz` |
+| Traefik certificates | named-volume export `traefik-letsencrypt.tar.gz` |
+
+The rest of the service-backup staging (`/var/lib/domum-core/service-backups/*`)
+stays **local-only** by default. Those `.tar.gz` files exist for fast same-host
+restores and the update backup gate, but most of them are not sent to restic
+because they duplicate the same bytes already captured under `compose/` and are
+opaque to restic dedup.
 
 ## The backup manifest
 
@@ -45,15 +65,18 @@ restic dump latest /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json | jq
 Snapshots older than the manifest simply don't have one — consumers treat
 that as informational, never an error.
 
-**Excluded:** raw MariaDB InnoDB files (`compose/automation/mariadb/data` —
-a hot copy is not a reliable restore source; the SQL dump above is), DB
-WAL/SHM files, TTS caches, and other disposable paths in `BACKUP_EXCLUDES`.
+**Excluded:** raw MariaDB InnoDB files (`compose/automation/mariadb/data`) are
+intentionally excluded because a hot copy is not a reliable restore source. The
+SQL dump above is the authoritative MariaDB backup. DB WAL/SHM files, TTS
+caches, and other disposable paths in `BACKUP_EXCLUDES` are also excluded.
 
-**Consistency:** services with live SQLite databases (Actual Budget,
-Vaultwarden) are quiesced with `docker pause` for the few seconds their tar
-takes during the nightly service backup — a barely-noticeable pause at 02:30
-in exchange for copies that cannot be torn mid-write. Opt out with
-`ACTUAL_QUIESCE=0` in the overlay for Actual.
+**Consistency:** MariaDB is protected by a logical `mariadb-dump`, and named
+volumes are exported before restic runs. Actual Budget and Vaultwarden are also
+tarred with a short `docker pause` for local same-host restore staging, but the
+default offsite restic source still captures their raw bind-mounted data under
+`compose/`. That keeps Hetzner usage small, but it is not as strong as sending
+the quiesced service archives offsite. [Task 39](../../backlog/task-39-app-consistent-offsite-service-archives.md)
+tracks the stricter model without reintroducing the full duplicate staging set.
 
 **Failure isolation:** every enabled target is attempted every run; a failed
 target is reported (run exits non-zero, `checkup` warns which destination is

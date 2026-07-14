@@ -4,21 +4,25 @@ Actual stores everything in SQLite under
 `compose/productivity/actual-budget/data/` (`ACTUAL_DATA_DIR=/data`), container
 name `actual-budget`.
 
-## Backup (default: no downtime)
+## Backup
 
 ```bash
 sudo domum-core actual backup            # filesystem-level tar
 sudo domum-core actual backup --dry-run  # show what would happen
 ```
 
-Creates `/var/lib/domum-core/service-backups/actual/actual-YYYYMMDD-HHMMSS.tar.gz`
-and keeps the last `ACTUAL_KEEP` (default 7). The artifact is swept into restic
-via the staging path, so a single `backups run` captures it offsite too.
+`domum-core backups run` protects Actual offsite by backing up the live data
+directory under `/opt/domum-core/compose/productivity/actual-budget/data`.
 
-### Optional consistency quiesce
+It also creates a local same-host restore archive at
+`/var/lib/domum-core/service-backups/actual/actual-YYYYMMDD-HHMMSS.tar.gz` and
+keeps the last `ACTUAL_KEEP` (default 7). That archive is local staging by
+default; the offsite copy is the data directory in restic.
+
+### Consistency quiesce
 
 SQLite can be mid-write during a hot copy. For a guaranteed-consistent copy,
-opt into a short `docker pause` around the tar:
+use a short `docker pause` around the local tar:
 
 ```ini
 # config/domum-backup.conf
@@ -26,7 +30,7 @@ ACTUAL_QUIESCE=1
 ```
 
 This pauses the container for the duration of the tar only (seconds), then
-unpauses. Default is `0` (no downtime).
+unpauses. Existing installs can set `ACTUAL_QUIESCE=0` to opt out.
 
 ## Restore (non-destructive)
 

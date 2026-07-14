@@ -42,6 +42,7 @@ big recovery work is built against it.
 | 26 | [Recovery docs overhaul + storage-replacement runbook](task-26-recovery-docs-overhaul.md) ✅ done (31b047f; A1 in 8c610f0) | medium | none |
 | 22 | [Guided restore: `domum-core restore`](task-22-guided-restore-command.md) ✅ done (870b951) — sandbox-verified end-to-end (real restic/age/rsync); on the Pi run read-only steps 1–2 only; full drill is task 23's rehearsal | large | medium |
 | 23 | [Automated restore verification (monthly) + annual fire drill](task-23-restore-verification.md) | medium | low |
+| 39 | [App-consistent offsite service archives for database-style apps](task-39-app-consistent-offsite-service-archives.md) | medium | medium |
 | 24 | [Multi-destination backups: Buffalo/Unraid/USB](task-24-multi-destination-backups.md) | medium | low-med |
 | 34 | [Make `init` converge the host (disposable OS)](task-34-init-host-convergence.md) | small-med | low-med |
 

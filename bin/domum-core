@@ -2899,6 +2899,72 @@ configure_validate() {
     [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || { echo "[!] recovery email on but SMTP host unset"; issues=1; }
     [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
   fi
+  local -a backup_targets=()
+  read -r -a backup_targets <<< "${BACKUP_TARGETS:-}"
+  local target token enabled_var enabled repo_var repo pw_var pw_file
+  local key_var key_file known_hosts_var known_hosts_file port_var port
+  local enabled_target_count=0
+  for target in "${backup_targets[@]}"; do
+    [[ -n "$target" ]] || continue
+    token="$(uppercase_token "$target")"
+    enabled_var="BACKUP_TARGET_${token}_ENABLED"
+    enabled="${!enabled_var:-0}"
+    [[ "$enabled" =~ ^[01]$ ]] || { echo "[!] $enabled_var must be 0 or 1"; issues=1; }
+    [[ "$enabled" == "1" ]] || continue
+    enabled_target_count=$(( enabled_target_count + 1 ))
+
+    repo_var="BACKUP_TARGET_${token}_REPOSITORY"
+    repo="${!repo_var:-}"
+    if [[ -z "$repo" ]]; then
+      echo "[!] $target backup target is enabled but $repo_var is empty"
+      issues=1
+    elif [[ "$repo" == *XXXXXX* || "$repo" == *your-storagebox* || "$repo" == *your-bucket* ]]; then
+      echo "[!] $repo_var still contains a placeholder value: $repo"
+      issues=1
+    fi
+
+    pw_var="BACKUP_TARGET_${token}_PASSWORD_FILE"
+    pw_file="${!pw_var:-$SECRETS_DIR/restic_password_$target}"
+    if [[ -z "$pw_file" ]]; then
+      echo "[!] $target backup target is enabled but $pw_var is empty"
+      issues=1
+    elif [[ ! -f "$pw_file" ]]; then
+      echo "[!] $target backup target password file missing: $pw_file"
+      issues=1
+    fi
+
+    if [[ "$repo" == sftp:* ]]; then
+      [[ "$repo" == sftp:*@*:* ]] || { echo "[!] $repo_var is not a valid SFTP repo string: $repo"; issues=1; }
+      key_var="BACKUP_TARGET_${token}_SFTP_KEY_FILE"
+      key_file="${!key_var:-}"
+      if [[ -z "$key_file" ]]; then
+        echo "[!] SFTP target '$target' is missing $key_var"
+        issues=1
+      elif [[ ! -f "$key_file" ]]; then
+        echo "[!] SFTP key file missing for target '$target': $key_file"
+        issues=1
+      fi
+
+      known_hosts_var="BACKUP_TARGET_${token}_SFTP_KNOWN_HOSTS_FILE"
+      known_hosts_file="${!known_hosts_var:-}"
+      if [[ -z "$known_hosts_file" ]]; then
+        echo "[~] SFTP target '$target' has no pinned known-hosts file configured."
+      elif [[ ! -f "$known_hosts_file" ]]; then
+        echo "[!] SFTP known-hosts file missing for target '$target': $known_hosts_file"
+        issues=1
+      fi
+
+      port_var="BACKUP_TARGET_${token}_SFTP_PORT"
+      port="${!port_var:-}"
+      if [[ "$token" == "HETZNER" && "$port" != "23" ]]; then
+        echo "[!] Hetzner Storage Box target must use $port_var=23"
+        issues=1
+      fi
+    fi
+  done
+  if (( enabled_target_count == 0 )); then
+    echo "[~] No restic backup targets are enabled in $BACKUP_CFG_FILE"
+  fi
   local svc token auto_key delay_key delay
   while IFS= read -r svc; do
     token="$(update_token_for "$svc")"
