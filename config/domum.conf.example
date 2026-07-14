@@ -16,6 +16,7 @@ DOMUM_EMAIL="admin@example.com"
 DOMUM_LAN_IP="10.0.10.2"
 DOMUM_TS_IP=""
 TAILSCALE_ACCEPT_DNS=0
+TAILSCALE_SSH=0
 
 # ============================================================
 # Core

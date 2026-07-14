@@ -39,3 +39,4 @@ ladomum.com   -> 100.121.26.52
 
 Host Tailscale must run with `--accept-dns=false`. The Pi keeps its normal LAN
 resolver path, and Tailscale never becomes a dependency for local HTTPS.
+Tailscale SSH is disabled by default with `TAILSCALE_SSH=0`.

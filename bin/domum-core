@@ -116,6 +116,7 @@ load_cfg() {
   # Tailscale is optional remote transport for this host. Keep host DNS under
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
   TAILSCALE_ACCEPT_DNS="${TAILSCALE_ACCEPT_DNS:-0}"
+  TAILSCALE_SSH="${TAILSCALE_SSH:-0}"
   ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-$(adguard_detect_web_port)}"
 
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
@@ -388,13 +389,23 @@ install_tailscale_host() {
     systemctl enable --now tailscaled
   fi
 
+  local tailscale_up_cmd="sudo tailscale up"
+  [[ "${TAILSCALE_ACCEPT_DNS:-0}" == "1" ]] || tailscale_up_cmd+=" --accept-dns=false"
+  [[ "${TAILSCALE_SSH:-0}" == "1" ]] || tailscale_up_cmd+=" --ssh=false"
+
+  if ! tailscale status >/dev/null 2>&1; then
+    log "Tailscale installed; authenticate with: $tailscale_up_cmd"
+    return 0
+  fi
+
   if [[ "${TAILSCALE_ACCEPT_DNS:-0}" != "1" ]]; then
-    if tailscale status >/dev/null 2>&1; then
-      tailscale set --accept-dns=false >/dev/null \
-        || warn "Could not set Tailscale accept-dns=false; run: sudo tailscale up --accept-dns=false"
-    else
-      log "Tailscale installed; authenticate with: sudo tailscale up --accept-dns=false"
-    fi
+    tailscale set --accept-dns=false >/dev/null \
+      || warn "Could not set Tailscale accept-dns=false; run: sudo tailscale set --accept-dns=false"
+  fi
+
+  if [[ "${TAILSCALE_SSH:-0}" != "1" ]]; then
+    tailscale set --ssh=false >/dev/null \
+      || warn "Could not set Tailscale ssh=false; run: sudo tailscale set --ssh=false"
   fi
 }
 
@@ -2663,6 +2674,9 @@ run_checkup() {
 
   # --- Tailscale (if enabled) ---
   if [[ "${ENABLE_TAILSCALE:-0}" == "1" ]]; then
+    local tailscale_up_cmd="sudo tailscale up"
+    [[ "${TAILSCALE_ACCEPT_DNS:-0}" == "1" ]] || tailscale_up_cmd+=" --accept-dns=false"
+    [[ "${TAILSCALE_SSH:-0}" == "1" ]] || tailscale_up_cmd+=" --ssh=false"
     if ! cmd_exists tailscale; then
       checkup_add warning "Tailscale is enabled but the host tailscale CLI is missing."
       checkup_add action "sudo domum-core init"
@@ -2673,7 +2687,7 @@ run_checkup() {
       checkup_add healthy "Tailscale is up."
     else
       checkup_add warning "Tailscale is enabled but not connected."
-      checkup_add action "sudo tailscale up --accept-dns=false"
+      checkup_add action "$tailscale_up_cmd"
     fi
   fi
 
@@ -2862,7 +2876,7 @@ configure_show() {
   echo
   local k
   for k in DOMUM_DOMAIN DOMUM_EMAIL DOMUM_LAN_IP DOMUM_TS_IP \
-           ADGUARD_WEB_PORT TAILSCALE_ACCEPT_DNS \
+           ADGUARD_WEB_PORT TAILSCALE_ACCEPT_DNS TAILSCALE_SSH \
            ENABLE_HOME_ASSISTANT ENABLE_MQTT ENABLE_ZIGBEE2MQTT ENABLE_ZWAVE \
            ENABLE_ESP_HOME ENABLE_NODERED ENABLE_MA ENABLE_MARIADB \
            ENABLE_ADGUARD_HOME ENABLE_ACTUAL_BUDGET ENABLE_VAULTWARDEN \
@@ -3052,6 +3066,7 @@ configure_wizard() {
   set_conf_key "$CFG_FILE" DOMUM_TS_IP  "$(ask 'Tailscale IP' "${DOMUM_TS_IP:-}")"
   set_conf_key "$CFG_FILE" ENABLE_TAILSCALE "$(ask_bool 'Host Tailscale remote access' "${ENABLE_TAILSCALE:-0}")"
   set_conf_key "$CFG_FILE" TAILSCALE_ACCEPT_DNS "$(ask_bool '  allow Tailscale to manage host DNS' "${TAILSCALE_ACCEPT_DNS:-0}")"
+  set_conf_key "$CFG_FILE" TAILSCALE_SSH "$(ask_bool '  allow Tailscale SSH' "${TAILSCALE_SSH:-0}")"
 
   echo "-- Services (1=on 0=off) --"
   local name enable_var _rest

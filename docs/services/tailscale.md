@@ -11,12 +11,14 @@ if Docker is unhealthy.
 Use:
 
 ```bash
-sudo tailscale up --accept-dns=false
+sudo tailscale up --accept-dns=false --ssh=false
 ```
 
 The `--accept-dns=false` setting is required for this host. UniFi remains the LAN
 DNS authority, and Traefik certificate renewal uses Cloudflare DNS-01 with public
 recursive resolvers. Tailscale DNS must not become a dependency for local HTTPS.
+`--ssh=false` keeps Tailscale SSH disabled unless `TAILSCALE_SSH=1` is set in
+`config/domum.conf`.
 
 After disaster recovery, re-authenticate Tailscale. Node keys are not backed up
 because they are re-issuable.
