@@ -59,7 +59,8 @@ ENABLE_VAULTWARDEN=1
 # VAULTWARDEN_INVITATIONS_ALLOWED=false
 ENABLE_OBSIDIAN_SYNC=0
 # OBSIDIAN_COUCHDB_USER="obsidian"
-# OBSIDIAN_COUCHDB_PASSWORD="changeme"
+# Required when ENABLE_OBSIDIAN_SYNC=1; never leave this as changeme.
+# OBSIDIAN_COUCHDB_PASSWORD="set-a-long-random-password"
 
 # Removed / intentionally not part of domum-core:
 # go2rtc, frigate, jellyfin, and portainer belong outside this Pi profile.

@@ -179,6 +179,22 @@ load_cfg() {
   SECURITY_PATCH_REBOOT_POLICY="${SECURITY_PATCH_REBOOT_POLICY:-manual}"
 }
 
+validate_obsidian_credentials() {
+  local issues=0
+  [[ "${ENABLE_OBSIDIAN_SYNC:-0}" == "1" ]] || return 0
+
+  if [[ -z "${OBSIDIAN_COUCHDB_USER:-}" ]]; then
+    echo "[!] ENABLE_OBSIDIAN_SYNC=1 but OBSIDIAN_COUCHDB_USER is empty"
+    issues=1
+  fi
+  if [[ -z "${OBSIDIAN_COUCHDB_PASSWORD:-}" || "${OBSIDIAN_COUCHDB_PASSWORD:-}" == "changeme" ]]; then
+    echo "[!] ENABLE_OBSIDIAN_SYNC=1 requires a non-default OBSIDIAN_COUCHDB_PASSWORD"
+    issues=1
+  fi
+
+  return "$issues"
+}
+
 ensure_state_dirs() {
   install -d -m 0750 "$STATE_ROOT"
   install -d -m 0750 "$STATE_ROOT/backups"
@@ -588,6 +604,7 @@ EOF
 apply() {
   need_root
   load_cfg
+  validate_obsidian_credentials || die "Fix Obsidian Sync credentials before apply."
   install_tailscale_host
   ensure_networks
   export_env_for_compose
@@ -2917,6 +2934,7 @@ configure_validate() {
     [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || { echo "[!] recovery email on but SMTP host unset"; issues=1; }
     [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
   fi
+  validate_obsidian_credentials || issues=1
   local -a backup_targets=()
   read -r -a backup_targets <<< "${BACKUP_TARGETS:-}"
   local target token enabled_var enabled repo_var repo pw_var pw_file

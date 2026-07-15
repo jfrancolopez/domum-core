@@ -24,6 +24,9 @@ OBSIDIAN_COUCHDB_PASSWORD="replace-me"
 sudo domum-core apply
 ```
 
+`domum-core configure --validate` and `domum-core apply` reject Obsidian Sync
+when the password is empty or still set to `changeme`.
+
 The service is exposed as `https://obsidian.${DOMUM_DOMAIN}` unless
 `OBSIDIAN_DOMAIN` overrides it. CouchDB tuning for authenticated access and CORS lives in
 `compose/productivity/obsidian-sync/etc/local.ini`.
