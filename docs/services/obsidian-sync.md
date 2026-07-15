@@ -28,6 +28,11 @@ The service is exposed as `https://obsidian.${DOMUM_DOMAIN}` unless
 `OBSIDIAN_DOMAIN` overrides it. CouchDB tuning for authenticated access and CORS lives in
 `compose/productivity/obsidian-sync/etc/local.ini`.
 
+Do not add a CouchDB `[admins]` block or password hashes to that tracked file.
+The admin user and password come from `OBSIDIAN_COUCHDB_USER` and
+`OBSIDIAN_COUCHDB_PASSWORD`; generated CouchDB runtime config must stay out of
+git.
+
 After applying, open `https://obsidian.${DOMUM_DOMAIN}` in a browser. A simple
 CouchDB response means the backend is reachable. You normally do not write notes
 in this web page; it is only the sync database.
