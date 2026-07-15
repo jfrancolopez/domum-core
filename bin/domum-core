@@ -118,6 +118,8 @@ load_cfg() {
   TAILSCALE_ACCEPT_DNS="${TAILSCALE_ACCEPT_DNS:-0}"
   TAILSCALE_SSH="${TAILSCALE_SSH:-0}"
   ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-$(adguard_detect_web_port)}"
+  MQTT_USER="${MQTT_USER:-domum}"
+  MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
   MOSQUITTO_PASSWD_FILE="${MOSQUITTO_PASSWD_FILE:-$SECRETS_DIR/mosquitto_passwd}"
 
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
@@ -198,10 +200,20 @@ validate_obsidian_credentials() {
 
 validate_mqtt_auth() {
   local issues=0
+  local z2m_secret="$DOMUM_DIR/compose/automation/zigbee2mqtt/secret.yaml"
   [[ "${ENABLE_MQTT:-0}" == "1" ]] || return 0
 
   if [[ -z "${MOSQUITTO_PASSWD_FILE:-}" ]]; then
     echo "[!] ENABLE_MQTT=1 but MOSQUITTO_PASSWD_FILE is empty"
+    issues=1
+  elif [[ -z "${MQTT_PASSWORD_FILE:-}" ]]; then
+    echo "[!] ENABLE_MQTT=1 but MQTT_PASSWORD_FILE is empty"
+    issues=1
+  elif [[ ! -f "$MQTT_PASSWORD_FILE" ]]; then
+    echo "[!] ENABLE_MQTT=1 but MQTT password file is missing: $MQTT_PASSWORD_FILE"
+    issues=1
+  elif [[ ! -s "$MQTT_PASSWORD_FILE" ]]; then
+    echo "[!] MQTT password file is empty: $MQTT_PASSWORD_FILE"
     issues=1
   elif [[ ! -f "$MOSQUITTO_PASSWD_FILE" ]]; then
     echo "[!] ENABLE_MQTT=1 but Mosquitto password file is missing: $MOSQUITTO_PASSWD_FILE"
@@ -210,17 +222,47 @@ validate_mqtt_auth() {
     echo "[!] Mosquitto password file is empty: $MOSQUITTO_PASSWD_FILE"
     issues=1
   else
-    if [[ "${ENABLE_HOME_ASSISTANT:-0}" == "1" ]] && ! grep -q '^ha:' "$MOSQUITTO_PASSWD_FILE"; then
-      echo "[!] Mosquitto password file is missing the ha account"
-      issues=1
-    fi
-    if [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]] && ! grep -q '^z2m:' "$MOSQUITTO_PASSWD_FILE"; then
-      echo "[!] Mosquitto password file is missing the z2m account"
+    if ! grep -q "^${MQTT_USER:-domum}:" "$MOSQUITTO_PASSWD_FILE"; then
+      echo "[!] Mosquitto password file is missing the ${MQTT_USER:-domum} account"
       issues=1
     fi
   fi
 
+  if [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]; then
+    if [[ ! -f "$z2m_secret" ]]; then
+      echo "[!] Zigbee2MQTT secret file is missing MQTT credentials: $z2m_secret"
+      issues=1
+    else
+      grep -q '^mqtt_user:' "$z2m_secret" || { echo "[!] Zigbee2MQTT secret.yaml is missing mqtt_user"; issues=1; }
+      grep -q '^mqtt_pass:' "$z2m_secret" || { echo "[!] Zigbee2MQTT secret.yaml is missing mqtt_pass"; issues=1; }
+      grep -Eq "^mqtt_user:[[:space:]]*\"?${MQTT_USER:-domum}\"?[[:space:]]*$" "$z2m_secret" || {
+        echo "[!] Zigbee2MQTT secret.yaml mqtt_user must be ${MQTT_USER:-domum}"
+        issues=1
+      }
+    fi
+  fi
+
   return "$issues"
+}
+
+random_password() {
+  od -An -tx1 -N24 /dev/urandom | tr -d ' \n'
+}
+
+yaml_set_simple_secret() {
+  local file="$1" key="$2" value="$3" tmp found=0 line
+  tmp="$(mktemp)"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$key:"* ]]; then
+      printf '%s: "%s"\n' "$key" "$value" >> "$tmp"
+      found=1
+    else
+      printf '%s\n' "$line" >> "$tmp"
+    fi
+  done < "$file"
+  (( found == 1 )) || printf '%s: "%s"\n' "$key" "$value" >> "$tmp"
+  install -m 0600 "$tmp" "$file"
+  rm -f "$tmp"
 }
 
 ensure_state_dirs() {
@@ -563,6 +605,8 @@ export_env_for_compose() {
   export DOMUM_LAN_IP="${DOMUM_LAN_IP:-}"
   export DOMUM_TS_IP="${DOMUM_TS_IP:-}"
   export ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}"
+  export MQTT_USER="${MQTT_USER:-domum}"
+  export MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
   export MOSQUITTO_PASSWD_FILE="${MOSQUITTO_PASSWD_FILE:-$SECRETS_DIR/mosquitto_passwd}"
 
   # Optional-service interpolation (safe defaults; compose has its own too).
@@ -634,7 +678,7 @@ apply() {
   need_root
   load_cfg
   validate_obsidian_credentials || die "Fix Obsidian Sync credentials before apply."
-  validate_mqtt_auth || die "Create the Mosquitto password file before apply."
+  validate_mqtt_auth || die "Run 'domum-core mqtt init-auth' before apply."
   install_tailscale_host
   ensure_networks
   export_env_for_compose
@@ -3312,6 +3356,61 @@ schedule_cmd() {
 }
 
 # ===========================================================================
+#  Section: MQTT auth bootstrap
+# ===========================================================================
+
+mqtt_init_auth() {
+  need_root
+  load_cfg
+  install -d -m 0700 "$SECRETS_DIR"
+
+  local password z2m_secret
+  if [[ -f "$MQTT_PASSWORD_FILE" ]]; then
+    password="$(<"$MQTT_PASSWORD_FILE")"
+    [[ -n "$password" ]] || die "MQTT password file is empty: $MQTT_PASSWORD_FILE"
+    log "MQTT password already exists: $MQTT_PASSWORD_FILE"
+  else
+    password="$(random_password)"
+    install -m 0600 /dev/null "$MQTT_PASSWORD_FILE"
+    printf '%s\n' "$password" > "$MQTT_PASSWORD_FILE"
+    log "Created MQTT password: $MQTT_PASSWORD_FILE"
+  fi
+
+  if [[ -f "$MOSQUITTO_PASSWD_FILE" ]] && grep -q "^${MQTT_USER}:" "$MOSQUITTO_PASSWD_FILE"; then
+    log "Mosquitto password file already has account: $MQTT_USER"
+  else
+    cmd_exists docker || die "docker is required to generate $MOSQUITTO_PASSWD_FILE"
+    local -a pass_args=(-b)
+    [[ -f "$MOSQUITTO_PASSWD_FILE" ]] || pass_args=(-c -b)
+    docker run --rm -u root -v "$SECRETS_DIR:/secrets" docker.io/library/eclipse-mosquitto:2 \
+      mosquitto_passwd "${pass_args[@]}" "/secrets/$(basename "$MOSQUITTO_PASSWD_FILE")" "$MQTT_USER" "$password"
+    chmod 0644 "$MOSQUITTO_PASSWD_FILE"
+    log "Updated Mosquitto password file: $MOSQUITTO_PASSWD_FILE"
+  fi
+
+  if [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]; then
+    z2m_secret="$DOMUM_DIR/compose/automation/zigbee2mqtt/secret.yaml"
+    install -d -m 0750 "$(dirname "$z2m_secret")"
+    [[ -f "$z2m_secret" ]] || install -m 0600 /dev/null "$z2m_secret"
+    if [[ ! -f "$z2m_secret.pre-mqtt-init" ]]; then
+      install -m 0600 "$z2m_secret" "$z2m_secret.pre-mqtt-init"
+    fi
+    yaml_set_simple_secret "$z2m_secret" mqtt_user "$MQTT_USER"
+    yaml_set_simple_secret "$z2m_secret" mqtt_pass "$password"
+    log "Zigbee2MQTT MQTT secrets are present: $z2m_secret"
+  fi
+
+  log "MQTT auth bootstrap complete. Use username '$MQTT_USER' and the password in $MQTT_PASSWORD_FILE for Home Assistant."
+}
+
+mqtt_cmd() {
+  case "${1:-}" in
+    init-auth) shift; mqtt_init_auth "$@" ;;
+    *) die "Usage: domum-core mqtt init-auth" ;;
+  esac
+}
+
+# ===========================================================================
 #  dispatch
 # ===========================================================================
 
@@ -3322,6 +3421,7 @@ domum-core — home-automation server management CLI
 Deployment:
   domum-core init
   domum-core configure [--show|--validate|--write-defaults|--backup-current]
+  domum-core mqtt init-auth              create missing MQTT auth secrets
   domum-core apply
   domum-core update                       git pull (warns on local drift)
   domum-core status [--counts]
@@ -3364,6 +3464,7 @@ main() {
   case "$cmd" in
     init)     init_host "$@" ;;
     configure) configure_cmd "$@" ;;
+    mqtt)     mqtt_cmd "$@" ;;
     apply)    apply "$@" ;;
     update)   repo_update "$@" ;;
     status)   status "$@" ;;

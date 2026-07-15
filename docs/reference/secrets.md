@@ -13,6 +13,7 @@ drift is fixed.
 |---|---|
 | `cloudflare_api_token` | Traefik DNS-01 ACME |
 | `mariadb/mariadb.env` | MariaDB container env (`MARIADB_ROOT_PASSWORD`, etc.) |
+| `mqtt_password` | cleartext password for Home Assistant/Zigbee2MQTT MQTT clients |
 | `mosquitto_passwd` | Mosquitto password hashes for MQTT clients |
 | `traefik_dashboard_users` | Traefik dashboard basic-auth |
 | `tailscale_authkey` | Optional one-time Tailscale re-authentication |
