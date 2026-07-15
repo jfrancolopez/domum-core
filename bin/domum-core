@@ -202,6 +202,7 @@ validate_obsidian_credentials() {
 validate_mqtt_auth() {
   local issues=0
   local z2m_secret="$DOMUM_DIR/compose/automation/zigbee2mqtt/secret.yaml"
+  local expected_owner=""
   [[ "${ENABLE_MQTT:-0}" == "1" ]] || return 0
 
   if [[ -z "${MOSQUITTO_PASSWD_FILE:-}" ]]; then
@@ -237,12 +238,19 @@ validate_mqtt_auth() {
       echo "[!] Mosquitto runtime password file is missing the ${MQTT_USER:-domum} account"
       issues=1
     fi
-    if [[ "$(stat -c '%u:%g' "$MOSQUITTO_RUNTIME_PASSWD_FILE" 2>/dev/null || true)" != "1883:1883" ]]; then
-      echo "[!] Mosquitto runtime password file must be owned by uid/gid 1883:1883: $MOSQUITTO_RUNTIME_PASSWD_FILE"
+    if cmd_exists docker; then
+      expected_owner="$(docker run --rm docker.io/library/eclipse-mosquitto:2 sh -c 'printf "%s:%s" "$(id -u mosquitto)" "$(id -g mosquitto)"' 2>/dev/null || true)"
+    fi
+    if [[ -n "$expected_owner" && "$(stat -c '%u:%g' "$MOSQUITTO_RUNTIME_PASSWD_FILE" 2>/dev/null || true)" != "$expected_owner" ]]; then
+      echo "[!] Mosquitto runtime password file must be owned by container mosquitto uid/gid $expected_owner: $MOSQUITTO_RUNTIME_PASSWD_FILE"
       issues=1
     fi
     if [[ "$(stat -c '%a' "$MOSQUITTO_RUNTIME_PASSWD_FILE" 2>/dev/null || true)" != "600" ]]; then
       echo "[!] Mosquitto runtime password file must be mode 0600: $MOSQUITTO_RUNTIME_PASSWD_FILE"
+      issues=1
+    fi
+    if [[ ! -x "$(dirname "$MOSQUITTO_RUNTIME_PASSWD_FILE")" ]]; then
+      echo "[!] Mosquitto runtime config directory is not traversable: $(dirname "$MOSQUITTO_RUNTIME_PASSWD_FILE")"
       issues=1
     fi
   fi
@@ -285,9 +293,15 @@ yaml_set_simple_secret() {
 }
 
 install_mosquitto_runtime_passwd() {
-  install -d -m 0750 "$(dirname "$MOSQUITTO_RUNTIME_PASSWD_FILE")"
+  local uid gid
+  cmd_exists docker || die "docker is required to prepare $MOSQUITTO_RUNTIME_PASSWD_FILE"
+  uid="$(docker run --rm docker.io/library/eclipse-mosquitto:2 id -u mosquitto)"
+  gid="$(docker run --rm docker.io/library/eclipse-mosquitto:2 id -g mosquitto)"
+  [[ "$uid" =~ ^[0-9]+$ && "$gid" =~ ^[0-9]+$ ]] || die "Unable to determine Mosquitto container uid/gid."
+
+  install -d -m 0755 "$(dirname "$MOSQUITTO_RUNTIME_PASSWD_FILE")"
   install -m 0600 "$MOSQUITTO_PASSWD_FILE" "$MOSQUITTO_RUNTIME_PASSWD_FILE"
-  chown 1883:1883 "$MOSQUITTO_RUNTIME_PASSWD_FILE"
+  chown "$uid:$gid" "$MOSQUITTO_RUNTIME_PASSWD_FILE"
 }
 
 ensure_state_dirs() {
