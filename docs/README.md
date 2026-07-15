@@ -7,6 +7,7 @@ designed to be explicit and backup-aware.
 ## Getting started
 
 - [Install](getting-started/install.md)
+- [Operator SSH access](getting-started/operator-ssh-access.md)
 - [Configure](getting-started/configure.md)
 - [First run](getting-started/first-run.md)
 

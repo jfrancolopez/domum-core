@@ -49,6 +49,10 @@ Set:
 # 2) Security Baseline
 
 ## SSH
+
+Before disabling password login, install and test operator keys:
+[Operator SSH access](operator-ssh-access.md).
+
 ```
     sudo nano /etc/ssh/sshd_config
 ```
