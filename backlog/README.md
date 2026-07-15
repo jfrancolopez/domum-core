@@ -95,7 +95,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
-| 29 | [MQTT authentication (anonymous LAN broker)](task-29-mqtt-authentication.md) | small code / medium ops | medium |
+| 29 | [MQTT authentication (anonymous LAN broker)](task-29-mqtt-authentication.md) ✅ done (52f59db) — operator maintenance window remains: create credentials, stage HA/Z2M, apply, verify clients | small code / medium ops | medium |
 | 11 | [Remove or justify iot_vlan50 in ensure_networks](task-11-iot-vlan50.md) | small | medium |
 | 13 | [Zigbee network key rotation runbook](task-13-zigbee-key-rotation.md) | small (doc) | medium (op) |
 
