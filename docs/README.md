@@ -32,6 +32,7 @@ designed to be explicit and backup-aware.
 ## Services
 
 - [Home Assistant](services/home-assistant.md)
+- [MQTT](services/mqtt.md)
 - [AdGuard Tailscale DNS](services/adguard-tailscale-dns.md)
 - [Tailscale](services/tailscale.md)
 - [Actual Budget](services/actual-budget.md)

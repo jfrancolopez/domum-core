@@ -51,3 +51,19 @@ the current one aside), reloads the MariaDB dump, then starts HA. Verify at
 sudo domum-core schedule install-maintenance
 sudo systemctl enable --now domum-core-backups.timer
 ```
+
+## MQTT
+
+Home Assistant connects to Mosquitto with credentials. Before applying MQTT
+broker authentication changes, update the MQTT integration in the Home Assistant
+UI with the `ha` account from `/etc/domum-core/secrets/mosquitto_passwd`:
+
+```text
+Settings -> Devices & services -> MQTT -> Configure/Reconfigure
+Broker: mqtt
+Port: 1883
+Username: ha
+Password: <ha-password>
+```
+
+See [MQTT](mqtt.md) for the full maintenance-window checklist.

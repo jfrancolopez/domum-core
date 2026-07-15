@@ -9,6 +9,7 @@ services:
       - TZ=America/New_York
     volumes:
       - /opt/domum-core/compose/automation/mqtt/config:/mosquitto/config
+      - ${MOSQUITTO_PASSWD_FILE:-/etc/domum-core/secrets/mosquitto_passwd}:/mosquitto/config/passwd:ro
       - /opt/domum-core/compose/automation/mqtt/data:/mosquitto/data
       - /opt/domum-core/compose/automation/mqtt/log:/mosquitto/log
     ports:
