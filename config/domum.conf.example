@@ -34,6 +34,7 @@ ENABLE_MQTT=1
 # MQTT_USER="domum"
 # MQTT_PASSWORD_FILE="/etc/domum-core/secrets/mqtt_password"
 # MOSQUITTO_PASSWD_FILE="/etc/domum-core/secrets/mosquitto_passwd"
+# MOSQUITTO_RUNTIME_PASSWD_FILE="/opt/domum-core/compose/automation/mqtt/config/passwd"
 ENABLE_ZIGBEE2MQTT=1
 ENABLE_ZWAVE=1
 ENABLE_NODERED=1

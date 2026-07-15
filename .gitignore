@@ -10,6 +10,7 @@ logs/
 **/data/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
+compose/automation/zigbee2mqtt/secret.yaml.pre-mqtt-init
 compose/automation/mqtt/config/passwd
 
 # Live generated app config with credentials/password hashes.

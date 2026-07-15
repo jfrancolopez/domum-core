@@ -121,6 +121,7 @@ load_cfg() {
   MQTT_USER="${MQTT_USER:-domum}"
   MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
   MOSQUITTO_PASSWD_FILE="${MOSQUITTO_PASSWD_FILE:-$SECRETS_DIR/mosquitto_passwd}"
+  MOSQUITTO_RUNTIME_PASSWD_FILE="${MOSQUITTO_RUNTIME_PASSWD_FILE:-$DOMUM_DIR/compose/automation/mqtt/config/passwd}"
 
   RECOVERY_PACK_ENABLED="${RECOVERY_PACK_ENABLED:-1}"
   RECOVERY_PACK_AGE_PUBKEY_FILE="${RECOVERY_PACK_AGE_PUBKEY_FILE:-$SECRETS_DIR/recovery-age.pub}"
@@ -221,9 +222,27 @@ validate_mqtt_auth() {
   elif [[ ! -s "$MOSQUITTO_PASSWD_FILE" ]]; then
     echo "[!] Mosquitto password file is empty: $MOSQUITTO_PASSWD_FILE"
     issues=1
+  elif [[ ! -f "$MOSQUITTO_RUNTIME_PASSWD_FILE" ]]; then
+    echo "[!] Mosquitto runtime password file is missing: $MOSQUITTO_RUNTIME_PASSWD_FILE"
+    issues=1
+  elif [[ ! -s "$MOSQUITTO_RUNTIME_PASSWD_FILE" ]]; then
+    echo "[!] Mosquitto runtime password file is empty: $MOSQUITTO_RUNTIME_PASSWD_FILE"
+    issues=1
   else
     if ! grep -q "^${MQTT_USER:-domum}:" "$MOSQUITTO_PASSWD_FILE"; then
       echo "[!] Mosquitto password file is missing the ${MQTT_USER:-domum} account"
+      issues=1
+    fi
+    if ! grep -q "^${MQTT_USER:-domum}:" "$MOSQUITTO_RUNTIME_PASSWD_FILE"; then
+      echo "[!] Mosquitto runtime password file is missing the ${MQTT_USER:-domum} account"
+      issues=1
+    fi
+    if [[ "$(stat -c '%u:%g' "$MOSQUITTO_RUNTIME_PASSWD_FILE" 2>/dev/null || true)" != "1883:1883" ]]; then
+      echo "[!] Mosquitto runtime password file must be owned by uid/gid 1883:1883: $MOSQUITTO_RUNTIME_PASSWD_FILE"
+      issues=1
+    fi
+    if [[ "$(stat -c '%a' "$MOSQUITTO_RUNTIME_PASSWD_FILE" 2>/dev/null || true)" != "600" ]]; then
+      echo "[!] Mosquitto runtime password file must be mode 0600: $MOSQUITTO_RUNTIME_PASSWD_FILE"
       issues=1
     fi
   fi
@@ -263,6 +282,12 @@ yaml_set_simple_secret() {
   (( found == 1 )) || printf '%s: "%s"\n' "$key" "$value" >> "$tmp"
   install -m 0600 "$tmp" "$file"
   rm -f "$tmp"
+}
+
+install_mosquitto_runtime_passwd() {
+  install -d -m 0750 "$(dirname "$MOSQUITTO_RUNTIME_PASSWD_FILE")"
+  install -m 0600 "$MOSQUITTO_PASSWD_FILE" "$MOSQUITTO_RUNTIME_PASSWD_FILE"
+  chown 1883:1883 "$MOSQUITTO_RUNTIME_PASSWD_FILE"
 }
 
 ensure_state_dirs() {
@@ -608,6 +633,7 @@ export_env_for_compose() {
   export MQTT_USER="${MQTT_USER:-domum}"
   export MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
   export MOSQUITTO_PASSWD_FILE="${MOSQUITTO_PASSWD_FILE:-$SECRETS_DIR/mosquitto_passwd}"
+  export MOSQUITTO_RUNTIME_PASSWD_FILE="${MOSQUITTO_RUNTIME_PASSWD_FILE:-$DOMUM_DIR/compose/automation/mqtt/config/passwd}"
 
   # Optional-service interpolation (safe defaults; compose has its own too).
   export VAULTWARDEN_DOMAIN="${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}"
@@ -2432,7 +2458,7 @@ pi_temp_check() {
 # tcp_probe <host> <port> — true if a TCP connection opens within ~2s.
 tcp_probe() {
   local host="$1" port="$2"
-  timeout 2 bash -c "echo > /dev/tcp/${host}/${port}" >/dev/null 2>&1
+  timeout 2 bash -c ": <> /dev/tcp/${host}/${port}" >/dev/null 2>&1
 }
 
 # mqtt_discovery_enabled — best-effort: HA default discovery is on unless the
@@ -3384,9 +3410,11 @@ mqtt_init_auth() {
     [[ -f "$MOSQUITTO_PASSWD_FILE" ]] || pass_args=(-c -b)
     docker run --rm -u root -v "$SECRETS_DIR:/secrets" docker.io/library/eclipse-mosquitto:2 \
       mosquitto_passwd "${pass_args[@]}" "/secrets/$(basename "$MOSQUITTO_PASSWD_FILE")" "$MQTT_USER" "$password"
-    chmod 0644 "$MOSQUITTO_PASSWD_FILE"
     log "Updated Mosquitto password file: $MOSQUITTO_PASSWD_FILE"
   fi
+  chmod 0600 "$MOSQUITTO_PASSWD_FILE"
+  install_mosquitto_runtime_passwd
+  log "Updated Mosquitto runtime password file: $MOSQUITTO_RUNTIME_PASSWD_FILE"
 
   if [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]; then
     z2m_secret="$DOMUM_DIR/compose/automation/zigbee2mqtt/secret.yaml"

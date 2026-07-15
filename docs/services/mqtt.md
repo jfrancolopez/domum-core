@@ -22,13 +22,15 @@ sudo domum-core mqtt init-auth
 The command is idempotent. It never rotates an existing MQTT password:
 
 - `/etc/domum-core/secrets/mqtt_password` — cleartext password for clients
-- `/etc/domum-core/secrets/mosquitto_passwd` — Mosquitto password hash file
+- `/etc/domum-core/secrets/mosquitto_passwd` — root-only source hash file
+- `/opt/domum-core/compose/automation/mqtt/config/passwd` — runtime hash copy
+  owned by the Mosquitto container user
 - `/opt/domum-core/compose/automation/zigbee2mqtt/secret.yaml` — updates only
   the `mqtt_user` and `mqtt_pass` entries, with a local `.pre-mqtt-init` backup
 
-`mosquitto_passwd` is mode `0644` intentionally: Mosquitto runs as a non-root
-user inside the container and must be able to read the bind-mounted file. The
-cleartext password file remains mode `0600`.
+The runtime `config/passwd` copy is ignored by git and exists only because
+Mosquitto runs as a non-root user inside the container. The files under
+`/etc/domum-core/secrets` remain root-only.
 
 ## Stage Consumers Before Apply
 
@@ -64,7 +66,7 @@ Expected checks:
 - authenticated publish succeeds
 - Home Assistant MQTT integration is connected
 - Zigbee2MQTT devices continue reporting
-- `docker logs mqtt` has no repeated authorization failures
+- `docker logs mqtt` has no permission warnings or repeated authorization failures
 
 ## Rollback
 
