@@ -77,6 +77,17 @@ remain unchanged before it can apply. If a newer candidate digest appears before
 the delay expires, domum-core resets the first-seen timestamp and waits the full
 delay again.
 
+Checkup also warns when images look forgotten:
+
+```bash
+UPDATE_ROT_AUTO_DAYS=60
+UPDATE_ROT_MANUAL_DAYS=270
+```
+
+Auto-update services older than `UPDATE_ROT_AUTO_DAYS` usually mean the pipeline
+is stuck. Manual services older than `UPDATE_ROT_MANUAL_DAYS` are due for a pin
+or update-policy review.
+
 Some services also have explicit image variables in `config/domum.conf`:
 
 ```bash

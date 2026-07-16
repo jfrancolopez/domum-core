@@ -172,6 +172,8 @@ load_cfg() {
   VAULTWARDEN_UPDATE_DELAY_DAYS="${VAULTWARDEN_UPDATE_DELAY_DAYS:-14}"
   OBSIDIAN_SYNC_AUTO_UPDATE="${OBSIDIAN_SYNC_AUTO_UPDATE:-0}"
   OBSIDIAN_SYNC_UPDATE_DELAY_DAYS="${OBSIDIAN_SYNC_UPDATE_DELAY_DAYS:-7}"
+  UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
+  UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
   HEALTHCHECK_HOMEASSISTANT_HTTP="${HEALTHCHECK_HOMEASSISTANT_HTTP:-0}"
   HOMEASSISTANT_HEALTH_URL="${HOMEASSISTANT_HEALTH_URL:-}"
@@ -2589,6 +2591,40 @@ pi_temp_check() {
   fi
 }
 
+image_created_epoch_for_container() {
+  local cid="$1" image_id created
+  image_id="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
+  [[ -n "$image_id" ]] || return 1
+  created="$(docker image inspect "$image_id" --format '{{.Created}}' 2>/dev/null || true)"
+  [[ -n "$created" ]] || return 1
+  date -d "$created" +%s 2>/dev/null
+}
+
+image_rot_check() {
+  local now svc cid created age_days threshold created_iso
+  now="$(date +%s)"
+  while IFS= read -r svc; do
+    svc="$(normalize_service_name "$svc")"
+    cid="$(container_for "$svc" || true)"
+    [[ -n "$cid" ]] || continue
+    created="$(image_created_epoch_for_container "$cid" || true)"
+    [[ -n "$created" ]] || continue
+    age_days=$(( ( now - created ) / 86400 ))
+    created_iso="$(epoch_to_iso "$created")"
+    if update_auto_enabled_for "$svc"; then
+      threshold="$(to_int "${UPDATE_ROT_AUTO_DAYS:-60}" 60)"
+      if (( age_days > threshold )); then
+        checkup_add warning "$svc image is ${age_days}d old (built $created_iso); auto-update path may be stuck — check updates status."
+      fi
+    else
+      threshold="$(to_int "${UPDATE_ROT_MANUAL_DAYS:-270}" 270)"
+      if (( age_days > threshold )); then
+        checkup_add warning "$svc image is ${age_days}d old (built $created_iso); manual pin review due."
+      fi
+    fi
+  done < <(enabled_services)
+}
+
 # tcp_probe <host> <port> — true if a TCP connection opens within ~2s.
 tcp_probe() {
   local host="$1" port="$2"
@@ -2851,6 +2887,9 @@ run_checkup() {
 
   # --- Pi temperature / throttling ---
   pi_temp_check
+
+  # --- image age nags (no registry access, no pulls) ---
+  image_rot_check
 
   # --- time sync ---
   if cmd_exists timedatectl; then
