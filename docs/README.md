@@ -16,6 +16,7 @@ designed to be explicit and backup-aware.
 - [CLI cheatsheet](operations/cli-cheatsheet.md)
 - [Checkup and doctor](operations/checkup.md)
 - [Container updates](operations/updates.md)
+- [Weekly health report](operations/weekly-report.md)
 - [Security patches](operations/security-patches.md)
 - [Maintenance timers](operations/maintenance-timers.md)
 - [Storage replacement](operations/storage-replacement.md)

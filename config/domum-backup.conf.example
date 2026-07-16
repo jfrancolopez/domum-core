@@ -152,6 +152,20 @@ GMAIL_APP_PASSWORD_FILE="/etc/domum-core/secrets/gmail-app-password"
 # RECOVERY_PACK_SMTP_PASSWORD_FILE="/etc/domum-core/secrets/recovery_pack_smtp_password"
 
 # ============================================================
+# SECTION: weekly health report email
+# ============================================================
+# Uses the same SMTP settings as recovery-pack email. Disabled by default.
+REPORT_EMAIL_ENABLED=0
+# Default recipient is RECOVERY_EMAIL_TO, then DOMUM_EMAIL. Override if desired.
+REPORT_EMAIL_TO=""
+# Optional power-cost display for future report sections; unset means omitted.
+REPORT_KWH_RATE=""
+REPORT_CURRENCY=""
+# Optional Traefik request counting remains off by default because access logs
+# add steady disk writes.
+REPORT_TRAEFIK_REQUESTS=0
+
+# ============================================================
 # SECTION: host OS security patches
 # ============================================================
 # Container update policy is app-by-app in config/domum.conf.

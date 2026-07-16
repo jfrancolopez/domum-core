@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule weekly health report
+
+[Timer]
+OnCalendar=Sun *-*-* 08:00:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=domum-core-weekly-report.service
+
+[Install]
+WantedBy=timers.target

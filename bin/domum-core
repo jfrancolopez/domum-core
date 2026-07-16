@@ -170,6 +170,11 @@ load_cfg() {
   RECOVERY_PACK_SMTP_USERNAME_FILE="${RECOVERY_PACK_SMTP_USERNAME_FILE:-$SECRETS_DIR/recovery_pack_smtp_username}"
   # Gmail app password file is the password file when provider=gmail.
   RECOVERY_PACK_SMTP_PASSWORD_FILE="${RECOVERY_PACK_SMTP_PASSWORD_FILE:-${GMAIL_APP_PASSWORD_FILE:-$SECRETS_DIR/recovery_pack_smtp_password}}"
+  REPORT_EMAIL_ENABLED="${REPORT_EMAIL_ENABLED:-0}"
+  REPORT_EMAIL_TO="${REPORT_EMAIL_TO:-${RECOVERY_PACK_EMAIL_TO:-${DOMUM_EMAIL:-}}}"
+  REPORT_KWH_RATE="${REPORT_KWH_RATE:-}"
+  REPORT_CURRENCY="${REPORT_CURRENCY:-}"
+  REPORT_TRAEFIK_REQUESTS="${REPORT_TRAEFIK_REQUESTS:-0}"
 
   # Per-app container update policy. Category labels in the service catalog are
   # informational only; they do not control update behavior.
@@ -2144,6 +2149,45 @@ send_email_with_attachment() {
   rm -f "$message"
 }
 
+send_email_body() {
+  local subject="$1" body_file="$2" content_type="${3:-text/plain; charset=utf-8}" dry="${4:-0}"
+  local smtp_user smtp_pass from to message
+  [[ -n "${RECOVERY_PACK_SMTP_HOST:-}" ]] || die "RECOVERY_PACK_SMTP_HOST required for email delivery (set provider/host)."
+  from="${RECOVERY_PACK_EMAIL_FROM:-$DOMUM_EMAIL}"
+  to="${REPORT_EMAIL_TO:-${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}}"
+  [[ -n "$from" && -n "$to" ]] || die "Report email From/To not set."
+  if [[ -f "$RECOVERY_PACK_SMTP_USERNAME_FILE" ]]; then
+    smtp_user="$(read_secret_file_value "$RECOVERY_PACK_SMTP_USERNAME_FILE")"
+  else
+    smtp_user="$from"
+  fi
+  [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || die "SMTP/app password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"
+  [[ -f "$body_file" ]] || die "Email body file missing: $body_file"
+  if (( dry == 1 )); then
+    log "[dry-run] would email '$subject'"
+    log "[dry-run]   smtps://${RECOVERY_PACK_SMTP_HOST}:${RECOVERY_PACK_SMTP_PORT} as $smtp_user, $from -> $to"
+    return 0
+  fi
+  smtp_pass="$(read_secret_file_value "$RECOVERY_PACK_SMTP_PASSWORD_FILE")"
+  message="$(mktemp)"
+  {
+    printf 'From: %s\n' "$from"
+    printf 'To: %s\n' "$to"
+    printf 'Subject: %s\n' "$subject"
+    printf 'MIME-Version: 1.0\n'
+    printf 'Content-Type: %s\n\n' "$content_type"
+    cat "$body_file"
+    printf '\n'
+  } > "$message"
+  curl --silent --show-error --ssl-reqd \
+    --url "smtps://${RECOVERY_PACK_SMTP_HOST}:${RECOVERY_PACK_SMTP_PORT}" \
+    --user "${smtp_user}:${smtp_pass}" \
+    --mail-from "$from" \
+    --mail-rcpt "$to" \
+    --upload-file "$message"
+  rm -f "$message"
+}
+
 send_recovery_pack_email() {
   local archive="$1" dry="${2:-0}"
   [[ "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] || return 0
@@ -3087,6 +3131,11 @@ json_array_from_items() {
   fi
 }
 
+pi_temp_c() {
+  cmd_exists vcgencmd || return 1
+  vcgencmd measure_temp 2>/dev/null | grep -oE '[0-9.]+' | head -n1
+}
+
 pi_temp_check() {
   cmd_exists vcgencmd || return 0
   local temp throttled
@@ -3682,6 +3731,161 @@ doctor_cmd() {
 }
 
 # ===========================================================================
+#  Section: weekly report
+# ===========================================================================
+
+report_history_file() { echo "$STATE_ROOT/report/history.csv"; }
+
+report_verdict() {
+  if (( ${#CHECKUP_CRITICAL[@]} > 0 )); then
+    printf 'CRITICAL (%d critical, %d warnings)' "${#CHECKUP_CRITICAL[@]}" "${#CHECKUP_WARNINGS[@]}"
+  elif (( ${#CHECKUP_WARNINGS[@]} > 0 )); then
+    printf 'WARNINGS (%d)' "${#CHECKUP_WARNINGS[@]}"
+  else
+    printf 'OK'
+  fi
+}
+
+report_append_history() {
+  local hist disk mem temp containers journal_errors
+  hist="$(report_history_file)"
+  install -d -m 0750 "$(dirname "$hist")"
+  [[ -f "$hist" ]] || printf 'date,disk_root_pct,mem_pct,temp_c,containers_running,journal_errors\n' > "$hist"
+  disk="$(df -P / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')"
+  mem=""
+  if [[ -r /proc/meminfo ]]; then
+    local mt ma
+    mt="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+    ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+    [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]] && mem=$(( (mt - ma) * 100 / mt ))
+  fi
+  temp="$(pi_temp_c 2>/dev/null || true)"
+  containers="$(docker ps --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')"
+  journal_errors="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
+  printf '%s,%s,%s,%s,%s,%s\n' "$(date -I)" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}" >> "$hist"
+  local tmp
+  tmp="$(mktemp)"
+  { head -n1 "$hist"; tail -n 120 "$hist"; } > "$tmp"
+  mv "$tmp" "$hist"
+  chmod 0640 "$hist"
+}
+
+report_print_file_age() {
+  local label="$1" file="$2"
+  if [[ -f "$file" ]]; then
+    printf '  %-28s %s (%s ago)\n' "$label" "$(cat "$file" 2>/dev/null || true)" "$(human_age_from_epoch "$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file")")"
+  else
+    printf '  %-28s not recorded\n' "$label"
+  fi
+}
+
+report_render_weekly() {
+  local out="$1" verdict
+  run_checkup
+  verdict="$(report_verdict)"
+  report_append_history || warn "Could not append report history."
+  {
+    printf 'DOMUM-CORE // WEEKLY // %s\n' "$(date -Iseconds)"
+    printf 'Verdict: %s\n\n' "$verdict"
+
+    printf 'Backups\n'
+    report_print_file_age "last successful backup" "$STATE_ROOT/backups/last-success"
+    local tf tname
+    for tf in "$STATE_ROOT/backups"/last-success-*; do
+      [[ -f "$tf" ]] || continue
+      tname="${tf##*/last-success-}"
+      report_print_file_age "target $tname" "$tf"
+    done
+    report_print_file_age "restore verification" "$(restore_verify_state_file)"
+    report_print_file_age "manual USB backup" "$STATE_ROOT/backups/last-usb-success"
+    printf '\n'
+
+    printf 'System\n'
+    df -h / /opt "$STATE_ROOT" 2>/dev/null | awk 'NR==1 || NR>1 {print "  "$0}'
+    if [[ -r /proc/meminfo ]]; then
+      local mt ma used_pct
+      mt="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
+      ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+      [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]] && { used_pct=$(( (mt - ma) * 100 / mt )); printf '  Memory used: %s%%\n' "$used_pct"; }
+    fi
+    local temp throttled
+    temp="$(pi_temp_c 2>/dev/null || true)"; [[ -n "$temp" ]] && printf '  Pi temperature: %s C\n' "$temp"
+    throttled="$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2 || true)"; [[ -n "$throttled" ]] && printf '  Pi throttling: %s\n' "$throttled"
+    cmd_exists uptime && printf '  Uptime: %s\n' "$(uptime -p 2>/dev/null || true)"
+    printf '\n'
+
+    printf 'Docker\n'
+    status_counts | sed 's/^/  /'
+    printf '\n'
+
+    printf 'Updates\n'
+    updates_status 2>/dev/null | sed 's/^/  /' || printf '  updates status unavailable\n'
+    printf '\n'
+
+    printf 'Journal\n'
+    local err_count
+    err_count="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
+    printf '  Error lines in last 7d: %s\n' "${err_count:-0}"
+    journalctl -p err --since -7d --no-pager 2>/dev/null \
+      | sed 's/[0-9][0-9:]\{7,8\}//g' \
+      | sort | uniq -c | sort -rn | head -n 3 \
+      | sed 's/^/  /' || true
+    printf '\n'
+
+    printf 'Findings\n'
+    (( ${#CHECKUP_CRITICAL[@]} == 0 )) || printf '  CRITICAL: %s\n' "${CHECKUP_CRITICAL[@]}"
+    (( ${#CHECKUP_WARNINGS[@]} == 0 )) || printf '  WARNING: %s\n' "${CHECKUP_WARNINGS[@]}"
+    (( ${#CHECKUP_CRITICAL[@]} || ${#CHECKUP_WARNINGS[@]} )) || printf '  none\n'
+    printf '\n'
+
+    printf 'Suggested Actions\n'
+    if (( ${#CHECKUP_ACTIONS[@]} == 0 )); then
+      printf '  none\n'
+    else
+      local i=0 action
+      for action in "${CHECKUP_ACTIONS[@]}"; do
+        i=$(( i + 1 )); (( i > 5 )) && break
+        printf '  %d. %s\n' "$i" "$action"
+      done
+    fi
+  } > "$out"
+}
+
+report_cmd() {
+  need_root
+  load_cfg
+  local sub="${1:-}" stdout=0 dry=0 arg body subject verdict
+  [[ "$sub" == "weekly" ]] || die "Usage: domum-core report weekly [--stdout|--dry-run]"
+  shift || true
+  while (( $# )); do
+    arg="$1"; shift
+    case "$arg" in
+      --stdout) stdout=1 ;;
+      --dry-run) dry=1 ;;
+      *) die "Usage: domum-core report weekly [--stdout|--dry-run]" ;;
+    esac
+  done
+  body="$(mktemp)"
+  report_render_weekly "$body"
+  verdict="$(report_verdict)"
+  subject="[domum-core] Weekly report - $verdict"
+  if (( stdout == 1 )); then
+    cat "$body"
+  elif (( dry == 1 )); then
+    send_email_body "$subject" "$body" "text/plain; charset=utf-8" 1
+  else
+    if [[ "${REPORT_EMAIL_ENABLED:-0}" != "1" ]]; then
+      log "Weekly report email disabled (set REPORT_EMAIL_ENABLED=1, or use --stdout/--dry-run)."
+      rm -f "$body"
+      return 0
+    fi
+    send_email_body "$subject" "$body" "text/plain; charset=utf-8" 0
+    log "Weekly report emailed to ${REPORT_EMAIL_TO:-${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}}."
+  fi
+  rm -f "$body"
+}
+
+# ===========================================================================
 #  Section: configure wizard
 # ===========================================================================
 
@@ -4152,6 +4356,7 @@ Deployment:
 Health:
   domum-core checkup [--json|--quiet]
   domum-core doctor
+  domum-core report weekly [--stdout|--dry-run]
 
 Home Assistant:
   domum-core homeassistant audit          read-only HA dependency report
@@ -4191,6 +4396,7 @@ main() {
     status)   status "$@" ;;
     checkup)  checkup_cmd "$@" ;;
     doctor)   doctor_cmd "$@" ;;
+    report)   report_cmd "$@" ;;
     schedule) schedule_cmd "$@" ;;
     backups)  backups_cmd "$@" ;;
     restore)  restore_cmd "$@" ;;
