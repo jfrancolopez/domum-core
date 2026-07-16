@@ -2143,6 +2143,15 @@ running_repo_digest_for() {
   return 1
 }
 
+local_repo_digest_for_ref() {
+  local image_ref="$1" digest
+  while IFS= read -r digest; do
+    digest="$(digest_only "$digest" 2>/dev/null || true)"
+    [[ -n "$digest" ]] && { printf '%s\n' "$digest"; return 0; }
+  done < <(docker image inspect "$image_ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' 2>/dev/null || true)
+  return 1
+}
+
 registry_manifest_digest_for() {
   local image_ref="$1" digest
   digest="$(docker buildx imagetools inspect "$image_ref" --format '{{.Manifest.Digest}}' 2>/dev/null || true)"
@@ -2272,13 +2281,20 @@ record_update_history() {
 updates_apply_one() {
   local svc="$1" force="$2"
   svc="$(normalize_service_name "$svc")"
-  local file cid before after cs
+  local file cid before after cs image_ref running_digest candidate_digest pulled_digest
   file="$(candidate_file_for "$svc")"
   [[ -f "$file" ]] || { log "Skipping $svc: no candidate recorded. Run 'sudo domum-core updates check' first."; return 0; }
   if ! candidate_ready_for_apply "$svc" "$force"; then
     log "Skipping $svc: delay window has not elapsed."
     return 0
   fi
+  unset IMAGE_REF RUNNING_DIGEST CURRENT_DIGEST CANDIDATE_DIGEST
+  # shellcheck disable=SC1090
+  source "$file"
+  image_ref="${IMAGE_REF:-}"
+  running_digest="${RUNNING_DIGEST:-${CURRENT_DIGEST:-}}"
+  candidate_digest="${CANDIDATE_DIGEST:-}"
+  [[ -n "$image_ref" && -n "$candidate_digest" ]] || { warn "Skipping $svc: candidate file is incomplete. Run 'sudo domum-core updates check' again."; return 0; }
   if service_requires_backup "$svc" && ! backup_gate_ok_for_service "$svc"; then
     if (( force == 0 )); then
       warn "Skipping $svc: fresh service backup is required, and restic freshness is also required when a restic target is enabled (<= ${BACKUP_MAX_AGE_HOURS}h). Run 'sudo domum-core backups run' or pass --force."
@@ -2291,6 +2307,17 @@ updates_apply_one() {
   before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
   log "Updating $svc..."
   run compose_cmd pull "$cs"
+  if (( DRY_RUN == 0 )); then
+    pulled_digest="$(local_repo_digest_for_ref "$image_ref" || true)"
+    if [[ "$pulled_digest" != "$candidate_digest" ]]; then
+      if (( force == 0 )); then
+        warn "$svc: pulled digest does not match aged candidate; registry likely moved. Re-recording candidate and resetting the delay window."
+        [[ -n "$pulled_digest" && -n "$running_digest" ]] && record_update_candidate "$svc" "$image_ref" "$running_digest" "$pulled_digest"
+        return 0
+      fi
+      warn "FORCED UPDATE: $svc pulled digest does not match aged candidate. Proceeding only because --force was provided."
+    fi
+  fi
   run compose_cmd up -d "$cs"
   if (( DRY_RUN == 0 )); then
     cid="$(container_for "$svc" || true)"

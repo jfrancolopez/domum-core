@@ -29,9 +29,10 @@ Why this split:
 
 Current caveat: task 36 is landing in separate safety commits. `updates check`
 is pull-free and uses registry manifest inspection, so it no longer downloads
-new images during a read-only check. Treat container updates as supervised until
-the remaining task 36 pieces land: digest-verified apply, scheduled apply-auto,
-rollback, and image-age nags.
+new images during a read-only check. `updates apply` verifies that the pulled
+image still matches the aged candidate before deployment. Treat container
+updates as supervised until the remaining task 36 pieces land: scheduled
+apply-auto, rollback, and image-age nags.
 
 ## Commands
 
@@ -108,6 +109,13 @@ image reference, and records:
 
 `updates status` shows each enabled app, auto-update setting, required delay,
 candidate status, and whether a backup gate applies.
+
+`updates apply <app>` pulls the app image only after the delay and backup gates
+pass. Before recreating the container, it verifies that the local tag's pulled
+repo digest still matches the recorded candidate digest. If the registry moved
+to a newer digest during the waiting period, domum-core records the newer digest
+as a fresh candidate and resets the delay window. `--force` can override this,
+but should be reserved for supervised maintenance.
 
 ## Backup gates
 
