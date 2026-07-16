@@ -28,6 +28,7 @@ ENABLE_TAILSCALE=0
 # Home Assistant core automation stack
 # ============================================================
 ENABLE_HOME_ASSISTANT=1
+# Home Assistant depends on MariaDB for recorder storage in this deployment.
 ENABLE_MARIADB=1
 ENABLE_MQTT=1
 # Required when ENABLE_MQTT=1.

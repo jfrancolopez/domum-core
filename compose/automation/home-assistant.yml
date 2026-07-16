@@ -28,6 +28,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Home Assistant recorder uses MariaDB in this deployment; keep both enabled.
     depends_on:
       mariadb:
         condition: service_healthy
@@ -38,7 +39,6 @@ networks:
   domum-proxy:
     external: true
   domum-data:
-    name: domum-data
-    driver: bridge
+    external: true
   domum-internal:
     external: true

@@ -23,6 +23,11 @@ compose/networking/adguard/work/
 # Live ESPHome bind-mount config; backed up, never committed.
 compose/automation/esphome/
 
+# Live automation runtime state; backed up, never committed.
+compose/automation/zwave-js-ui/store/
+compose/automation/music-assistant/
+compose/automation/mqtt/log/
+
 # Local editor and AI agent workspace state
 nimbalyst-local/
 .nimbalyst/
