@@ -90,7 +90,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 | 15 | [Unified logging convention](task-15-logging-convention.md) ✅ done (c7dd2d4) **[shared-philosophy]** | small | low |
 | 16 | [Git workflow conventions doc](task-16-git-conventions.md) ✅ done (2eb93b3) **[shared-philosophy]** | small | none |
 | 35 | [Update/install must not depend on operator SSH identity](task-35-anonymous-fetch-resilience.md) ✅ done (a60abad) | trivial-small | none |
-| 40 | [Split runtime-written app config from tracked templates](task-40-split-runtime-written-config.md) | small-med | medium |
+| 40 | [Split runtime-written app config from tracked templates](task-40-split-runtime-written-config.md) ✅ code done (7b38301, 6e4261d) — validate on Pi after `apply` | small-med | medium |
 
 ### Phase 5 — Needs the operator (host access / maintenance window)
 
