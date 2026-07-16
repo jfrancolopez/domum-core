@@ -47,6 +47,8 @@ designed to be explicit and backup-aware.
 - [Removed services](reference/removed-services.md)
 - [Add a new service](reference/add-new-service.md)
 - [Remove a service](reference/removing-service.md)
+- [Hardware devices](reference/hardware-devices.md)
+- [MariaDB troubleshooting](reference/mariadb-troubleshoot.md)
 - [Secrets](reference/secrets.md)
 - [DNS](reference/dns.md)
 - [Cloudflare](reference/cloudflare.md)
