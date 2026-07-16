@@ -283,7 +283,10 @@ ensure_zigbee2mqtt_runtime_config() {
   local dir="$DOMUM_DIR/compose/automation/zigbee2mqtt" f
   install -d -m 0750 "$dir"
   for f in devices.yaml groups.yaml; do
-    [[ -f "$dir/$f" ]] || install -m 0644 /dev/null "$dir/$f"
+    if [[ ! -f "$dir/$f" || ! -s "$dir/$f" ]]; then
+      printf '{}\n' > "$dir/$f"
+      chmod 0644 "$dir/$f"
+    fi
   done
 }
 

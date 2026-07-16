@@ -37,7 +37,9 @@ Mosquitto runs as a non-root user inside the container. The files under
 `/etc/domum-core/secrets` remain root-only.
 Zigbee2MQTT device and group state is also ignored by git; the tracked
 `configuration.yaml` points Zigbee2MQTT at `devices.yaml` and `groups.yaml` so
-normal joins/renames do not dirty the repository.
+normal joins/renames do not dirty the repository. `sudo domum-core apply`
+creates missing or zero-byte runtime files as `{}`, which is valid empty YAML;
+do not replace them with blank files.
 
 ## Stage Consumers Before Apply
 
