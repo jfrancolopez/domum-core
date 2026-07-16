@@ -718,6 +718,9 @@ export_env_for_compose() {
   export MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
   export MOSQUITTO_PASSWD_FILE="${MOSQUITTO_PASSWD_FILE:-$SECRETS_DIR/mosquitto_passwd}"
   export MOSQUITTO_RUNTIME_PASSWD_FILE="${MOSQUITTO_RUNTIME_PASSWD_FILE:-$DOMUM_DIR/compose/automation/mqtt/config/passwd}"
+  export TRAEFIK_IMAGE="${TRAEFIK_IMAGE:-traefik:v3}"
+  export HOMEASSISTANT_IMAGE="${HOMEASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
+  export MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:12.2}"
 
   # Optional-service interpolation (safe defaults; compose has its own too).
   export VAULTWARDEN_DOMAIN="${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}"

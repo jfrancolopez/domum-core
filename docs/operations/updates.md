@@ -57,7 +57,7 @@ The class apply form prints a warning and uses app-by-app auto-update logic.
 
 ## Policy settings
 
-Each app has two settings:
+Each app has update policy settings:
 
 ```bash
 HOMEASSISTANT_AUTO_UPDATE=0
@@ -72,6 +72,19 @@ HOMEASSISTANT_UPDATE_DELAY_DAYS=14
 remain unchanged before it can apply. If a newer candidate digest appears before
 the delay expires, domum-core resets the first-seen timestamp and waits the full
 delay again.
+
+Some services also have explicit image variables in `config/domum.conf`:
+
+```bash
+TRAEFIK_IMAGE="traefik:v3"
+HOMEASSISTANT_IMAGE="ghcr.io/home-assistant/home-assistant:stable"
+MARIADB_IMAGE="mariadb:12.2"
+```
+
+Move these deliberately when you want to change the pinned stream. For MariaDB,
+take a fresh backup first and treat major/minor changes as a planned database
+upgrade. For Traefik, keep the major pin (`v3`) until you are ready to review a
+future major's migration notes.
 
 Current defaults:
 

@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:latest
+    image: ${TRAEFIK_IMAGE:-traefik:v3}
     container_name: traefik
     restart: unless-stopped
 
@@ -15,7 +15,7 @@ services:
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
       - DOMUM_DOMAIN=${DOMUM_DOMAIN}
       - DOMUM_LAN_IP=${DOMUM_LAN_IP}
-      - DOMUM_EMAIL=jfranco.lopez@outlook.com
+      - DOMUM_EMAIL=${DOMUM_EMAIL}
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

@@ -104,6 +104,15 @@ HEALTHCHECK_ACTUAL_HTTP=0
 ACTUAL_HEALTH_URL=""
 
 # ============================================================
+# Image pinning
+# ============================================================
+# Keep dangerous major upgrades explicit. Traefik is pinned by major so v3
+# updates continue, but a future v4 requires an intentional config edit.
+TRAEFIK_IMAGE="traefik:v3"
+HOMEASSISTANT_IMAGE="ghcr.io/home-assistant/home-assistant:stable"
+MARIADB_IMAGE="mariadb:12.2"
+
+# ============================================================
 # Per-app container update policy
 # ============================================================
 # Each app can have its own update policy.
