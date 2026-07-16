@@ -44,7 +44,7 @@ big recovery work is built against it.
 | 23 | [Automated restore verification (monthly) + annual fire drill](task-23-restore-verification.md) | medium | low |
 | 39 | [App-consistent offsite service archives for database-style apps](task-39-app-consistent-offsite-service-archives.md) | medium | medium |
 | 24 | [Multi-destination backups: Buffalo/Unraid/USB](task-24-multi-destination-backups.md) | medium | low-med |
-| 34 | [Make `init` converge the host (disposable OS)](task-34-init-host-convergence.md) ✅ code done (04fdd2b) — host validation remains: run `sudo domum-core init`, confirm no unexpected Docker restart/recreation, then `sudo domum-core checkup` | small-med | low-med |
+| 34 | [Make `init` converge the host (disposable OS)](task-34-init-host-convergence.md) ✅ done (04fdd2b; host-validated 2026-07-16) | small-med | low-med |
 
 Note: the wrong restic `--target` command in disaster-recovery.md (task 26,
 item A1) was cherry-picked ahead of the rest of 26 — ✅ done (8c610f0).
