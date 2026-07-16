@@ -101,31 +101,7 @@ Docker-published ports can bypass host `ufw` rules. Do not expose unauthenticate
 services just because `ufw` is enabled; MQTT authentication is mandatory because
 port `1883` is published by Docker. See [MQTT](../services/mqtt.md).
 
-## 5. Docker Log Limits
-
-`domum-core init` installs Docker if missing. Before starting services, cap
-container logs so a noisy container cannot fill the NVMe:
-
-```bash
-sudo install -d -m 0755 /etc/docker
-sudo tee /etc/docker/daemon.json >/dev/null <<'JSON'
-{
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  }
-}
-JSON
-```
-
-If Docker is already running:
-
-```bash
-sudo systemctl restart docker
-```
-
-## 6. Install domum-core
+## 5. Install domum-core
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
@@ -150,7 +126,7 @@ sudo git -C /opt/domum-core remote set-url origin https://github.com/jfrancolope
 sudo git -C /opt/domum-core remote set-url --push origin git@github.com:jfrancolopez/domum-core.git
 ```
 
-## 7. Configure And Converge
+## 6. Configure And Converge
 
 Review and edit the live config:
 
@@ -170,10 +146,20 @@ sudo domum-core checkup
 git -C /opt/domum-core status --short
 ```
 
+`domum-core init` converges the mechanical host state: Docker if missing, the
+standard backup/recovery utility packages, bounded Docker json-file logs, state
+directories, secrets directory, config examples, and optional host Tailscale. If
+it creates `/etc/docker/daemon.json` on a running host, it asks before restarting
+Docker because that restarts containers.
+
+`init` prints the remaining operator checklist instead of applying it for you:
+timezone/hostname, SSH hardening, firewall/fail2ban, and maintenance timer
+enablement. Those steps can lock out a headless Pi or require local judgment.
+
 See [First run](first-run.md) for the normal command sequence and config safety
 rules.
 
-## 8. Host-Specific One-Offs
+## 7. Host-Specific One-Offs
 
 Create the Traefik dashboard users file before exposing the dashboard:
 
@@ -205,7 +191,7 @@ Restart Cockpit after editing:
 sudo systemctl restart cockpit.socket
 ```
 
-## 9. Backups And Timers
+## 8. Backups And Timers
 
 Configure backups before trusting the rebuild:
 

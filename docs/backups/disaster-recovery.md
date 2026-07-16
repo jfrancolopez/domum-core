@@ -30,9 +30,19 @@ EEPROM boot-order steps), boot, set hostname/network, then:
 curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 ```
 
-This installs Docker, clones the repo to `/opt/domum-core`, installs
-`domum-core`, and creates `/etc/domum-core/secrets`, `/var/lib/domum-core`,
+This clones the repo to `/opt/domum-core`, installs the `domum-core` commands,
+and creates `/etc/domum-core/secrets`, `/var/lib/domum-core`, and
 `/var/log/domum-core`.
+
+Then converge the mechanical host state before restoring data:
+
+```bash
+sudo domum-core init
+```
+
+`init` installs Docker if missing, installs the standard backup/recovery utility
+packages, configures bounded Docker logs when `/etc/docker/daemon.json` is
+absent, and prints the remaining operator checklist. It does not run `apply`.
 
 Order matters: install.sh refuses to overwrite a non-git `/opt/domum-core`,
 so restore data only *after* the installer has run.

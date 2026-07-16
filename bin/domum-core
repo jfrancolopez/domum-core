@@ -22,6 +22,7 @@ BACKUP_CFG_FILE="${BACKUP_CFG_FILE:-$DOMUM_DIR/config/domum-backup.conf}"
 SECRETS_DIR="${SECRETS_DIR:-/etc/domum-core/secrets}"
 STATE_ROOT="${STATE_ROOT:-/var/lib/domum-core}"
 LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
+HOST_REQUIRED_PACKAGES=(restic age jq smartmontools)
 
 # ---- output helpers --------------------------------------------------------
 
@@ -45,6 +46,32 @@ need_root() {
 }
 
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
+
+package_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'
+}
+
+docker_daemon_json_expected() {
+  cat <<'JSON'
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+JSON
+}
+
+docker_daemon_json_matches() {
+  local tmp
+  tmp="$(mktemp)"
+  docker_daemon_json_expected > "$tmp"
+  local rc=0
+  cmp -s /etc/docker/daemon.json "$tmp" || rc=$?
+  rm -f "$tmp"
+  return "$rc"
+}
 
 uppercase_token() {
   printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
@@ -585,6 +612,64 @@ install_tailscale_host() {
   fi
 }
 
+install_host_packages() {
+  local -a missing=()
+  local pkg
+  for pkg in "${HOST_REQUIRED_PACKAGES[@]}"; do
+    package_installed "$pkg" || missing+=("$pkg")
+  done
+  (( ${#missing[@]} == 0 )) && { log "Host utility packages already present."; return 0; }
+
+  log "Installing host utility packages: ${missing[*]}"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y --no-install-recommends "${missing[@]}"
+}
+
+ensure_docker_log_limits() {
+  local daemon_json=/etc/docker/daemon.json tmp
+  install -d -m 0755 /etc/docker
+
+  if [[ ! -f "$daemon_json" ]]; then
+    log "Creating $daemon_json with bounded json-file container logs."
+    docker_daemon_json_expected > "$daemon_json"
+    chmod 0644 "$daemon_json"
+    if cmd_exists systemctl && systemctl is-active --quiet docker; then
+      warn "Docker must restart for new log limits to take effect; this restarts containers."
+      if confirm "Restart Docker now"; then
+        systemctl restart docker
+      else
+        warn "Docker restart skipped; run: sudo systemctl restart docker"
+      fi
+    fi
+    return 0
+  fi
+
+  if docker_daemon_json_matches; then
+    log "Docker daemon log limits already configured."
+    return 0
+  fi
+
+  warn "$daemon_json exists but does not match domum-core's expected log-limit config; leaving it unchanged."
+  tmp="$(mktemp)"
+  docker_daemon_json_expected > "$tmp"
+  diff -u --label "$daemon_json" --label expected "$daemon_json" "$tmp" || true
+  rm -f "$tmp"
+}
+
+print_init_operator_checklist() {
+  cat <<'EOF'
+
+Host checklist not automated by init:
+  1. Confirm timezone/hostname: sudo timedatectl set-timezone America/New_York; sudo hostnamectl set-hostname domum-core
+  2. Harden SSH after key login is tested: PermitRootLogin no; PasswordAuthentication no; sudo sshd -t; sudo systemctl restart ssh
+  3. Configure firewall/fail2ban if desired; remember Docker-published ports can bypass ufw.
+  4. Install maintenance units: sudo domum-core schedule install-maintenance
+  5. Enable only intended timers: sudo systemctl enable --now domum-core-backups.timer domum-core-checkup.timer domum-core-updates-check.timer
+  6. Keep domum-core-updates-apply.timer disabled until more supervised update cycles.
+EOF
+}
+
 ensure_dirs() {
   mkdir -p "$DOMUM_DIR/data" "$DOMUM_DIR/logs"
 }
@@ -761,6 +846,8 @@ compose_cmd() {
 init_host() {
   need_root
   install_docker
+  install_host_packages
+  ensure_docker_log_limits
   ensure_dirs
   install -d -m 0700 "$SECRETS_DIR"
 
@@ -790,6 +877,7 @@ EOF
   fi
 
   log "Init complete."
+  print_init_operator_checklist
 }
 
 apply() {
@@ -2928,6 +3016,24 @@ run_checkup() {
   else
     checkup_add critical "Docker daemon is not responding."
   fi
+  if [[ -f /etc/docker/daemon.json ]] && docker_daemon_json_matches; then
+    checkup_add healthy "Docker daemon log limits configured."
+  else
+    checkup_add warning "Docker daemon log limits are missing or differ from domum-core defaults (run: sudo domum-core init)."
+    checkup_add action "sudo domum-core init"
+  fi
+
+  # --- host packages needed for backup/recovery diagnostics ---
+  local missing_pkg=() pkg
+  for pkg in "${HOST_REQUIRED_PACKAGES[@]}"; do
+    package_installed "$pkg" || missing_pkg+=("$pkg")
+  done
+  if (( ${#missing_pkg[@]} == 0 )); then
+    checkup_add healthy "Host utility packages installed: ${HOST_REQUIRED_PACKAGES[*]}."
+  else
+    checkup_add warning "Missing host utility package(s): ${missing_pkg[*]} (run: sudo domum-core init)."
+    checkup_add action "sudo domum-core init"
+  fi
 
   # --- networks ---
   local n
@@ -3266,7 +3372,7 @@ doctor_cmd() {
 
   echo "-- required binaries --"
   local b
-  for b in docker restic age curl jq; do
+  for b in docker curl "${HOST_REQUIRED_PACKAGES[@]}"; do
     cmd_exists "$b" && echo "  $b: $(command -v "$b")" || echo "  $b: MISSING"
   done
 
