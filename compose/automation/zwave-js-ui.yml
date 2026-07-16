@@ -5,7 +5,6 @@ services:
     restart: unless-stopped
     tty: true
     stop_signal: SIGINT
-    privileged: true
     environment:
       - TZ=America/New_York
     networks:

@@ -8,7 +8,6 @@ services:
       - domum-proxy
     environment:
       - TZ=America/New_York
-    privileged: true
     volumes:
       - /opt/domum-core/compose/automation/esphome:/config
       - /etc/localtime:/etc/localtime:ro
