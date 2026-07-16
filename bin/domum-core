@@ -1367,9 +1367,9 @@ restore_verify_pick_target() {
 
 restore_verify_latest_snapshot() {
   local target="$1" out snap
-  out="$(restic_for_backup_target "$target" snapshots --latest 1 --json 2>/dev/null)" \
+  out="$(restic_for_backup_target "$target" snapshots --json 2>/dev/null)" \
     || die "Could not list latest restic snapshot for target '$target'."
-  snap="$(jq -r '.[0].short_id // .[0].id // empty' <<<"$out")"
+  snap="$(jq -r 'sort_by(.time) | last | .short_id // .id // empty' <<<"$out")"
   [[ -n "$snap" ]] || die "No snapshots found for target '$target'."
   printf '%s\n' "$snap"
 }
