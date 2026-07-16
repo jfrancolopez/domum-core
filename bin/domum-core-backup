@@ -426,7 +426,7 @@ EOF
 }
 
 do_usb_backup() {
-  local mount_point="${1:-}" repo pw_file rc=0
+  local mount_point="${1:-}" repo pw_file rc=0 host_id
   [[ -n "$mount_point" ]] || die "Usage: domum-core-backup usb <mount-point>"
   [[ -d "$mount_point" ]] || die "USB mount point is not a directory: $mount_point"
   [[ "$mount_point" != "/" ]] || die "Refusing to use / as a USB backup mount point."
@@ -440,7 +440,10 @@ do_usb_backup() {
     die "Need findmnt or mountpoint to verify the USB mount."
   fi
 
-  repo="$mount_point/domum-core-restic"
+  host_id="${DOMUM_USB_BACKUP_ID:-$(hostname -s 2>/dev/null || hostname)}"
+  host_id="$(printf '%s' "$host_id" | tr -c 'A-Za-z0-9_.-' '-')"
+  repo="$mount_point/domum-backups/$host_id/restic"
+  install -d -m 0750 "$repo"
   pw_file="$(backup_target_password_file local)"
   [[ -f "$pw_file" ]] || die "Missing LOCAL restic password file for USB backup: $pw_file"
   check_secret_perms "$pw_file"
@@ -462,7 +465,8 @@ do_usb_backup() {
 
   if (( rc == 0 )); then
     date -Iseconds > "$STATE_ROOT/backups/last-usb-success"
-    log "USB backup complete. Unmount when done: sudo umount $mount_point"
+    log "USB backup complete: $repo"
+    log "Unmount when done: sudo umount $mount_point"
   fi
   return "$rc"
 }
@@ -506,7 +510,7 @@ Usage:
   domum-core-backup --restore <snap> <dir> [repo] [--verify]
                                       (absolute paths are recreated UNDER <dir>)
   domum-core-backup init <target>    Initialize a restic repository
-  domum-core-backup usb <mount>      Run on-demand backup to <mount>/domum-core-restic
+  domum-core-backup usb <mount>      Run on-demand backup to <mount>/domum-backups/<host>/restic
 EOF
       return 0
       ;;

@@ -24,6 +24,7 @@ designed to be explicit and backup-aware.
 
 - [Overview](backups/overview.md)
 - [Hetzner](backups/hetzner.md)
+- [Manual USB backups](backups/usb.md)
 - [Recovery pack](backups/recovery-pack.md)
 - [Gmail recovery email](backups/gmail-recovery.md)
 - [Disaster recovery](backups/disaster-recovery.md)

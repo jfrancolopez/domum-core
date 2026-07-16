@@ -225,17 +225,17 @@ sudo systemctl enable --now domum-core-recovery-pack.timer
 ## Manual USB Backups
 
 USB backups are explicit and unscheduled: plug in a disk, mount it, run one
-command, unmount it, and store it offline.
+command, unmount it, and store it offline. Use the detailed
+[USB backup runbook](usb.md) when you are physically near the Pi.
 
-The USB repository lives at `<mount-point>/domum-core-restic` and uses the LOCAL
-restic password file (`BACKUP_TARGET_LOCAL_PASSWORD_FILE`). That is intentional:
-one fewer emergency password to preserve.
+The USB repository lives at `<mount-point>/domum-backups/<host>/restic`, for
+example `/mnt/domum-usb/domum-backups/domum-core/restic`. That layout lets one
+external SSD hold independent backups for multiple servers without mixing restic
+repositories.
 
-```bash
-sudo mount /dev/disk/by-label/DOMUM-USB /mnt/domum-usb
-sudo domum-core backups usb /mnt/domum-usb
-sudo umount /mnt/domum-usb
-```
+The USB repo uses the LOCAL restic password file
+(`BACKUP_TARGET_LOCAL_PASSWORD_FILE`). That is intentional: one fewer emergency
+password to preserve.
 
 The command refuses `/`, refuses unmounted directories, initializes the USB repo
 on first use, runs a restic backup with the normal source set, prints recent
@@ -244,8 +244,8 @@ shows that timestamp when present, but never warns about USB age because USB is
 manual by design.
 
 To restore from USB, mount the disk and temporarily define a normal restic target
-whose repository points at `<mount-point>/domum-core-restic`, using the LOCAL
-password file, then use the normal restore workflow.
+whose repository points at `<mount-point>/domum-backups/<host>/restic`, using the
+LOCAL password file, then use the normal restore workflow.
 
 ## Retention
 
