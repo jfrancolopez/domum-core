@@ -67,3 +67,26 @@ Password: value from /etc/domum-core/secrets/mqtt_password
 ```
 
 See [MQTT](mqtt.md) for the full maintenance-window checklist.
+
+## First-Run Secrets
+
+The tracked Home Assistant configuration may reference `!secret` values. Create
+the local-only secrets file before first start if it is missing:
+
+```bash
+sudo install -d -m 0750 /opt/domum-core/compose/automation/home-assistant
+sudoedit /opt/domum-core/compose/automation/home-assistant/secrets.yaml
+```
+
+Minimum shape:
+
+```yaml
+external_url: "https://ha.example.com"
+internal_url: "http://homeassistant:8123"
+mqtt_user: "domum"
+mqtt_pass: "CHANGE_ME"
+ha_db_url: "mysql://ha:CHANGE_ME@mariadb:3306/homeassistant?charset=utf8mb4"
+```
+
+Use the real MQTT password from `/etc/domum-core/secrets/mqtt_password` after
+`sudo domum-core mqtt init-auth`. Keep this file out of git.

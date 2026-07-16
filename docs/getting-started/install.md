@@ -1,130 +1,114 @@
-# domum-core: Raspberry Pi Host (SSD Boot)
+# Install on Raspberry Pi 5 NVMe
 
-This document defines the canonical Raspberry Pi SSD-based Docker host setup for domum-core.
+This is the base-host install path for the production domum-core machine:
+Raspberry Pi 5, official PCIe/NVMe HAT, Debian 13 Lite arm64, Zigbee and Z-Wave
+USB radios, and Docker-managed services under `/opt/domum-core`.
 
-# 0) SSD Boot Setup
+For disaster recovery, use this page only for the base OS. Restore service data
+with [Disaster recovery](../backups/disaster-recovery.md). Backups are restic
+based; do not set up rsync/cron mirror backups from old notes. See
+[Backups overview](../backups/overview.md).
 
-## 0.1 Enable USB Boot
+## 1. Flash Debian 13 Lite
+
+Use Raspberry Pi Imager:
+
+- OS: Debian 13 Lite, arm64
+- Target: NVMe drive on the PCIe HAT
+- Enable SSH with your operator public key
+- Set hostname, locale, timezone, and Wi-Fi only if Ethernet is unavailable
+
+Boot the Pi from the NVMe. If this is a rebuild, do not restore `/opt/domum-core`
+before running the installer; `install.sh` must create or update the git checkout
+first.
+
+## 2. Set NVMe Boot Order
+
+Update EEPROM and set NVMe first, then SD, then USB:
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y rpi-eeprom
+sudo rpi-eeprom-update -a
+sudo rpi-eeprom-config --edit
 ```
-    sudo raspi-config
-```
-Advanced Options → Boot Order → USB Boot
 
----
-
-## 0.2 Enable Higher USB Current
-
-Edit:
-```
-    sudo nano /boot/firmware/config.txt
-```
-
-Add:
-```
-    usb_max_current_enable=1
-```
-
-Reboot.
-
----
-## 0.3 Update EEPROM and Boot Order
-```
-    sudo rpi-eeprom-update
-    sudo rpi-eeprom-config
-```
 Set:
-```
-    [all]
-    BOOT_ORDER=0xf41
-```
----
-# 1) Base OS Setup
-```
-    sudo apt update
-    sudo apt full-upgrade -y
-    sudo apt autoremove -y
-    sudo reboot
-```
----
-# 2) Security Baseline
 
-## SSH
+```text
+BOOT_ORDER=0xf416
+```
 
-Before disabling password login, install and test operator keys:
+Reboot and confirm the Pi boots from NVMe.
+
+```bash
+sudo reboot
+lsblk
+```
+
+## 3. Base OS
+
+```bash
+sudo apt-get update -y
+sudo apt-get full-upgrade -y
+sudo apt-get autoremove -y
+sudo timedatectl set-timezone America/New_York
+sudo hostnamectl set-hostname domum-core
+sudo reboot
+```
+
+## 4. Security Baseline
+
+Install and test operator SSH keys before disabling password login:
 [Operator SSH access](operator-ssh-access.md).
 
-```
-    sudo nano /etc/ssh/sshd_config
-```
-Ensure:
-```
-    PermitRootLogin no
-    PasswordAuthentication no
-    PubkeyAuthentication yes
-```
-Restart:
-```
-    sudo systemctl restart ssh
-```
----
-## Firewall
+Harden SSH:
 
-```
-    sudo apt install -y ufw
-    sudo ufw default deny incoming
-    sudo ufw default allow outgoing
-    sudo ufw allow OpenSSH
-    sudo ufw allow 9090/tcp
-    sudo ufw allow 80/tcp
-    sudo ufw allow 443/tcp
-    sudo ufw enable
+```bash
+sudoedit /etc/ssh/sshd_config
 ```
 
----
+Required settings:
 
-## Fail2ban
-```
-    sudo apt install -y fail2ban
-    sudo systemctl enable --now fail2ban
-```
-
----
-# 3) Docker Install (Official Repo)
-
-Remove old packages:
+```text
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
 ```
 
-    sudo apt remove -y docker docker.io containerd runc || true
+Validate and restart:
+
+```bash
+sudo sshd -t
+sudo systemctl restart ssh
 ```
 
-Install Docker from official repository.
+Install firewall and fail2ban:
 
-Add user to docker group:
+```bash
+sudo apt-get install -y ufw fail2ban
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 9090/tcp
+sudo ufw enable
+sudo systemctl enable --now fail2ban
 ```
 
-    sudo usermod -aG docker $USER
-    newgrp docker
-```
+Docker-published ports can bypass host `ufw` rules. Do not expose unauthenticated
+services just because `ufw` is enabled; MQTT authentication is mandatory because
+port `1883` is published by Docker. See [MQTT](../services/mqtt.md).
 
-Test:
-```
+## 5. Docker Log Limits
 
-    docker version
-    docker compose version
-```
+`domum-core init` installs Docker if missing. Before starting services, cap
+container logs so a noisy container cannot fill the NVMe:
 
----
-# 4) Docker Log Limits
-
-Create:
-```
-
-    sudo nano /etc/docker/daemon.json
-```
-
-Use:
-```
-
+```bash
+sudo install -d -m 0755 /etc/docker
+sudo tee /etc/docker/daemon.json >/dev/null <<'JSON'
 {
   "log-driver": "json-file",
   "log-opts": {
@@ -132,220 +116,103 @@ Use:
     "max-file": "3"
   }
 }
+JSON
 ```
 
-Restart:
-```
+If Docker is already running:
 
-    sudo systemctl restart docker
-```
-
----
-# 5) Recommended Directory Structure
-
-Persistent container data:
-```
-
-    /opt/domum-core/data
-```
-
-Local backup mirror:
-```
-
-    /home/jfranco/backups/domum-core/data
-```
-
----
-# 6) Backup Strategy (rsync Mirror + Cron)
-
-We use a simple local mirror backup with rsync.
-
-Create backup directory:
-```
-
-    mkdir -p ~/backups/domum-core/data
-```
-
-Manual backup:
-```
-
-    rsync -aHAX --delete       /opt/domum-core/data/       /home/jfranco/backups/domum-core/data/
-```
-
-Explanation:
-- -a = archive
-- -HAX = preserve hardlinks, ACLs, xattrs
-- --delete = mirror exactly
-
----
-## Automate with Cron
-
-Edit crontab:
-```
-
-    crontab -e
-```
-
-Add daily backup at 2:00 AM:
-```
-
-    0 2 * * * rsync -aHAX --delete /opt/domum-core/data/ /home/jfranco/backups/domum-core/data/ >> /home/jfranco/backups/backup.log 2>&1
-```
-
----
-# 7) Future NAS Sync
-
-Later you can sync to NAS:
-```
-
-    rsync -aHAX --delete       /home/jfranco/backups/domum-core/data/       user@nas:/mnt/backups/rpi/domum-core/data/
-```
-
-This creates:
-
-Layer 1: Live data
-Layer 2: Local mirror
-Layer 3: NAS mirror
-
----
-# 8) Quick Commands
-
-Docker:
-```
-
-    docker ps
-    docker logs <container>
-```
-
-System:
-```
-
-    sudo apt update && sudo apt full-upgrade -y
-    sudo systemctl status docker
-    sudo ufw status
-```
-
-Git:
-```
-
-    git status
-    git add -A
-    git commit -m "msg"
-    git push
-```
----
-# Make Your User a sudo User
-
-If your user is not already in the sudo group, run:
 ```bash
-sudo usermod -aG docker jfranco
-newgrp docker
-
-
+sudo systemctl restart docker
 ```
 
+## 6. Install domum-core
 
-Then log out completely and log back in.
-
-Verify:
-```
-
-    groups
-```
-
-You should see `sudo` listed.
-
-If sudo still does not work:
-```
-
-    sudo visudo
-```
-
-Ensure this line exists and is NOT commented:
-```
-
-    %sudo   ALL=(ALL:ALL) ALL
-```
-
----
-# Fix Ownership of backups Directory
-
-If backups was created by root:
-```
-
-    sudo chown -R jfranco:jfranco /home/jfranco/backups
-```
-
-Verify:
 ```bash
-    ls -ld ~/backups
+curl -fsSL https://raw.githubusercontent.com/jfrancolopez/domum-core/main/install.sh | sudo bash
 ```
 
-Owner should now be jfranco.
+The installer:
 
----
-# Traefik dashboard
-```bash
-sudo apt-get update -y
-sudo apt-get install -y apache2-utils
+- installs prerequisite packages for fetching the repo;
+- clones or updates `/opt/domum-core`;
+- links `/usr/local/bin/domum-core`, `domum-core-backup`, and `domum`;
+- creates `/etc/domum-core/secrets`, `/var/lib/domum-core`, and
+  `/var/log/domum-core`;
+- creates missing live config files from tracked examples;
+- does not overwrite live config;
+- does not run `init` or `apply` automatically.
 
-sudo htpasswd -nbB jfranco 'STRONGPASSWORD' | sudo tee /etc/domum-core/secrets/traefik_dashboard_users >/dev/null
-sudo chmod 600 /etc/domum-core/secrets/traefik_dashboard_users
-```
-
----
-# Git fetch URL for root-run updates
-
-The repo is public, so root-run install/update flows should fetch over HTTPS.
-If you push from the Pi, keep SSH for push only:
+Root-run update flows fetch over HTTPS. If you push from the Pi, keep SSH for
+push only:
 
 ```bash
 sudo git -C /opt/domum-core remote set-url origin https://github.com/jfrancolopez/domum-core.git
 sudo git -C /opt/domum-core remote set-url --push origin git@github.com:jfrancolopez/domum-core.git
 ```
 
-This lets `sudo domum-core update` and `sudo ./install.sh` fetch without relying
-on root having your GitHub SSH key.
+## 7. Configure And Converge
 
----
-# HACS installation
-
-Install HACS (The Bridge)
-
-Since the Frigate integration is not a "built-in" Home Assistant component, you need the Home Assistant Community Store (HACS) to install it.
-
-Open a terminal on your RPi.
-Run this command to install HACS inside your container:
-```bash
-   docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"
-```
-
-   
-   Restart the Home Assistant container.In the HA GUI, go to Settings > Devices & Services > Add Integration and search for HACS. Follow the GitHub auth prompts.
-
-# First time HA 
-
-Need to create a secrets file in order to start the first time:
-```
-sudo nano /opt/domum-core/compose/automation/home-assistant/secrets.yaml
-
-external_url: "https://ha.example.com"
-internal_url: "http://homeassistant:8123"
-mqtt_user: "CHANGE_ME"
-mqtt_pass: "CHANGE_ME"
-ha_db_url: "mysql://ha:CHANGE_ME@mariadb:3306/homeassistant?charset=utf8mb4"
-```
-
----
-# Cockpit DNS
+Review and edit the live config:
 
 ```bash
-sudo cat /etc/cockpit/cockpit.conf
-## it should contain:
+sudo domum-core configure --show
+sudoedit /opt/domum-core/config/domum.conf
+sudoedit /opt/domum-core/config/domum-backup.conf
+sudo domum-core configure --validate
+```
+
+Initialize the host, apply services, then verify:
+
+```bash
+sudo domum-core init
+sudo domum-core apply
+sudo domum-core checkup
+git -C /opt/domum-core status --short
+```
+
+See [First run](first-run.md) for the normal command sequence and config safety
+rules.
+
+## 8. Host-Specific One-Offs
+
+Create the Traefik dashboard users file before exposing the dashboard:
+
+```bash
+sudo apt-get install -y apache2-utils
+sudo install -d -m 0700 /etc/domum-core/secrets
+sudo htpasswd -nbB admin 'CHANGE_ME_LONG_RANDOM_PASSWORD' \
+  | sudo tee /etc/domum-core/secrets/traefik_dashboard_users >/dev/null
+sudo chmod 600 /etc/domum-core/secrets/traefik_dashboard_users
+```
+
+Home Assistant needs a local `secrets.yaml` before first start when the tracked
+configuration references `!secret` values. See
+[Home Assistant](../services/home-assistant.md#first-run-secrets).
+
+If Cockpit is reverse-proxied through Traefik, allow the proxied origin in
+`/etc/cockpit/cockpit.conf`:
+
+```ini
 [WebService]
-Origins = https://cockpit.ladomum.com wss://cockpit.ladomum.com https://10.0.10.2:9090
+Origins = https://cockpit.example.com wss://cockpit.example.com https://10.0.10.2:9090
 ProtocolHeader = X-Forwarded-Proto
 ForwardedForHeader = X-Forwarded-For
 ```
 
----
+Restart Cockpit after editing:
+
+```bash
+sudo systemctl restart cockpit.socket
+```
+
+## 9. Backups And Timers
+
+Configure backups before trusting the rebuild:
+
+```bash
+sudo domum-core backups run --dry-run
+sudo domum-core backups run
+sudo domum-core schedule install-maintenance
+```
+
+Enable only the timers you want. See [Maintenance timers](../operations/maintenance-timers.md).
