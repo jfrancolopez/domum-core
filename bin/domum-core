@@ -668,6 +668,21 @@ compose_files_for_enabled_services() {
   done < <(service_catalog)
 }
 
+compose_device_host_paths() {
+  local compose_file="$1"
+  awk '
+    /^[[:space:]]*devices:[[:space:]]*$/ { in_devices=1; next }
+    in_devices && /^[[:space:]]*[^[:space:]-]/ { in_devices=0 }
+    in_devices && /^[[:space:]]*-[[:space:]]*\/dev\// {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/[[:space:]]*#.*/, "", line)
+      sub(/:.*/, "", line)
+      print line
+    }
+  ' "$compose_file"
+}
+
 enabled_services() {
   local name enable_var _rest
   while IFS='|' read -r name enable_var _rest; do
@@ -2659,6 +2674,23 @@ run_checkup() {
       checkup_add healthy "$svc is running${health:+ ($health)}."
     fi
   done < <(enabled_services)
+
+  # --- host device paths declared in compose ---
+  local name enable_var _cat _class _bvar compose_rel _probe compose_file device_path
+  while IFS='|' read -r name enable_var _cat _class _bvar compose_rel _probe; do
+    [[ "${!enable_var:-0}" == "1" ]] || continue
+    [[ "$compose_rel" == "-" || -z "$compose_rel" ]] && continue
+    compose_file="$DOMUM_DIR/$compose_rel"
+    [[ -f "$compose_file" ]] || continue
+    while IFS= read -r device_path; do
+      [[ -n "$device_path" ]] || continue
+      if [[ -e "$device_path" ]]; then
+        checkup_add healthy "$name USB/device path present: $device_path"
+      else
+        checkup_add critical "$name USB/device path missing: $device_path"
+      fi
+    done < <(compose_device_host_paths "$compose_file")
+  done < <(service_catalog)
 
   if [[ "${ENABLE_ADGUARD_HOME:-0}" == "1" ]]; then
     local adguard_cid adguard_label_port

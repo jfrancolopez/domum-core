@@ -32,6 +32,8 @@ Common outcomes:
 ### 1.3 Prefer stable device names using `/dev/serial/by-id` (recommended)
 
 The safest way is to use the `by-id` symlink, because `/dev/ttyUSB0` can change after reboots.
+Moving the same dongle to a different physical USB port does not normally change
+the `/dev/serial/by-id/...` name; replacing the dongle hardware does.
 
 ```bash
 ls -l /dev/serial/by-id 2>/dev/null || true
@@ -42,6 +44,10 @@ Example output may look like:
 - `/dev/serial/by-id/usb-ITEAD_SONOFF_Zigbee_3.0_USB_Dongle_Plus_V2_... -> ../../ttyACM0`
 
 Use the full `/dev/serial/by-id/...` path whenever possible.
+
+`domum-core checkup` reads enabled compose files and verifies every host
+`devices:` path exists. If a radio is unplugged or dead, checkup reports it
+directly instead of only saying the container is down.
 
 ### 1.4 When the device is not showing up
 
@@ -230,7 +236,8 @@ Common fixes:
 
 ### 5.3 You moved the dongle to a different USB port and the name changed
 
-That is exactly why `/dev/serial/by-id` is recommended.
-Use the by-id path and the issue goes away.
-
+That should not happen when the compose file uses `/dev/serial/by-id/...` for
+the host path. If it does, confirm you are looking at the same physical dongle
+and update the one compose `devices:` line only after verifying the new by-id
+path.
 
