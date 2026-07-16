@@ -26,7 +26,9 @@ The command is idempotent. It never rotates an existing MQTT password:
 - `/opt/domum-core/compose/automation/mqtt/config/passwd` — runtime hash copy
   owned by the Mosquitto user from the running container image
 - `/opt/domum-core/compose/automation/zigbee2mqtt/secret.yaml` — updates only
-  the `mqtt_user` and `mqtt_pass` entries, with a local `.pre-mqtt-init` backup
+  the `mqtt_user` and `mqtt_pass` entries, with a local `.pre-mqtt-init` backup;
+  if `network_key` is missing, restores it from Zigbee2MQTT's
+  `coordinator_backup.json`
 
 The runtime `config/passwd` copy is ignored by git and exists only because
 Mosquitto runs as a non-root user inside the container. The files under
@@ -47,6 +49,17 @@ Password: value from /etc/domum-core/secrets/mqtt_password
 
 If any LAN sensors or ESPHome devices use raw MQTT, update them to the same
 `domum` account before applying.
+
+Zigbee2MQTT secret references in tracked configuration must stay quoted strings,
+not YAML tags:
+
+```yaml
+user: '!secret mqtt_user'
+password: '!secret mqtt_pass'
+network_key: '!secret network_key'
+```
+
+Unquoted `!secret` tags fail validation in current Zigbee2MQTT versions.
 
 ## Apply And Verify
 
