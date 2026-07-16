@@ -4,6 +4,34 @@ Container update behavior is configured per app in `config/domum.conf`.
 Category labels such as infrastructure, home automation core, and stateful app
 are documentation/UI labels only. They do not control update behavior globally.
 
+## Target model: low-maintenance, not stale
+
+The desired operating model is: update automatically where breakage is unlikely,
+gate every update on fresh backups, and nag when manual/pinned services are
+getting old. The goal is neither reckless freshness nor pinning everything until
+it fossilizes.
+
+| Tier | Services | Policy |
+|---|---|---|
+| OS security | Debian packages | Automatic security patches; no automatic reboot |
+| Safe infrastructure | Traefik within current major, AdGuard | Auto-update after a short delay |
+| Normal apps | Actual Budget, Vaultwarden, Music Assistant, ESPHome, Node-RED, Obsidian Sync | Auto-update after backup + delay |
+| Dangerous core/stateful | MariaDB, Home Assistant, Zigbee2MQTT, Z-Wave JS UI | Manual approval, with age nags so they are not forgotten |
+
+Why this split:
+
+- MariaDB and Home Assistant can involve data/schema migrations.
+- Zigbee2MQTT and Z-Wave JS UI can affect radio networks and device behavior.
+- Vaultwarden is security-sensitive, so timely backup-gated updates are better
+  than leaving it manual forever.
+- Traefik should be pinned by major version, not frozen forever: `traefik:v3`
+  keeps v3 updates flowing but prevents an unattended v4 config break.
+
+Current caveat: task 36 is still required before this model is safe unattended.
+Today `updates check` still downloads images with `docker pull`, which means a
+later `apply` can deploy an image outside the delay/backup gate. Until task 36
+lands, treat container updates as supervised.
+
 ## Commands
 
 ```bash
@@ -45,12 +73,12 @@ remain unchanged before it can apply. If a newer candidate digest appears before
 the delay expires, domum-core resets the first-seen timestamp and waits the full
 delay again.
 
-Default philosophy:
+Current defaults:
 
 - Infrastructure can auto-update after short delays.
 - Home automation core is manual by default.
-- Stateful apps are manual by default.
-- Vaultwarden is manual because it contains sensitive data.
+- Stateful apps are mostly manual until task 36 implements the safer unattended
+  pipeline and image-age nags.
 - Home Assistant is manual because it is the main automation hub.
 
 ## Candidate lifecycle
