@@ -45,6 +45,8 @@ sudo domum-core updates apply homeassistant --dry-run
 sudo domum-core updates apply homeassistant
 sudo domum-core updates apply-auto --dry-run
 sudo domum-core updates apply-auto
+sudo domum-core updates rollback nodered --dry-run
+sudo domum-core updates rollback nodered
 sudo domum-core updates history
 ```
 
@@ -134,6 +136,12 @@ repo digest still matches the recorded candidate digest. If the registry moved
 to a newer digest during the waiting period, domum-core records the newer digest
 as a fresh candidate and resets the delay window. `--force` can override this,
 but should be reserved for supervised maintenance.
+
+`updates rollback <app>` retags the previous local image from the latest
+successful update history entry and recreates only that compose service. It is a
+local-image rollback, not a data/schema rollback. For config-pinned services
+(`traefik`, `home-assistant`, `mariadb`), move the image pin in
+`config/domum.conf` and apply deliberately instead.
 
 ## Backup gates
 

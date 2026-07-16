@@ -2026,6 +2026,13 @@ protected_manual_update_service() {
   esac
 }
 
+config_pinned_image_service() {
+  case "$(normalize_service_name "$1")" in
+    traefik|home-assistant|mariadb) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 update_auto_enabled_for() {
   local key
   protected_manual_update_service "$1" && return 1
@@ -2288,6 +2295,40 @@ record_update_history() {
   echo "$(epoch_to_iso "$ts") $svc: $result ${note}" >> "$(update_history_dir)/history.log"
 }
 
+latest_success_history_file_for() {
+  local svc="$1" f service result
+  svc="$(normalize_service_name "$svc")"
+  while IFS= read -r f; do
+    [[ -f "$f" ]] || continue
+    unset SERVICE RESULT
+    # shellcheck disable=SC1090
+    source "$f"
+    service="$(normalize_service_name "${SERVICE:-}")"
+    result="${RESULT:-}"
+    if [[ "$service" == "$svc" && "$result" == "success" ]]; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+  done < <(find "$(update_history_dir)" -maxdepth 1 -name "${svc}-*.env" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | cut -d' ' -f2-)
+  return 1
+}
+
+rollback_protected_images() {
+  local name _ev _cat _class _bvar _rel _probe file from result
+  while IFS='|' read -r name _ev _cat _class _bvar _rel _probe; do
+    file="$(latest_success_history_file_for "$name" || true)"
+    [[ -n "$file" ]] || continue
+    unset FROM_IMAGE RESULT
+    # shellcheck disable=SC1090
+    source "$file"
+    from="${FROM_IMAGE:-}"
+    result="${RESULT:-}"
+    [[ "$result" == "success" && -n "$from" ]] || continue
+    docker image inspect "$from" >/dev/null 2>&1 || continue
+    printf '%s\n' "$from"
+  done < <(service_catalog)
+}
+
 updates_apply_one() {
   local svc="$1" force="$2"
   svc="$(normalize_service_name "$svc")"
@@ -2387,6 +2428,56 @@ updates_apply_auto() {
   done < <(enabled_services)
 }
 
+updates_rollback() {
+  load_cfg
+  export_env_for_compose
+  ensure_state_dirs
+  local svc="${1:-}" dry=0 file from image_ref cid cs before after
+  [[ -n "$svc" ]] || die "Usage: domum-core updates rollback <app> [--dry-run]"
+  svc="$(normalize_service_name "$svc")"
+  shift || true
+  while (( $# )); do
+    case "$1" in
+      --dry-run) dry=1 ;;
+      *) die "Usage: domum-core updates rollback <app> [--dry-run]" ;;
+    esac
+    shift
+  done
+
+  if config_pinned_image_service "$svc"; then
+    warn "$svc uses a config-pinned image stream. Move the image pin in config/domum.conf and run 'sudo domum-core apply' instead of retag rollback."
+    return 0
+  fi
+
+  file="$(latest_success_history_file_for "$svc" || true)"
+  [[ -n "$file" ]] || { warn "No successful update history found for $svc."; return 0; }
+  unset FROM_IMAGE TO_IMAGE RESULT
+  # shellcheck disable=SC1090
+  source "$file"
+  from="${FROM_IMAGE:-}"
+  [[ -n "$from" ]] || { warn "Latest successful update history for $svc has no FROM_IMAGE."; return 0; }
+  docker image inspect "$from" >/dev/null 2>&1 || { warn "Rollback image for $svc is no longer local: $from"; return 0; }
+
+  cid="$(container_for "$svc" || true)"
+  [[ -n "$cid" ]] || { warn "Cannot resolve container for $svc; rollback needs the current service image reference."; return 0; }
+  image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
+  [[ -n "$image_ref" ]] || { warn "Cannot resolve image reference for $svc."; return 0; }
+
+  cs="$(compose_service_for "$svc")"
+  before="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+  log "Rolling back $svc to previous local image $from via $image_ref..."
+  if (( dry == 1 )); then
+    echo "[dry-run] docker tag $from $image_ref"
+    echo "[dry-run] compose up -d $cs"
+    return 0
+  fi
+  docker tag "$from" "$image_ref"
+  compose_cmd up -d "$cs"
+  cid="$(container_for "$svc" || true)"
+  after="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+  record_update_history "$svc" "$before" "$after" rollback "retagged previous local image"
+}
+
 updates_history() {
   load_cfg
   local logf
@@ -2407,8 +2498,9 @@ updates_cmd() {
     candidates) updates_candidates ;;
     apply)      updates_apply "$@" ;;
     apply-auto) updates_apply_auto "$@" ;;
+    rollback)   updates_rollback "$@" ;;
     history)    updates_history ;;
-    *) die "Usage: domum-core updates {check|status|apply <app> [--dry-run] [--force]|apply-auto [--dry-run] [--force]|history}" ;;
+    *) die "Usage: domum-core updates {check|status|apply <app> [--dry-run] [--force]|apply-auto [--dry-run] [--force]|rollback <app> [--dry-run]|history}" ;;
   esac
 }
 
@@ -2496,7 +2588,7 @@ images_in_use() {
 pruneable_dangling_images() {
   local inuse_tmp id
   inuse_tmp="$(mktemp)"
-  images_in_use > "$inuse_tmp"
+  { images_in_use; rollback_protected_images; } | sort -u > "$inuse_tmp"
   while IFS= read -r id; do
     [[ -n "$id" ]] || continue
     grep -Fxq "$id" "$inuse_tmp" && continue
@@ -3611,7 +3703,7 @@ Recovery & updates:
   domum-core recovery-pack create [--dry-run] [--no-email] | status | inspect
   domum-core recovery-pack send-latest [--dry-run] | email-test
   domum-core updates check | status | apply <app> [--dry-run] [--force]
-  domum-core updates apply-auto [--dry-run] [--force] | history
+  domum-core updates apply-auto [--dry-run] [--force] | rollback <app> [--dry-run] | history
   domum-core os-updates check | security-apply [--dry-run] | history
 
 Maintenance:
