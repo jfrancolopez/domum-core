@@ -701,7 +701,7 @@ export_env_for_compose() {
 }
 
 ensure_networks() {
-  local nets=("domum-internal" "domum-proxy" "domum-data" "iot_vlan50")
+  local nets=("domum-internal" "domum-proxy" "domum-data")
   for n in "${nets[@]}"; do
     if ! docker network inspect "$n" >/dev/null 2>&1; then
       log "Creating docker network: $n"
