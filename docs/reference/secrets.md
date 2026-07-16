@@ -27,6 +27,19 @@ drift is fixed.
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.
 
+## Traefik Dashboard Auth
+
+The dashboard basic-auth file is mounted from
+`/etc/domum-core/secrets/traefik_dashboard_users` to `/etc/traefik/usersfile` in
+the Traefik container. Do not create or commit an in-repo `usersfile`.
+
+Generate it on the host with:
+
+```bash
+sudo apt-get install -y apache2-utils
+sudo sh -lc 'umask 077; htpasswd -nbB USERNAME "STRONG_PASSWORD_HERE" > /etc/domum-core/secrets/traefik_dashboard_users'
+```
+
 ## AGE keypair for the recovery pack
 
 The recovery pack is encrypted to an AGE recipient. **Generate the keypair on a
