@@ -70,7 +70,7 @@ Key layout:
 
 ```bash
 bash -n bin/domum-core bin/domum-core-backup install.sh
-shellcheck bin/domum bin/domum-core bin/domum-core-backup bin/night-profile.sh install.sh
+shellcheck bin/domum bin/domum-core bin/domum-core-backup install.sh
 yamllint -c .yamllint.yml .
 git diff --cached --name-only   # confirm: no live config, no secrets, no data dirs
 ```

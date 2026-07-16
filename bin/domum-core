@@ -675,12 +675,6 @@ enabled_services() {
   done < <(service_catalog)
 }
 
-profiles_for_apply() {
-  local profiles=("core")
-  [[ "${ENABLE_NIGHT_PROFILE:-0}" == "1" ]] && profiles+=("night")
-  printf "%s\n" "${profiles[@]}"
-}
-
 export_env_for_compose() {
   export DOMUM_DOMAIN="${DOMUM_DOMAIN:-ladomum.com}"
   export DOMUM_EMAIL="${DOMUM_EMAIL:-admin@ladomum.com}"
@@ -769,35 +763,10 @@ apply() {
   ensure_dirs
   ensure_state_dirs
 
-  local -a profile_flags=()
-  while IFS= read -r p; do
-    profile_flags+=("--profile" "$p")
-  done < <(profiles_for_apply)
-
   log "Applying desired state..."
-  compose_cmd "${profile_flags[@]}" up -d --remove-orphans
-
-  if [[ "${ENABLE_NIGHT_PROFILE:-0}" == "1" && "${NIGHT_AUTOSTOP_OUTSIDE_WINDOW:-1}" == "1" ]]; then
-    domum_night_autostop
-  fi
+  compose_cmd --profile core up -d --remove-orphans
 
   log "Apply done."
-}
-
-domum_night_autostop() {
-  local up="${NIGHT_UP_TIME:-23:00}" down="${NIGHT_DOWN_TIME:-07:00}" now
-  now="$(date +%H:%M)"
-  if [[ "$up" < "$down" ]]; then
-    if [[ "$now" < "$up" || "$now" > "$down" ]]; then
-      log "Outside night window, stopping night profile."
-      compose_cmd --profile night stop || true
-    fi
-  else
-    if [[ "$now" < "$up" && "$now" > "$down" ]]; then
-      log "Outside night window, stopping night profile."
-      compose_cmd --profile night stop || true
-    fi
-  fi
 }
 
 # ===========================================================================
@@ -3313,72 +3282,8 @@ configure_cmd() {
 }
 
 # ===========================================================================
-#  Section: schedule (night profile) + maintenance timers
+#  Section: schedule maintenance timers
 # ===========================================================================
-
-schedule_install() {
-  need_root
-  load_cfg
-  local script="$DOMUM_DIR/bin/night-profile.sh"
-  install -m 0755 "$script" /usr/local/bin/domum-night-profile
-
-  local up="${NIGHT_UP_TIME:-23:00}" down="${NIGHT_DOWN_TIME:-07:00}"
-
-  cat >/etc/systemd/system/domum-night-up.service <<EOF
-[Unit]
-Description=Start domum night profile
-Wants=network-online.target
-After=network-online.target docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/domum-night-profile up
-EOF
-
-  cat >/etc/systemd/system/domum-night-down.service <<EOF
-[Unit]
-Description=Stop domum night profile
-Wants=network-online.target
-After=network-online.target docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/domum-night-profile down
-EOF
-
-  local up_h="${up%:*}" up_m="${up#*:}" down_h="${down%:*}" down_m="${down#*:}"
-
-  cat >/etc/systemd/system/domum-night-up.timer <<EOF
-[Unit]
-Description=Timer to start domum night profile
-
-[Timer]
-OnCalendar=*-*-* ${up_h}:${up_m}:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-  cat >/etc/systemd/system/domum-night-down.timer <<EOF
-[Unit]
-Description=Timer to stop domum night profile
-
-[Timer]
-OnCalendar=*-*-* ${down_h}:${down_m}:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-  systemctl daemon-reload
-  systemctl enable --now domum-night-up.timer domum-night-down.timer
-
-  log "Night profile scheduling installed. Up: $up  Down: $down"
-}
 
 schedule_remove() {
   need_root
@@ -3387,7 +3292,7 @@ schedule_remove() {
   rm -f /etc/systemd/system/domum-night-up.service /etc/systemd/system/domum-night-down.service
   rm -f /usr/local/bin/domum-night-profile
   systemctl daemon-reload
-  log "Night profile scheduling removed."
+  log "Legacy night-profile scheduling removed."
 }
 
 # Copy repo unit files into /etc/systemd/system and daemon-reload.
@@ -3431,10 +3336,9 @@ EOF
 
 schedule_cmd() {
   case "${1:-}" in
-    install)               shift; schedule_install "$@" ;;
     remove)                shift; schedule_remove "$@" ;;
     install-maintenance)   shift; schedule_install_maintenance "$@" ;;
-    *) die "Usage: domum-core schedule {install|remove|install-maintenance}" ;;
+    *) die "Usage: domum-core schedule {install-maintenance|remove}" ;;
   esac
 }
 
@@ -3511,7 +3415,7 @@ Deployment:
   domum-core apply
   domum-core update                       git pull (warns on local drift)
   domum-core status [--counts]
-  domum-core schedule install|remove      night-profile timers
+  domum-core schedule remove              remove legacy night-profile timers
   domum-core schedule install-maintenance maintenance timers (install only)
 
 Health:

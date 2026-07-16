@@ -148,11 +148,3 @@ OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
 ENABLE_SECURITY_PATCHES=1
 ENABLE_AUTOREMOVE_OLD_KERNELS=0
 SECURITY_PATCH_REBOOT_POLICY="manual"
-
-# ============================================================
-# Night profile
-# ============================================================
-# ENABLE_NIGHT_PROFILE=0
-# NIGHT_UP_TIME="23:00"
-# NIGHT_DOWN_TIME="07:00"
-# NIGHT_AUTOSTOP_OUTSIDE_WINDOW=1

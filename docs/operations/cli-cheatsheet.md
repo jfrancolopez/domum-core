@@ -61,8 +61,8 @@ All commands run as root (`sudo`).
 | Command | What it does |
 |---|---|
 | `domum-core cleanup images [--dry-run]` | Prune dangling, unused images (dry-run default) |
-| `domum-core schedule install` | Night-profile timers |
 | `domum-core schedule install-maintenance` | Install (not enable) maintenance timers |
+| `domum-core schedule remove` | Remove legacy night-profile timers if an old install has them |
 
 ## Per-app updates
 
