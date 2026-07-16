@@ -33,8 +33,8 @@ new images during a read-only check. `updates apply` verifies that the pulled
 image still matches the aged candidate before deployment. The optional
 `domum-core-updates-apply.timer` can run `updates apply-auto` each morning, but
 keep it disabled until you have supervised one full cycle on the Pi. Treat
-container updates as supervised until the remaining task 36 pieces land:
-rollback and image-age nags.
+container updates as supervised until the remaining task 36 rollback piece
+lands.
 
 ## Commands
 
@@ -71,6 +71,11 @@ HOMEASSISTANT_UPDATE_DELAY_DAYS=14
 `*_AUTO_UPDATE=1` allows `updates apply-auto` to update the app after the delay.
 `*_AUTO_UPDATE=0` records candidates but requires manual
 `updates apply <app>`.
+
+MariaDB, Home Assistant, Zigbee2MQTT, and Z-Wave JS UI are protected manual
+services. `updates apply-auto` treats them as auto-update disabled even if an old
+live config sets `*_AUTO_UPDATE=1`; use `updates apply <app>` for supervised
+maintenance.
 
 `*_UPDATE_DELAY_DAYS` is the number of stable days a candidate image digest must
 remain unchanged before it can apply. If a newer candidate digest appears before

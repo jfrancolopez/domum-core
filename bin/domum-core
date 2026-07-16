@@ -2019,8 +2019,16 @@ update_token_for() {
   esac
 }
 
+protected_manual_update_service() {
+  case "$(normalize_service_name "$1")" in
+    home-assistant|mariadb|zigbee2mqtt|zwave-js-ui) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 update_auto_enabled_for() {
   local key
+  protected_manual_update_service "$1" && return 1
   key="$(update_token_for "$1")_AUTO_UPDATE"
   [[ "${!key:-0}" == "1" ]]
 }
