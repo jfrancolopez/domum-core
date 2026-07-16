@@ -670,7 +670,7 @@ Host checklist not automated by init:
   2. Harden SSH after key login is tested: PermitRootLogin no; PasswordAuthentication no; sudo sshd -t; sudo systemctl restart ssh
   3. Configure firewall/fail2ban if desired; remember Docker-published ports can bypass ufw.
   4. Install maintenance units: sudo domum-core schedule install-maintenance
-  5. Enable only intended timers: sudo systemctl enable --now domum-core-backups.timer domum-core-checkup.timer domum-core-updates-check.timer
+  5. Enable only intended timers: sudo systemctl enable --now domum-core-backups.timer domum-core-checkup.timer domum-core-updates-check.timer domum-core-weekly-report.timer
   6. Keep domum-core-updates-apply.timer disabled until more supervised update cycles.
 EOF
 }
@@ -4264,6 +4264,7 @@ Units installed but DISABLED. Enable the ones you want with:
   sudo systemctl enable --now domum-core-security-patches.timer
   sudo systemctl enable --now domum-core-backup-verify.timer
   sudo systemctl enable --now domum-core-cleanup-report.timer
+  sudo systemctl enable --now domum-core-weekly-report.timer
 
 Review timing first: systemctl cat domum-core-backups.timer
 EOF
