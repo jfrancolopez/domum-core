@@ -137,6 +137,12 @@ to a newer digest during the waiting period, domum-core records the newer digest
 as a fresh candidate and resets the delay window. `--force` can override this,
 but should be reserved for supervised maintenance.
 
+`domum-core apply` does not pull images. If pending candidates exist, it warns
+before running compose because a manual or out-of-band `docker pull` could still
+make compose recreate a service on a candidate image outside `updates apply`. If
+that happens, apply records update history and clears the candidate whose digest
+is now running.
+
 `updates rollback <app>` retags the previous local image from the latest
 successful update history entry and recreates only that compose service. It is a
 local-image rollback, not a data/schema rollback. For config-pinned services

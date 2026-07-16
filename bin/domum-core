@@ -795,6 +795,7 @@ EOF
 apply() {
   need_root
   load_cfg
+  local candidate_snapshot=""
   validate_obsidian_credentials || die "Fix Obsidian Sync credentials before apply."
   validate_mqtt_auth || die "Run 'domum-core mqtt init-auth' before apply."
   install_tailscale_host
@@ -805,9 +806,14 @@ apply() {
   ensure_state_dirs
   ensure_zigbee2mqtt_runtime_config
   ensure_obsidian_runtime_config
+  candidate_snapshot="$(mktemp)"
+  snapshot_pending_update_candidates "$candidate_snapshot"
+  warn_pending_update_candidates "$candidate_snapshot"
 
   log "Applying desired state..."
   compose_cmd --profile core up -d --remove-orphans
+  reconcile_apply_update_candidates "$candidate_snapshot"
+  rm -f "$candidate_snapshot"
 
   log "Apply done."
 }
@@ -2138,6 +2144,58 @@ record_update_candidate() {
 
 clear_update_candidate() {
   rm -f "$(candidate_file_for "$1")"
+}
+
+service_enabled_for_updates() {
+  local svc="$1" enable_var
+  svc="$(normalize_service_name "$svc")"
+  enable_var="$(catalog_field "$svc" 2)"
+  [[ -n "$enable_var" && "${!enable_var:-0}" == "1" ]]
+}
+
+snapshot_pending_update_candidates() {
+  local out="$1" file svc candidate before cid
+  : > "$out"
+  for file in "$(update_candidate_dir)"/*.env; do
+    [[ -f "$file" ]] || continue
+    unset SERVICE CANDIDATE_DIGEST
+    # shellcheck disable=SC1090
+    source "$file"
+    svc="$(normalize_service_name "${SERVICE:-}")"
+    candidate="${CANDIDATE_DIGEST:-}"
+    [[ -n "$svc" && -n "$candidate" ]] || continue
+    service_enabled_for_updates "$svc" || continue
+    cid="$(container_for "$svc" || true)"
+    before="$([[ -n "$cid" ]] && docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+    printf '%s\t%s\t%s\n' "$svc" "$candidate" "$before" >> "$out"
+  done
+}
+
+warn_pending_update_candidates() {
+  local snapshot="$1" svc candidate before services=()
+  [[ -s "$snapshot" ]] || return 0
+  while IFS=$'\t' read -r svc candidate before; do
+    [[ -n "$svc" ]] && services+=("$svc")
+  done < "$snapshot"
+  (( ${#services[@]} > 0 )) || return 0
+  warn "pending image update candidates recorded for: ${services[*]}"
+  warn "apply does not pull images, but an out-of-band docker pull could make compose recreate a service outside the update pipeline."
+  warn "Review with: sudo domum-core updates status"
+}
+
+reconcile_apply_update_candidates() {
+  local snapshot="$1" svc candidate before cid after_digest after_image
+  [[ -s "$snapshot" ]] || return 0
+  while IFS=$'\t' read -r svc candidate before; do
+    [[ -n "$svc" && -n "$candidate" ]] || continue
+    cid="$(container_for "$svc" || true)"
+    [[ -n "$cid" ]] || continue
+    after_digest="$(running_repo_digest_for "$cid" || true)"
+    [[ "$after_digest" == "$candidate" ]] || continue
+    after_image="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || echo "")"
+    record_update_history "$svc" "$before" "$after_image" success "applied via apply"
+    clear_update_candidate "$svc"
+  done < "$snapshot"
 }
 
 digest_only() {
