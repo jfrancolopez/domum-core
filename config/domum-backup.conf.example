@@ -29,11 +29,12 @@ BACKUP_MAX_AGE_HOURS=48
 # These usually need no editing — the defaults in bin/domum-core-backup store
 # each byte once: the compose tree (contains every service bind mount) +
 # config, plus the only staging artifacts restic cannot reproduce from raw
-# files (MariaDB SQL dumps, named-volume exports) and the recovery packs.
-# The other gzipped service tars stay local-only (opaque to restic dedup).
+# files (MariaDB SQL dumps, quiesced Actual/Vaultwarden SQLite archives,
+# named-volume exports) and the recovery packs. The other gzipped service tars
+# stay local-only (opaque to restic dedup).
 # Uncomment to override.
 #
-# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups/mariadb /var/lib/domum-core/service-backups/volumes /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json /var/lib/domum-core/recovery-pack"
+# BACKUP_PATHS="/opt/domum-core/compose /opt/domum-core/config /var/lib/domum-core/service-backups/actual /var/lib/domum-core/service-backups/mariadb /var/lib/domum-core/service-backups/vaultwarden /var/lib/domum-core/service-backups/volumes /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json /var/lib/domum-core/recovery-pack"
 #
 # Named docker volumes exported (tar) into staging so they ride along.
 # BACKUP_VOLUMES="nodered-data uptime-kuma-data traefik-letsencrypt"

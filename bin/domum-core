@@ -1401,6 +1401,16 @@ restore_verify_dir_has_files() {
     || { warn "restore verification found no non-empty files in $label: $path"; return 1; }
 }
 
+restore_verify_latest_tar_ok() {
+  local dir="$1" glob="$2" label="$3" archive
+  archive="$(find "$dir" -maxdepth 1 -name "$glob" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)"
+  if [[ -z "$archive" ]]; then
+    warn "restore verification found no $label archive in $dir."
+    return 1
+  fi
+  tar -tzf "$archive" >/dev/null 2>&1 || { warn "restore verification $label archive failed tar/gzip test: $archive"; return 1; }
+}
+
 restore_verify_manifest_checksums() {
   local stage="$1" mf rel expected restored actual verified=0 rc=0
   mf="$stage$(backup_manifest_file)"
@@ -1423,16 +1433,24 @@ restore_verify_manifest_checksums() {
 }
 
 restore_verify_validate_staging() {
-  local stage="$1" rc=0 actual_dir ha_dir z2m_dir mariadb_dir dump
+  local stage="$1" rc=0 actual_dir ha_dir z2m_dir mariadb_dir actual_stage vaultwarden_stage dump
   actual_dir="$stage$(actual_data_dir)"
   ha_dir="$stage$(ha_config_dir)"
   z2m_dir="$stage$(backup_src_dir_for zigbee2mqtt)"
   mariadb_dir="$stage$STATE_ROOT/service-backups/mariadb"
+  actual_stage="$stage$STATE_ROOT/service-backups/actual"
+  vaultwarden_stage="$stage$STATE_ROOT/service-backups/vaultwarden"
 
   restore_verify_dir_has_files "$actual_dir" "Actual Budget data" || rc=1
+  if [[ "${ENABLE_ACTUAL_BUDGET:-0}" == "1" ]]; then
+    restore_verify_latest_tar_ok "$actual_stage" 'actual-*.tar.gz' "Actual Budget" || rc=1
+  fi
   restore_verify_file_ok "$ha_dir/configuration.yaml" "Home Assistant configuration.yaml" || rc=1
   restore_verify_file_ok "$ha_dir/.storage/core.config_entries" "Home Assistant core.config_entries" || rc=1
   restore_verify_file_ok "$z2m_dir/configuration.yaml" "Zigbee2MQTT configuration.yaml" || rc=1
+  if [[ "${ENABLE_VAULTWARDEN:-0}" == "1" ]]; then
+    restore_verify_latest_tar_ok "$vaultwarden_stage" 'vaultwarden-*.tar.gz' "Vaultwarden" || rc=1
+  fi
   if [[ -f "$(backup_src_dir_for zigbee2mqtt)/coordinator_backup.json" ]]; then
     restore_verify_file_ok "$z2m_dir/coordinator_backup.json" "Zigbee2MQTT coordinator_backup.json" || rc=1
   fi
@@ -1485,7 +1503,9 @@ verify_restore_cmd() {
   restore_args+=(--include "$(actual_data_dir)")
   restore_args+=(--include "$(ha_config_dir)")
   restore_args+=(--include "$(backup_src_dir_for zigbee2mqtt)")
+  restore_args+=(--include "$STATE_ROOT/service-backups/actual")
   restore_args+=(--include "$STATE_ROOT/service-backups/mariadb")
+  restore_args+=(--include "$STATE_ROOT/service-backups/vaultwarden")
   restore_args+=(--include "$(backup_manifest_file)")
   if ! restic_for_backup_target "$target" "${restore_args[@]}"; then
     rc=1

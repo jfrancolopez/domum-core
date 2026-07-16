@@ -11,13 +11,17 @@ sudo domum-core actual backup            # filesystem-level tar
 sudo domum-core actual backup --dry-run  # show what would happen
 ```
 
-`domum-core backups run` protects Actual offsite by backing up the live data
-directory under `/opt/domum-core/compose/productivity/actual-budget/data`.
+`domum-core backups run` protects Actual offsite in two ways:
 
-It also creates a local same-host restore archive at
+- the live data directory under
+  `/opt/domum-core/compose/productivity/actual-budget/data`;
+- the quiesced service archive under
+  `/var/lib/domum-core/service-backups/actual`.
+
+It creates the service archive at
 `/var/lib/domum-core/service-backups/actual/actual-YYYYMMDD-HHMMSS.tar.gz` and
-keeps the last `ACTUAL_KEEP` (default 7). That archive is local staging by
-default; the offsite copy is the data directory in restic.
+keeps the last `ACTUAL_KEEP` (default 7). The archive is included in restic and
+is the preferred SQLite restore source after a Pi loss.
 
 ### Consistency quiesce
 

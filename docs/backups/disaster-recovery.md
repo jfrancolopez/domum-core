@@ -124,22 +124,25 @@ for v in nodered-data uptime-kuma-data traefik-letsencrypt; do
 done
 ```
 
-### 6. Manual: confirm Actual + Home Assistant data
+### 6. Manual: confirm app data sources
 
 The restic restore in step 5 already restored the offsite copies of:
 
 - Actual Budget data:
   `/opt/domum-core/compose/productivity/actual-budget/data`
+- Actual Budget quiesced archive:
+  `/var/lib/domum-core/service-backups/actual/actual-*.tar.gz`
 - Home Assistant config:
   `/opt/domum-core/compose/automation/home-assistant`
 - Home Assistant recorder/history:
   `/var/lib/domum-core/service-backups/mariadb/mariadb-all-*.sql.gz`
+- Vaultwarden quiesced archive:
+  `/var/lib/domum-core/service-backups/vaultwarden/vaultwarden-*.tar.gz`
 
-Do not expect the Actual or Home Assistant `.tar.gz` service archives to exist
-after an offsite-only restore. Those archives are local staging by default.
-Use `sudo domum-core actual restore-plan` or
-`sudo domum-core homeassistant restore-plan` only when those local archives are
-present and you intentionally want to restore from them.
+Home Assistant `.tar.gz` config archives remain local-only by default because
+the config directory is already restored from `/opt/domum-core/compose`. Use
+`sudo domum-core actual restore-plan` or `sudo domum-core homeassistant
+restore-plan` when you intentionally want to restore from a service archive.
 
 The SQL dump is loaded in step 7 after MariaDB starts and before Home Assistant
 is converged.

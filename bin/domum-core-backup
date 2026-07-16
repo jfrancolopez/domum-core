@@ -42,19 +42,19 @@ load_cfg() {
   RESTIC_KEEP_YEARLY="${RESTIC_KEEP_YEARLY:-3}"
   BACKUP_TARGETS="${BACKUP_TARGETS:-local hetzner}"
   # Default source set. Each byte is stored ONCE, in restic's dedup-friendly
-  # raw form: the compose tree already contains every service bind mount, so
-  # listing them individually is redundant, and the gzipped service tars in
-  # service-backups/ are opaque to dedup (each rotation stored nearly in
-  # full). Local tar staging stays for fast same-host restores and the
-  # update backup gate — it just does not ride into restic, with two
-  # exceptions: MariaDB SQL dumps (the only artifact not reproducible from
-  # raw files) and named-volume exports (the only capture of those volumes).
+  # raw form where that is reliable enough. Selected app-consistent service
+  # archives also ride along when they are materially safer than hot raw files:
+  # MariaDB SQL dumps, quiesced Actual/Vaultwarden SQLite tars, and named-volume
+  # exports. Do not add the whole service-backups tree; compressed rotations are
+  # opaque to restic dedup and grow offsite storage quickly.
   # (BACKUP-MANIFEST.json is the per-run manifest written by `backups run` —
   # it documents each snapshot from inside the snapshot itself.)
   BACKUP_PATHS="${BACKUP_PATHS:-\
 $DOMUM_DIR/compose \
 $DOMUM_DIR/config \
+$STATE_ROOT/service-backups/actual \
 $STATE_ROOT/service-backups/mariadb \
+$STATE_ROOT/service-backups/vaultwarden \
 $STATE_ROOT/service-backups/volumes \
 $STATE_ROOT/service-backups/BACKUP-MANIFEST.json \
 $STATE_ROOT/recovery-pack}"

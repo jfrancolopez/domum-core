@@ -83,6 +83,10 @@ Data lives at `/opt/domum-core/compose/productivity/obsidian-sync/data` and is i
 `domum-core backups run` when `BACKUP_OBSIDIAN=1`.
 
 Recovery is a file restore of that data directory followed by `sudo domum-core apply`.
+Unlike Actual Budget and Vaultwarden, Obsidian Sync does not currently have an
+app-consistent archive included offsite. A hot CouchDB tar would not be safer
+than the raw bind mount, so the future improvement is a CouchDB-native export if
+restore verification shows the raw copy is not enough.
 
 Your devices also keep local copies of the vault, but the server data still
 matters because it lets all devices converge again after a restore.

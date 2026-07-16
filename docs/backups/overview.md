@@ -15,7 +15,9 @@ A Hetzner/restic backup is not just the compose YAML files. The default
 |---|---|
 | `/opt/domum-core/compose` | Service bind mounts and compose fragments |
 | `/opt/domum-core/config` | Live domum-core config, including backup target metadata |
+| `/var/lib/domum-core/service-backups/actual` | Quiesced Actual Budget SQLite archives |
 | `/var/lib/domum-core/service-backups/mariadb` | MariaDB SQL dumps, the authoritative database backup |
+| `/var/lib/domum-core/service-backups/vaultwarden` | Quiesced Vaultwarden SQLite archives |
 | `/var/lib/domum-core/service-backups/volumes` | Docker named-volume exports |
 | `/var/lib/domum-core/service-backups/BACKUP-MANIFEST.json` | Per-run backup manifest |
 | `/var/lib/domum-core/recovery-pack` | AGE-encrypted recovery packs containing config and small secret files |
@@ -45,6 +47,13 @@ stays **local-only** by default. Those `.tar.gz` files exist for fast same-host
 restores and the update backup gate, but most of them are not sent to restic
 because they duplicate the same bytes already captured under `compose/` and are
 opaque to restic dedup.
+
+Decision: only Actual Budget and Vaultwarden service archives are promoted into
+offsite restic. They are SQLite-backed apps, and `domum-core backups run` pauses
+each container for the short tar window before restic runs. Do not add the whole
+`service-backups` tree; that would reintroduce the compressed-archive storage
+growth that task 21 removed. Obsidian Sync remains raw-bind-mount only until a
+small CouchDB-native export is chosen; a hot tar would not be materially safer.
 
 ## The backup manifest
 
@@ -85,9 +94,11 @@ staging directory. Use `--keep-staging` only while debugging a failed check.
 It verifies:
 
 - Actual Budget data directory contains non-empty files.
+- Latest Actual Budget service archive passes tar/gzip validation.
 - Home Assistant `configuration.yaml` and `.storage/core.config_entries` exist.
 - The latest MariaDB SQL dump passes `gzip -t` and contains the HA `states`
   table.
+- Latest Vaultwarden service archive passes tar/gzip validation.
 - Zigbee2MQTT config, and coordinator backup when present in live data, restore.
 - Restored staging artifacts match `BACKUP-MANIFEST.json` checksums when the
   snapshot contains a manifest.
@@ -101,12 +112,12 @@ SQL dump above is the authoritative MariaDB backup. DB WAL/SHM files, TTS
 caches, and other disposable paths in `BACKUP_EXCLUDES` are also excluded.
 
 **Consistency:** MariaDB is protected by a logical `mariadb-dump`, and named
-volumes are exported before restic runs. Actual Budget and Vaultwarden are also
-tarred with a short `docker pause` for local same-host restore staging, but the
-default offsite restic source still captures their raw bind-mounted data under
-`compose/`. That keeps Hetzner usage small, but it is not as strong as sending
-the quiesced service archives offsite. [Task 39](../../backlog/task-39-app-consistent-offsite-service-archives.md)
-tracks the stricter model without reintroducing the full duplicate staging set.
+volumes are exported before restic runs. Actual Budget and Vaultwarden are
+protected two ways: their raw bind-mounted data is still present under
+`compose/`, and their quiesced service archives are included offsite as the
+authoritative SQLite restore source. Obsidian Sync/CouchDB is still raw
+bind-mount only; the safer future option is a CouchDB-native export, not a hot
+tar of the same files.
 
 **Failure isolation:** every enabled target is attempted every run; a failed
 target is reported (run exits non-zero, `checkup` warns which destination is

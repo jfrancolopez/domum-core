@@ -69,7 +69,14 @@ Only do this while you are available to confirm the account was created.
 Data lives at `/opt/domum-core/compose/security/vaultwarden/data` and is included by
 `domum-core backups run` when `BACKUP_VAULTWARDEN=1`.
 
-Recovery is a file restore of that data directory followed by `sudo domum-core apply`.
+`domum-core backups run` also creates a quiesced service archive under
+`/var/lib/domum-core/service-backups/vaultwarden` by briefly pausing the
+container while the tar is written. That archive is included in restic and is the
+preferred SQLite restore source after a Pi loss; the raw data directory remains
+available as a second copy.
+
+Recovery is a file restore of the selected Vaultwarden data source followed by
+`sudo domum-core apply`.
 
 ## Quick Checks
 
