@@ -70,7 +70,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
-| 10 | [Pin critical stateful images (MariaDB, HA, Traefik-major)](task-10-pin-critical-images.md) | medium | medium |
+| 10 | [Pin critical stateful images (MariaDB, HA, Traefik-major)](task-10-pin-critical-images.md) ✅ done (1e2cab1) | medium | medium |
 | 36 | [Unattended-safe update pipeline](task-36-unattended-update-pipeline.md) | med-large | medium |
 | 09 | [Warn on pending update candidates during apply](task-09-apply-warns-on-candidates.md) | small | low |
 | ~~31~~ | [superseded by 36](task-31-updates-apply-race-and-rollback.md) | — | — |
