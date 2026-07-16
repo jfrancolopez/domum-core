@@ -3451,6 +3451,7 @@ Units installed but DISABLED. Enable the ones you want with:
   sudo systemctl enable --now domum-core-recovery-pack.timer
   sudo systemctl enable --now domum-core-recovery-email.timer
   sudo systemctl enable --now domum-core-updates-check.timer
+  sudo systemctl enable --now domum-core-updates-apply.timer
   sudo systemctl enable --now domum-core-security-patches.timer
   sudo systemctl enable --now domum-core-backup-verify.timer
   sudo systemctl enable --now domum-core-cleanup-report.timer

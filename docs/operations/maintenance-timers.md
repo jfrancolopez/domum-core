@@ -14,6 +14,7 @@ sudo systemctl enable --now domum-core-backups.timer
 sudo systemctl enable --now domum-core-recovery-pack.timer
 sudo systemctl enable --now domum-core-recovery-email.timer
 sudo systemctl enable --now domum-core-updates-check.timer
+sudo systemctl enable --now domum-core-updates-apply.timer
 sudo systemctl enable --now domum-core-security-patches.timer
 sudo systemctl enable --now domum-core-backup-verify.timer
 sudo systemctl enable --now domum-core-cleanup-report.timer
@@ -24,13 +25,14 @@ Inspect timing before enabling:
 ```bash
 systemctl cat domum-core-checkup.timer
 systemctl cat domum-core-updates-check.timer
+systemctl cat domum-core-updates-apply.timer
 systemctl list-timers 'domum-core-*'
 ```
 
 Container auto-updates are controlled app-by-app in `config/domum.conf`; timer
-installation alone does not make manual apps update automatically. Until the
-unattended-safe update pipeline is implemented, keep container update application
-supervised and use `domum-core updates status` to review candidates.
+installation alone does not make manual apps update automatically. Keep the
+apply timer disabled until you have supervised at least one full check -> status
+-> apply-auto --dry-run -> apply-auto cycle on the Pi.
 
 Timer purpose:
 
@@ -42,5 +44,6 @@ Timer purpose:
 | `domum-core-recovery-pack.timer` | Refresh encrypted recovery pack |
 | `domum-core-recovery-email.timer` | Email latest encrypted recovery pack if enabled |
 | `domum-core-updates-check.timer` | Record container update candidates |
+| `domum-core-updates-apply.timer` | Apply eligible auto-update candidates after backup and delay gates |
 | `domum-core-security-patches.timer` | Apply Debian security patches |
 | `domum-core-cleanup-report.timer` | Dry-run Docker image cleanup report |

@@ -30,9 +30,11 @@ Why this split:
 Current caveat: task 36 is landing in separate safety commits. `updates check`
 is pull-free and uses registry manifest inspection, so it no longer downloads
 new images during a read-only check. `updates apply` verifies that the pulled
-image still matches the aged candidate before deployment. Treat container
-updates as supervised until the remaining task 36 pieces land: scheduled
-apply-auto, rollback, and image-age nags.
+image still matches the aged candidate before deployment. The optional
+`domum-core-updates-apply.timer` can run `updates apply-auto` each morning, but
+keep it disabled until you have supervised one full cycle on the Pi. Treat
+container updates as supervised until the remaining task 36 pieces land:
+rollback and image-age nags.
 
 ## Commands
 

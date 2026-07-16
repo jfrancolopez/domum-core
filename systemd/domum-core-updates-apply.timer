@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule eligible container update application
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+RandomizedDelaySec=30m
+Persistent=true
+Unit=domum-core-updates-apply.service
+
+[Install]
+WantedBy=timers.target

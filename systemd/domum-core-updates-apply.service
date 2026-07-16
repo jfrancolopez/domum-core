@@ -1,0 +1,13 @@
+[Unit]
+Description=domum-core: apply eligible container updates
+Documentation=file:///opt/domum-core/docs/operations/updates.md
+Wants=network-online.target
+After=network-online.target docker.service domum-core-updates-check.service
+Requires=docker.service
+ConditionPathExists=/usr/local/bin/domum-core
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=/usr/local/bin/domum-core updates apply-auto
+TimeoutStartSec=2h
