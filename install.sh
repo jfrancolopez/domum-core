@@ -18,6 +18,20 @@ fi
 REPO_URL="${REPO_URL:-$REPO_URL_DEFAULT}"
 INSTALL_DIR="${INSTALL_DIR:-$INSTALL_DIR_DEFAULT}"
 
+warn_non_https_origin_fetch() {
+  local dir="$1" fetch_url
+  fetch_url="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
+  case "$fetch_url" in
+    https://*) ;;
+    *)
+      echo "[domum] WARN: origin fetch URL is '${fetch_url:-unset}'; running as root, SSH auth will likely fail." >&2
+      echo "[domum] WARN: Recommended (anonymous fetch, SSH push):" >&2
+      echo "[domum] WARN:   git -C $dir remote set-url origin https://github.com/jfrancolopez/domum-core.git" >&2
+      echo "[domum] WARN:   git -C $dir remote set-url --push origin git@github.com:jfrancolopez/domum-core.git" >&2
+      ;;
+  esac
+}
+
 echo "[domum] Installing prerequisites (curl, git)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
@@ -25,7 +39,8 @@ apt-get install -y --no-install-recommends curl ca-certificates git
 
 echo "[domum] Cloning or updating repo in ${INSTALL_DIR}..."
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
-  git -C "${INSTALL_DIR}" fetch --all --prune
+  warn_non_https_origin_fetch "${INSTALL_DIR}"
+  git -C "${INSTALL_DIR}" fetch --prune origin
   if ! git -C "${INSTALL_DIR}" diff --quiet || ! git -C "${INSTALL_DIR}" diff --cached --quiet; then
     echo "[domum] WARN: local changes detected in ${INSTALL_DIR}; not resetting or pulling."
     echo "[domum]       Review with: git -C ${INSTALL_DIR} status"

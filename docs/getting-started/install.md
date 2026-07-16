@@ -294,6 +294,20 @@ sudo chmod 600 /etc/domum-core/secrets/traefik_dashboard_users
 ```
 
 ---
+# Git fetch URL for root-run updates
+
+The repo is public, so root-run install/update flows should fetch over HTTPS.
+If you push from the Pi, keep SSH for push only:
+
+```bash
+sudo git -C /opt/domum-core remote set-url origin https://github.com/jfrancolopez/domum-core.git
+sudo git -C /opt/domum-core remote set-url --push origin git@github.com:jfrancolopez/domum-core.git
+```
+
+This lets `sudo domum-core update` and `sudo ./install.sh` fetch without relying
+on root having your GitHub SSH key.
+
+---
 # HACS installation
 
 Install HACS (The Bridge)

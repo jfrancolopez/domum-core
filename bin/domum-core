@@ -566,11 +566,26 @@ ensure_dirs() {
   mkdir -p "$DOMUM_DIR/data" "$DOMUM_DIR/logs"
 }
 
+warn_non_https_origin_fetch() {
+  local dir="$1" fetch_url
+  fetch_url="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
+  case "$fetch_url" in
+    https://*) ;;
+    *)
+      warn "origin fetch URL is '${fetch_url:-unset}'; running as root, SSH auth will likely fail."
+      warn "Recommended (anonymous fetch, SSH push):"
+      warn "  git -C $dir remote set-url origin https://github.com/jfrancolopez/domum-core.git"
+      warn "  git -C $dir remote set-url --push origin git@github.com:jfrancolopez/domum-core.git"
+      ;;
+  esac
+}
+
 repo_update() {
   need_root
   log "Updating repo in $DOMUM_DIR..."
   [[ -d "$DOMUM_DIR/.git" ]] || die "$DOMUM_DIR is not a git repo. Reinstall using install.sh"
-  git -C "$DOMUM_DIR" fetch --all --prune
+  warn_non_https_origin_fetch "$DOMUM_DIR"
+  git -C "$DOMUM_DIR" fetch --prune origin
   # Soften the original `git reset --hard`: warn loudly about local drift
   # instead of silently destroying it.
   if ! git -C "$DOMUM_DIR" diff --quiet || ! git -C "$DOMUM_DIR" diff --cached --quiet; then
