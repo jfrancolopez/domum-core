@@ -97,7 +97,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
 | 29 | [MQTT authentication (anonymous LAN broker)](task-29-mqtt-authentication.md) ✅ done (b932088) | small code / medium ops | medium |
-| 11 | [Remove or justify iot_vlan50 in ensure_networks](task-11-iot-vlan50.md) | small | medium |
+| 11 | [Remove or justify iot_vlan50 in ensure_networks](task-11-iot-vlan50.md) ✅ code done (98efd81) — on the Pi: inspect/remove the old Docker network only if unattached | small | medium |
 | 13 | [Zigbee network key rotation runbook](task-13-zigbee-key-rotation.md) | small (doc) | medium (op) |
 
 ### Phase 6 — Future ideas (do not start without a fresh decision)
