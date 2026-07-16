@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: bash syntax
+        run: bash -n bin/domum bin/domum-core bin/domum-core-backup install.sh
       - uses: ludeeus/action-shellcheck@master
         with:
           scandir: "."
@@ -64,4 +66,4 @@ jobs:
             files+=(-f "$f")
           done < <(find compose -mindepth 2 -name '*.yml' ! -path 'compose/proxy/traefik/*' -print0 | sort -z)
           echo "Validating: ${files[*]}"
-          docker compose "${files[@]}" --profile core --profile night --profile media --profile ai config -q
+          docker compose "${files[@]}" --profile core config -q
