@@ -30,8 +30,9 @@ Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 ## Traefik Dashboard Auth
 
 The dashboard basic-auth file is mounted from
-`/etc/domum-core/secrets/traefik_dashboard_users` to `/etc/traefik/usersfile` in
-the Traefik container. Do not create or commit an in-repo `usersfile`.
+`/etc/domum-core/secrets/traefik_dashboard_users` to
+`/run/secrets/traefik_dashboard_users` in the Traefik container. Do not create
+or commit an in-repo `usersfile`.
 
 Generate it on the host with:
 

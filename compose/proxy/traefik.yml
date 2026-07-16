@@ -21,7 +21,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-letsencrypt:/letsencrypt
       - /opt/domum-core/compose/proxy/traefik:/etc/traefik:ro
-      - /etc/domum-core/secrets/traefik_dashboard_users:/etc/traefik/usersfile:ro
+      - /etc/domum-core/secrets/traefik_dashboard_users:/run/secrets/traefik_dashboard_users:ro
 
     command:
       - --api.dashboard=true

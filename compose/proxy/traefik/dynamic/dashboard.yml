@@ -13,4 +13,4 @@ http:
   middlewares:
     traefik-auth:
       basicAuth:
-        usersFile: /etc/traefik/usersfile
+        usersFile: /run/secrets/traefik_dashboard_users
