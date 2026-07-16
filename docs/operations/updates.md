@@ -27,10 +27,11 @@ Why this split:
 - Traefik should be pinned by major version, not frozen forever: `traefik:v3`
   keeps v3 updates flowing but prevents an unattended v4 config break.
 
-Current caveat: task 36 is still required before this model is safe unattended.
-Today `updates check` still downloads images with `docker pull`, which means a
-later `apply` can deploy an image outside the delay/backup gate. Until task 36
-lands, treat container updates as supervised.
+Current caveat: task 36 is landing in separate safety commits. `updates check`
+is pull-free and uses registry manifest inspection, so it no longer downloads
+new images during a read-only check. Treat container updates as supervised until
+the remaining task 36 pieces land: digest-verified apply, scheduled apply-auto,
+rollback, and image-age nags.
 
 ## Commands
 
@@ -96,8 +97,9 @@ Current defaults:
 
 ## Candidate lifecycle
 
-`updates check` checks enabled services, compares the running image digest with
-the current image digest for the configured image reference, and records:
+`updates check` checks enabled services without pulling images. It compares the
+running image's repo digest with the registry manifest digest for the configured
+image reference, and records:
 
 - current/running digest
 - candidate digest

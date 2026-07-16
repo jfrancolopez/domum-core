@@ -2123,6 +2123,44 @@ clear_update_candidate() {
   rm -f "$(candidate_file_for "$1")"
 }
 
+digest_only() {
+  local value="$1"
+  case "$value" in
+    *@sha256:*) printf '%s\n' "${value##*@}" ;;
+    sha256:*) printf '%s\n' "$value" ;;
+    *) return 1 ;;
+  esac
+}
+
+running_repo_digest_for() {
+  local cid="$1" image_id digest
+  image_id="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
+  [[ -n "$image_id" ]] || return 1
+  while IFS= read -r digest; do
+    digest="$(digest_only "$digest" 2>/dev/null || true)"
+    [[ -n "$digest" ]] && { printf '%s\n' "$digest"; return 0; }
+  done < <(docker image inspect "$image_id" --format '{{range .RepoDigests}}{{println .}}{{end}}' 2>/dev/null || true)
+  return 1
+}
+
+registry_manifest_digest_for() {
+  local image_ref="$1" digest
+  digest="$(docker buildx imagetools inspect "$image_ref" --format '{{.Manifest.Digest}}' 2>/dev/null || true)"
+  digest="$(digest_only "$digest" 2>/dev/null || true)"
+  if [[ -n "$digest" ]]; then
+    printf '%s\n' "$digest"
+    return 0
+  fi
+
+  cmd_exists jq || return 1
+  digest="$(docker manifest inspect --verbose "$image_ref" 2>/dev/null \
+    | jq -r 'if type == "object" then (.Descriptor.digest // .Descriptor.Digest // empty) else empty end' 2>/dev/null \
+    | head -n1)"
+  digest="$(digest_only "$digest" 2>/dev/null || true)"
+  [[ -n "$digest" ]] || return 1
+  printf '%s\n' "$digest"
+}
+
 candidate_ready_for_apply() {
   local svc force file first_seen now age_days delay_days
   svc="$(normalize_service_name "$1")"
@@ -2168,7 +2206,7 @@ updates_check() {
   load_cfg
   export_env_for_compose
   ensure_state_dirs
-  log "Checking enabled container images (read-only pull/inspect)..."
+  log "Checking enabled container images (registry manifest inspect; no pulls)..."
   printf '%-18s %-9s %-13s %-7s %s\n' "SERVICE" "UPDATE?" "AUTO" "DELAY" "IMAGE"
   local svc cid running_digest image_ref newest update auto
   while IFS= read -r svc; do
@@ -2180,11 +2218,13 @@ updates_check() {
       continue
     fi
     image_ref="$(docker inspect --format '{{index .Config.Image}}' "$cid" 2>/dev/null || true)"
-    running_digest="$(docker inspect --format '{{.Image}}' "$cid" 2>/dev/null || true)"
     update="no"
-    if docker pull --quiet "$image_ref" >/dev/null 2>&1; then
-      newest="$(docker image inspect "$image_ref" --format '{{.Id}}' 2>/dev/null || true)"
-      if [[ -n "$newest" && "$newest" != "$running_digest" ]]; then
+    running_digest="$(running_repo_digest_for "$cid" || true)"
+    if [[ -z "$image_ref" || -z "$running_digest" ]]; then
+      update="?"
+      clear_update_candidate "$svc"
+    elif newest="$(registry_manifest_digest_for "$image_ref" || true)" && [[ -n "$newest" ]]; then
+      if [[ "$newest" != "$running_digest" ]]; then
         update="YES"
         record_update_candidate "$svc" "$image_ref" "$running_digest" "$newest"
       else
