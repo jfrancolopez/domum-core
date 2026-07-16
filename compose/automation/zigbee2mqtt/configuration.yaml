@@ -7,15 +7,15 @@ frontend:
 mqtt:
   server: mqtt://mqtt:1883
   base_topic: zigbee2mqtt
-  user: !secret mqtt_user
-  password: !secret mqtt_pass
+  user: '!secret mqtt_user'
+  password: '!secret mqtt_pass'
 
 serial:
   port: /dev/serial/by-id/sonoff-zigbee
   adapter: zstack
 
 advanced:
-  network_key: !secret network_key
+  network_key: '!secret network_key'
 
 permit_join: false
 version: 5

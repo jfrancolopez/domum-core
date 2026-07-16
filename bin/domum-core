@@ -201,6 +201,7 @@ validate_obsidian_credentials() {
 
 validate_mqtt_auth() {
   local issues=0
+  local z2m_config="$DOMUM_DIR/compose/automation/zigbee2mqtt/configuration.yaml"
   local z2m_secret="$DOMUM_DIR/compose/automation/zigbee2mqtt/secret.yaml"
   local expected_owner=""
   [[ "${ENABLE_MQTT:-0}" == "1" ]] || return 0
@@ -256,10 +257,15 @@ validate_mqtt_auth() {
   fi
 
   if [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]]; then
+    if [[ -f "$z2m_config" ]] && grep -Eq ':[[:space:]]*!secret[[:space:]]+' "$z2m_config"; then
+      echo "[!] Zigbee2MQTT configuration uses invalid unquoted !secret tags; use \"!secret key\" strings."
+      issues=1
+    fi
     if [[ ! -f "$z2m_secret" ]]; then
       echo "[!] Zigbee2MQTT secret file is missing MQTT credentials: $z2m_secret"
       issues=1
     else
+      grep -q '^network_key:' "$z2m_secret" || { echo "[!] Zigbee2MQTT secret.yaml is missing network_key"; issues=1; }
       grep -q '^mqtt_user:' "$z2m_secret" || { echo "[!] Zigbee2MQTT secret.yaml is missing mqtt_user"; issues=1; }
       grep -q '^mqtt_pass:' "$z2m_secret" || { echo "[!] Zigbee2MQTT secret.yaml is missing mqtt_pass"; issues=1; }
       grep -Eq "^mqtt_user:[[:space:]]*\"?${MQTT_USER:-domum}\"?[[:space:]]*$" "$z2m_secret" || {
@@ -290,6 +296,28 @@ yaml_set_simple_secret() {
   (( found == 1 )) || printf '%s: "%s"\n' "$key" "$value" >> "$tmp"
   install -m 0600 "$tmp" "$file"
   rm -f "$tmp"
+}
+
+z2m_restore_network_key_from_backup() {
+  local secret="$1" backup="$DOMUM_DIR/compose/automation/zigbee2mqtt/coordinator_backup.json"
+  grep -q '^network_key:' "$secret" 2>/dev/null && return 0
+  [[ -f "$backup" ]] || die "Zigbee2MQTT network_key missing and coordinator backup not found: $backup"
+
+  python3 - "$backup" "$secret" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+backup = Path(sys.argv[1])
+secret = Path(sys.argv[2])
+key_hex = json.loads(backup.read_text())["network_key"]["key"]
+if len(key_hex) != 32:
+    raise SystemExit("unexpected Zigbee network key length")
+key = ", ".join(str(int(key_hex[i:i + 2], 16)) for i in range(0, 32, 2))
+existing = secret.read_text() if secret.exists() else ""
+secret.write_text(f"network_key: [{key}]\n" + existing)
+PY
+  log "Restored Zigbee2MQTT network_key from coordinator backup."
 }
 
 install_mosquitto_runtime_passwd() {
@@ -3437,6 +3465,7 @@ mqtt_init_auth() {
     if [[ ! -f "$z2m_secret.pre-mqtt-init" ]]; then
       install -m 0600 "$z2m_secret" "$z2m_secret.pre-mqtt-init"
     fi
+    z2m_restore_network_key_from_backup "$z2m_secret"
     yaml_set_simple_secret "$z2m_secret" mqtt_user "$MQTT_USER"
     yaml_set_simple_secret "$z2m_secret" mqtt_pass "$password"
     log "Zigbee2MQTT MQTT secrets are present: $z2m_secret"
