@@ -65,6 +65,36 @@ restic dump latest /var/lib/domum-core/service-backups/BACKUP-MANIFEST.json | jq
 Snapshots older than the manifest simply don't have one — consumers treat
 that as informational, never an error.
 
+## Restore verification
+
+`restic check` verifies repository integrity; restore verification proves that a
+small, critical slice can actually be restored and still looks structurally
+usable. Run it manually first, then enable the monthly timer if it passes:
+
+```bash
+sudo domum-core backups verify-restore
+sudo domum-core checkup
+sudo systemctl enable --now domum-core-restore-verify.timer
+```
+
+The command rotates across enabled backup targets, restores only selected paths
+under `/var/lib/domum-core/restore-verify/<timestamp>/`, validates them, records
+the result in `/var/lib/domum-core/backups/last-restore-verify`, and removes the
+staging directory. Use `--keep-staging` only while debugging a failed check.
+
+It verifies:
+
+- Actual Budget data directory contains non-empty files.
+- Home Assistant `configuration.yaml` and `.storage/core.config_entries` exist.
+- The latest MariaDB SQL dump passes `gzip -t` and contains the HA `states`
+  table.
+- Zigbee2MQTT config, and coordinator backup when present in live data, restore.
+- Restored staging artifacts match `BACKUP-MANIFEST.json` checksums when the
+  snapshot contains a manifest.
+
+It does **not** prove app-level semantic correctness or that a full rebuilt Pi
+boots end-to-end. Do the annual [fire drill](fire-drill.md) for that.
+
 **Excluded:** raw MariaDB InnoDB files (`compose/automation/mariadb/data`) are
 intentionally excluded because a hot copy is not a reliable restore source. The
 SQL dump above is the authoritative MariaDB backup. DB WAL/SHM files, TTS
@@ -141,6 +171,7 @@ sudo domum-core backups init local      # only if LOCAL is enabled too
 sudo domum-core backups run --dry-run
 sudo domum-core backups run
 sudo domum-core backups verify
+sudo domum-core backups verify-restore
 sudo domum-core backups snapshots
 sudo domum-core checkup
 ```
@@ -151,6 +182,7 @@ sudo domum-core checkup
 sudo domum-core schedule install-maintenance
 sudo systemctl enable --now domum-core-backups.timer
 sudo systemctl enable --now domum-core-backup-verify.timer
+sudo systemctl enable --now domum-core-restore-verify.timer
 sudo systemctl enable --now domum-core-recovery-pack.timer
 ```
 

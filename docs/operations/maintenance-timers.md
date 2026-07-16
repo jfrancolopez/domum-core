@@ -17,6 +17,7 @@ sudo systemctl enable --now domum-core-updates-check.timer
 sudo systemctl enable --now domum-core-updates-apply.timer
 sudo systemctl enable --now domum-core-security-patches.timer
 sudo systemctl enable --now domum-core-backup-verify.timer
+sudo systemctl enable --now domum-core-restore-verify.timer
 sudo systemctl enable --now domum-core-cleanup-report.timer
 ```
 
@@ -41,6 +42,7 @@ Timer purpose:
 | `domum-core-checkup.timer` | Regular health report in the journal |
 | `domum-core-backups.timer` | Nightly unified service + restic backup |
 | `domum-core-backup-verify.timer` | Weekly `restic check` |
+| `domum-core-restore-verify.timer` | Monthly partial restore verification |
 | `domum-core-recovery-pack.timer` | Refresh encrypted recovery pack |
 | `domum-core-recovery-email.timer` | Email latest encrypted recovery pack if enabled |
 | `domum-core-updates-check.timer` | Record container update candidates |

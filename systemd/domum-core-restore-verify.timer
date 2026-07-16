@@ -1,0 +1,11 @@
+[Unit]
+Description=domum-core: schedule monthly partial restore verification
+
+[Timer]
+OnCalendar=*-*-01 04:45:00
+RandomizedDelaySec=30m
+Persistent=true
+Unit=domum-core-restore-verify.service
+
+[Install]
+WantedBy=timers.target

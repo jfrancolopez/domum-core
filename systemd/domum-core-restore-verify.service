@@ -1,0 +1,15 @@
+[Unit]
+Description=domum-core: monthly partial restore verification
+Documentation=file:///opt/domum-core/docs/backups/overview.md
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=/usr/local/bin/domum-core
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/local/bin/domum-core backups verify-restore
+TimeoutStartSec=8h

@@ -27,6 +27,7 @@ designed to be explicit and backup-aware.
 - [Recovery pack](backups/recovery-pack.md)
 - [Gmail recovery email](backups/gmail-recovery.md)
 - [Disaster recovery](backups/disaster-recovery.md)
+- [Annual recovery fire drill](backups/fire-drill.md)
 - [Migrating between hosts](backups/migrating-between-hosts.md)
 
 ## Services

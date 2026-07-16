@@ -1264,6 +1264,252 @@ backup_bin() {
   echo "$DOMUM_DIR/bin/domum-core-backup"
 }
 
+backup_target_value() {
+  local target="$1" field="$2" fallback="${3:-}" key
+  key="BACKUP_TARGET_$(uppercase_token "$target")_${field}"
+  if [[ -n "${!key:-}" ]]; then printf '%s' "${!key}"; else printf '%s' "$fallback"; fi
+}
+
+backup_target_enabled() {
+  [[ "$(backup_target_value "$1" ENABLED 0)" == "1" ]]
+}
+
+enabled_backup_targets() {
+  local target
+  for target in ${BACKUP_TARGETS:-local hetzner}; do
+    [[ -n "$target" ]] || continue
+    backup_target_enabled "$target" || continue
+    printf '%s\n' "$target"
+  done
+}
+
+shell_join_quoted() {
+  local joined=""
+  printf -v joined '%q ' "$@"
+  printf '%s' "${joined% }"
+}
+
+sftp_repo_user_host() {
+  local repo="$1" spec
+  [[ "$repo" == sftp:* ]] || return 1
+  spec="${repo#sftp:}"; spec="${spec%%:*}"
+  [[ "$spec" == *@* ]] || return 1
+  printf '%s\n%s\n' "${spec%%@*}" "${spec#*@}"
+}
+
+sftp_command_option_for_target() {
+  local target="$1" sftp_key sftp_known_hosts sftp_port repo
+  local -a ssh_cmd=() sftp_parts=()
+  sftp_key="$(backup_target_value "$target" SFTP_KEY_FILE)"
+  sftp_known_hosts="$(backup_target_value "$target" SFTP_KNOWN_HOSTS_FILE)"
+  sftp_port="$(backup_target_value "$target" SFTP_PORT)"
+  [[ -n "$sftp_key" && -f "$sftp_key" ]] || die "SFTP target '$target' missing key file: ${sftp_key:-unset}"
+  repo="$(backup_target_value "$target" REPOSITORY)"
+  mapfile -t sftp_parts < <(sftp_repo_user_host "$repo") \
+    || die "SFTP target '$target' has an unparseable repository: $repo"
+  ssh_cmd=(ssh -F /dev/null -i "$sftp_key")
+  ssh_cmd+=(-o IdentitiesOnly=yes -o PreferredAuthentications=publickey)
+  ssh_cmd+=(-o PasswordAuthentication=no -o StrictHostKeyChecking=yes)
+  [[ -n "$sftp_known_hosts" ]] && { [[ -f "$sftp_known_hosts" ]] || die "SFTP target '$target' missing known-hosts file: $sftp_known_hosts"; ssh_cmd+=(-o UserKnownHostsFile="$sftp_known_hosts"); }
+  [[ -n "$sftp_port" ]] && ssh_cmd+=(-p "$sftp_port")
+  ssh_cmd+=("${sftp_parts[0]}@${sftp_parts[1]}" -s sftp)
+  printf 'sftp.command=%s' "$(shell_join_quoted "${ssh_cmd[@]}")"
+}
+
+restic_for_backup_target() {
+  local target="$1"; shift
+  local pw_file repository env_file sftp_command_opt
+  RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$STATE_ROOT/cache/restic}"
+  pw_file="$(backup_target_value "$target" PASSWORD_FILE "$SECRETS_DIR/restic_password_$target")"
+  repository="$(backup_target_value "$target" REPOSITORY)"
+  env_file="$(backup_target_value "$target" ENV_FILE)"
+  [[ -n "$repository" ]] || die "No BACKUP_TARGET_$(uppercase_token "$target")_REPOSITORY configured."
+  [[ -f "$pw_file" ]] || die "Missing restic password file for target '$target': $pw_file"
+  cmd_exists restic || die "restic is not installed (apt-get install -y restic)."
+
+  (
+    if [[ -n "$env_file" && -f "$env_file" ]]; then
+      set +u
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set -u
+    fi
+    local -a restic_cmd=(restic --cache-dir "$RESTIC_CACHE_DIR")
+    if [[ "$repository" == sftp:* ]]; then
+      sftp_command_opt="$(sftp_command_option_for_target "$target")"
+      restic_cmd+=(-o "$sftp_command_opt")
+    fi
+    restic_cmd+=("$@")
+    RESTIC_PASSWORD_FILE="$pw_file" RESTIC_REPOSITORY="$repository" "${restic_cmd[@]}"
+  )
+}
+
+restore_verify_state_file() { echo "$STATE_ROOT/backups/last-restore-verify"; }
+
+restore_verify_pick_target() {
+  local -a targets=()
+  local target last="" i
+  mapfile -t targets < <(enabled_backup_targets)
+  (( ${#targets[@]} > 0 )) || die "No enabled backup targets."
+  if [[ -f "$(restore_verify_state_file)" ]]; then
+    # shellcheck disable=SC1090
+    source "$(restore_verify_state_file)" 2>/dev/null || true
+    last="${TARGET:-}"
+  fi
+  for i in "${!targets[@]}"; do
+    if [[ "${targets[$i]}" == "$last" ]]; then
+      printf '%s\n' "${targets[$(( (i + 1) % ${#targets[@]} ))]}"
+      return 0
+    fi
+  done
+  printf '%s\n' "${targets[0]}"
+}
+
+restore_verify_latest_snapshot() {
+  local target="$1" out snap
+  out="$(restic_for_backup_target "$target" snapshots --latest 1 --json 2>/dev/null)" \
+    || die "Could not list latest restic snapshot for target '$target'."
+  snap="$(jq -r '.[0].short_id // .[0].id // empty' <<<"$out")"
+  [[ -n "$snap" ]] || die "No snapshots found for target '$target'."
+  printf '%s\n' "$snap"
+}
+
+write_restore_verify_state() {
+  local status="$1" target="$2" snapshot="$3" message="$4" state
+  state="$(restore_verify_state_file)"
+  install -d -m 0750 "$(dirname "$state")"
+  {
+    printf 'STATUS=%q\n' "$status"
+    printf 'TS=%q\n' "$(date +%s)"
+    printf 'ISO=%q\n' "$(date -Iseconds)"
+    printf 'TARGET=%q\n' "$target"
+    printf 'SNAPSHOT=%q\n' "$snapshot"
+    printf 'MESSAGE=%q\n' "$message"
+  } > "$state"
+  chmod 0640 "$state"
+}
+
+restore_verify_file_ok() {
+  local path="$1" label="$2"
+  [[ -s "$path" ]] || { warn "restore verification missing/empty $label: $path"; return 1; }
+}
+
+restore_verify_dir_has_files() {
+  local path="$1" label="$2"
+  [[ -d "$path" ]] || { warn "restore verification missing $label dir: $path"; return 1; }
+  find "$path" -type f -size +0c 2>/dev/null | grep -q . \
+    || { warn "restore verification found no non-empty files in $label: $path"; return 1; }
+}
+
+restore_verify_manifest_checksums() {
+  local stage="$1" mf rel expected restored actual verified=0 rc=0
+  mf="$stage$(backup_manifest_file)"
+  [[ -f "$mf" ]] || { log "No BACKUP-MANIFEST.json in snapshot; checksum verification skipped."; return 0; }
+  cmd_exists jq || { warn "jq missing; manifest checksum verification skipped."; return 0; }
+  while IFS=$'\t' read -r rel expected; do
+    [[ -n "$rel" && -n "$expected" ]] || continue
+    restored="$stage$STATE_ROOT/service-backups/$rel"
+    [[ -f "$restored" ]] || continue
+    actual="$(sha256_of_file "$restored")"
+    if [[ "$actual" != "$expected" ]]; then
+      warn "restore verification checksum mismatch: $rel"
+      rc=1
+    else
+      verified=$(( verified + 1 ))
+    fi
+  done < <(jq -r '.artifacts[]? | [.path, .sha256] | @tsv' "$mf")
+  log "Manifest checksum verification checked $verified restored artifact(s)."
+  return "$rc"
+}
+
+restore_verify_validate_staging() {
+  local stage="$1" rc=0 actual_dir ha_dir z2m_dir mariadb_dir dump
+  actual_dir="$stage$(actual_data_dir)"
+  ha_dir="$stage$(ha_config_dir)"
+  z2m_dir="$stage$(backup_src_dir_for zigbee2mqtt)"
+  mariadb_dir="$stage$STATE_ROOT/service-backups/mariadb"
+
+  restore_verify_dir_has_files "$actual_dir" "Actual Budget data" || rc=1
+  restore_verify_file_ok "$ha_dir/configuration.yaml" "Home Assistant configuration.yaml" || rc=1
+  restore_verify_file_ok "$ha_dir/.storage/core.config_entries" "Home Assistant core.config_entries" || rc=1
+  restore_verify_file_ok "$z2m_dir/configuration.yaml" "Zigbee2MQTT configuration.yaml" || rc=1
+  if [[ -f "$(backup_src_dir_for zigbee2mqtt)/coordinator_backup.json" ]]; then
+    restore_verify_file_ok "$z2m_dir/coordinator_backup.json" "Zigbee2MQTT coordinator_backup.json" || rc=1
+  fi
+
+  dump="$(find "$mariadb_dir" -maxdepth 1 -name 'mariadb-all-*.sql.gz' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)"
+  if [[ -z "$dump" ]]; then
+    warn "restore verification found no MariaDB SQL dump."
+    rc=1
+  else
+    gzip -t "$dump" 2>/dev/null || { warn "restore verification MariaDB dump failed gzip test: $dump"; rc=1; }
+    zgrep -qE "CREATE TABLE.*\`?states\`?" "$dump" 2>/dev/null \
+      || { warn "restore verification MariaDB dump does not contain a states table: $dump"; rc=1; }
+  fi
+
+  restore_verify_manifest_checksums "$stage" || rc=1
+  return "$rc"
+}
+
+verify_restore_cmd() {
+  local target="" keep_staging=0 arg snapshot stage rc=0 free_kb
+  while (( $# )); do
+    arg="$1"; shift
+    case "$arg" in
+      --target) target="${1:-}"; shift || true ;;
+      --keep-staging) keep_staging=1 ;;
+      *) die "Usage: domum-core backups verify-restore [--target <name>] [--keep-staging]" ;;
+    esac
+  done
+
+  ensure_state_dirs
+  RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$STATE_ROOT/cache/restic}"
+  install -d -m 0750 "$RESTIC_CACHE_DIR" "$STATE_ROOT/restore-verify"
+  cmd_exists jq || die "jq is required for restore verification (run: sudo domum-core init)."
+
+  free_kb="$(df -Pk "$STATE_ROOT" 2>/dev/null | awk 'NR==2 {print $4}')"
+  if [[ -n "$free_kb" && "$free_kb" =~ ^[0-9]+$ && "$free_kb" -lt 2097152 ]]; then
+    warn "$STATE_ROOT has less than 2 GiB free; skipping restore verification."
+    write_restore_verify_state skip "${target:-auto}" "" "less than 2 GiB free"
+    return 0
+  fi
+
+  [[ -n "$target" ]] || target="$(restore_verify_pick_target)"
+  backup_target_enabled "$target" || die "Backup target '$target' is not enabled."
+  snapshot="$(restore_verify_latest_snapshot "$target")"
+  stage="$STATE_ROOT/restore-verify/$(date +%Y%m%d-%H%M%S)-$target"
+  install -d -m 0750 "$stage"
+
+  log "Restore-verifying target '$target' snapshot '$snapshot' into $stage"
+  local -a restore_args=(restore "$snapshot" --target "$stage")
+  restore_args+=(--include "$(actual_data_dir)")
+  restore_args+=(--include "$(ha_config_dir)")
+  restore_args+=(--include "$(backup_src_dir_for zigbee2mqtt)")
+  restore_args+=(--include "$STATE_ROOT/service-backups/mariadb")
+  restore_args+=(--include "$(backup_manifest_file)")
+  if ! restic_for_backup_target "$target" "${restore_args[@]}"; then
+    rc=1
+    warn "restic partial restore failed for target '$target'."
+  elif ! restore_verify_validate_staging "$stage"; then
+    rc=1
+  fi
+
+  if (( rc == 0 )); then
+    write_restore_verify_state ok "$target" "$snapshot" "restore verification passed"
+    log "Restore verification passed for $target/$snapshot."
+  else
+    write_restore_verify_state fail "$target" "$snapshot" "restore verification failed"
+    warn "Restore verification failed for $target/$snapshot."
+  fi
+
+  if (( keep_staging == 1 )); then
+    log "Keeping restore verification staging dir: $stage"
+  else
+    rm -rf "$stage"
+  fi
+  return "$rc"
+}
+
 # ---- per-run backup manifest ------------------------------------------------
 # One JSON file describing what this run backed up, from what software state,
 # with per-artifact sha256. Overwritten each run — history lives in restic
@@ -1439,6 +1685,7 @@ backups_cmd() {
       (( svc_rc == 0 && restic_rc == 0 ))
       ;;
     verify)    "$bin" --check ;;
+    verify-restore) verify_restore_cmd "$@" ;;
     history)
       if [[ -f "$(backup_history_log)" ]]; then cat "$(backup_history_log)"; else echo "No backup history yet."; fi
       ;;
@@ -1451,7 +1698,7 @@ backups_cmd() {
       fi
       ;;
     init)      "$bin" init "$@" ;;
-    *) die "Usage: domum-core backups {run [--dry-run]|verify|snapshots|history|prune [--dry-run]|init <target>}" ;;
+    *) die "Usage: domum-core backups {run [--dry-run]|verify|verify-restore [--target <name>] [--keep-staging]|snapshots|history|prune [--dry-run]|init <target>}" ;;
   esac
 }
 
@@ -3212,6 +3459,34 @@ run_checkup() {
     done
   else
     checkup_add warning "No successful restic backup recorded yet."
+  fi
+
+  # --- partial restore verification freshness ---
+  local rv_state rv_status rv_ts rv_target rv_snapshot rv_message rv_age_days
+  rv_state="$(restore_verify_state_file)"
+  if [[ -f "$rv_state" ]]; then
+    STATUS="" TS="0" TARGET="" SNAPSHOT="" MESSAGE=""
+    # shellcheck disable=SC1090
+    source "$rv_state" 2>/dev/null || true
+    rv_status="$STATUS"; rv_ts="$(to_int "${TS:-0}")"; rv_target="$TARGET"; rv_snapshot="$SNAPSHOT"; rv_message="$MESSAGE"
+    if [[ "$rv_status" == "fail" ]]; then
+      checkup_add warning "Last restore verification failed for ${rv_target:-unknown}/${rv_snapshot:-unknown}: ${rv_message:-see logs}."
+      checkup_add action "sudo domum-core backups verify-restore --keep-staging"
+    elif [[ "$rv_status" == "skip" ]]; then
+      checkup_add warning "Last restore verification was skipped: ${rv_message:-unknown reason}."
+      checkup_add action "sudo domum-core backups verify-restore"
+    elif (( rv_ts > 0 )); then
+      rv_age_days=$(( ( $(date +%s) - rv_ts ) / 86400 ))
+      if (( rv_age_days > 40 )); then
+        checkup_add warning "Last restore verification is ${rv_age_days}d old (limit 40d)."
+        checkup_add action "sudo domum-core backups verify-restore"
+      else
+        checkup_add healthy "Last restore verification passed ${rv_age_days}d ago on ${rv_target:-unknown}."
+      fi
+    fi
+  else
+    checkup_add warning "No restore verification has been recorded yet."
+    checkup_add action "sudo domum-core backups verify-restore"
   fi
 
   # --- service-level backups present ---
