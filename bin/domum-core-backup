@@ -17,7 +17,7 @@ LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
 REPO_META_DIR="${REPO_META_DIR:-$STATE_ROOT/backups}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
-log() { echo "[$(date -Iseconds)] $*" | tee -a "${LOG_FILE:-/dev/null}" >&2; }
+log() { echo "[$(date -Iseconds)] $*" | tee -a "${LOG_FILE:-/dev/null}"; }
 need_root() { [[ "${EUID}" -eq 0 ]] || die "Run as root (use sudo)."; }
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 

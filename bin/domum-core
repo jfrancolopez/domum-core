@@ -25,8 +25,8 @@ LOG_DIR="${LOG_DIR:-/var/log/domum-core}"
 
 # ---- output helpers --------------------------------------------------------
 
-log()  { echo "[domum-core] $*"; }
-warn() { echo "[domum-core] WARN: $*" >&2; }
+log()  { echo "[$(date +%H:%M:%S)] [domum-core] $*"; }
+warn() { echo "[$(date +%H:%M:%S)] [domum-core] WARN: $*" >&2; }
 die()  { echo "ERROR: $*" >&2; exit 1; }
 
 DRY_RUN=0
