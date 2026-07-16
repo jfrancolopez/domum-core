@@ -13,8 +13,8 @@ compose/automation/zigbee2mqtt/secret.yaml
 compose/automation/zigbee2mqtt/secret.yaml.pre-mqtt-init
 compose/automation/mqtt/config/passwd
 
-# Live generated app config with credentials/password hashes.
-compose/productivity/obsidian-sync/etc/docker.ini
+# Live generated CouchDB config with credentials/password hashes.
+compose/productivity/obsidian-sync/etc/
 
 # Live AdGuard config includes local setup state and password hashes.
 compose/networking/adguard/conf/
