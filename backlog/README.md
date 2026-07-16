@@ -43,7 +43,7 @@ big recovery work is built against it.
 | 22 | [Guided restore: `domum-core restore`](task-22-guided-restore-command.md) ✅ done (870b951) — sandbox-verified end-to-end (real restic/age/rsync); on the Pi run read-only steps 1–2 only; full drill is task 23's rehearsal | large | medium |
 | 23 | [Automated restore verification (monthly) + annual fire drill](task-23-restore-verification.md) ✅ done (4cd9f08; Hetzner restore-verify host-validated 2026-07-16) | medium | low |
 | 39 | [App-consistent offsite service archives for database-style apps](task-39-app-consistent-offsite-service-archives.md) ✅ done (d9928eb; Hetzner snapshot 28831507 restore-verified 2026-07-16) | medium | medium |
-| 24 | [Multi-destination backups: Buffalo/Unraid/USB](task-24-multi-destination-backups.md) | medium | low-med |
+| 24 | [Multi-destination backups: Buffalo/Unraid/USB](task-24-multi-destination-backups.md) ✅ code done (6f81552) — host acceptance remains: configure/initialize LAN NAS target if desired and test `backups usb <mount>` on a scratch mounted disk | medium | low-med |
 | 34 | [Make `init` converge the host (disposable OS)](task-34-init-host-convergence.md) ✅ done (04fdd2b; host-validated 2026-07-16) | small-med | low-med |
 
 Note: the wrong restic `--target` command in disaster-recovery.md (task 26,
