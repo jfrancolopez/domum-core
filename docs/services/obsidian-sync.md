@@ -29,7 +29,8 @@ when the password is empty or still set to `changeme`.
 
 The service is exposed as `https://obsidian.${DOMUM_DOMAIN}` unless
 `OBSIDIAN_DOMAIN` overrides it. CouchDB tuning for authenticated access and CORS lives in
-`compose/productivity/obsidian-sync/local.ini` and is mounted read-only.
+`compose/productivity/obsidian-sync/local.ini`; `domum-core apply` copies it into
+the ignored runtime config directory.
 
 Do not add a CouchDB `[admins]` block or password hashes to that tracked file.
 The admin user and password come from `OBSIDIAN_COUCHDB_USER` and

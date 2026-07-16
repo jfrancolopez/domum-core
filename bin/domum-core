@@ -287,6 +287,15 @@ ensure_zigbee2mqtt_runtime_config() {
   done
 }
 
+ensure_obsidian_runtime_config() {
+  [[ "${ENABLE_OBSIDIAN_SYNC:-0}" == "1" ]] || return 0
+  local src="$DOMUM_DIR/compose/productivity/obsidian-sync/local.ini"
+  local dst_dir="$DOMUM_DIR/compose/productivity/obsidian-sync/etc"
+  [[ -f "$src" ]] || die "Missing Obsidian CouchDB config template: $src"
+  install -d -m 0750 "$dst_dir"
+  install -m 0644 "$src" "$dst_dir/local.ini"
+}
+
 random_password() {
   od -An -tx1 -N24 /dev/urandom | tr -d ' \n'
 }
@@ -787,6 +796,7 @@ apply() {
   ensure_dirs
   ensure_state_dirs
   ensure_zigbee2mqtt_runtime_config
+  ensure_obsidian_runtime_config
 
   log "Applying desired state..."
   compose_cmd --profile core up -d --remove-orphans

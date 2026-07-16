@@ -19,8 +19,6 @@ services:
       - /opt/domum-core/compose/productivity/obsidian-sync/data:/opt/couchdb/data
       # Writable runtime config dir for CouchDB-generated docker.ini/admin hashes.
       - /opt/domum-core/compose/productivity/obsidian-sync/etc:/opt/couchdb/etc/local.d
-      # Tracked tuning config is mounted read-only so CouchDB cannot rewrite it.
-      - /opt/domum-core/compose/productivity/obsidian-sync/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy
