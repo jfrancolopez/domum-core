@@ -278,6 +278,15 @@ validate_mqtt_auth() {
   return "$issues"
 }
 
+ensure_zigbee2mqtt_runtime_config() {
+  [[ "${ENABLE_ZIGBEE2MQTT:-0}" == "1" ]] || return 0
+  local dir="$DOMUM_DIR/compose/automation/zigbee2mqtt" f
+  install -d -m 0750 "$dir"
+  for f in devices.yaml groups.yaml; do
+    [[ -f "$dir/$f" ]] || install -m 0644 /dev/null "$dir/$f"
+  done
+}
+
 random_password() {
   od -An -tx1 -N24 /dev/urandom | tr -d ' \n'
 }
@@ -777,6 +786,7 @@ apply() {
   install_docker
   ensure_dirs
   ensure_state_dirs
+  ensure_zigbee2mqtt_runtime_config
 
   log "Applying desired state..."
   compose_cmd --profile core up -d --remove-orphans

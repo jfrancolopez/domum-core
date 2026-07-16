@@ -11,6 +11,8 @@ logs/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 compose/automation/zigbee2mqtt/secret.yaml.pre-mqtt-init
+compose/automation/zigbee2mqtt/devices.yaml
+compose/automation/zigbee2mqtt/groups.yaml
 compose/automation/mqtt/config/passwd
 
 # Live generated CouchDB config with credentials/password hashes.

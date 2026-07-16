@@ -18,4 +18,6 @@ advanced:
   network_key: '!secret network_key'
 
 permit_join: false
+devices: devices.yaml
+groups: groups.yaml
 version: 5

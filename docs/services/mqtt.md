@@ -29,10 +29,15 @@ The command is idempotent. It never rotates an existing MQTT password:
   the `mqtt_user` and `mqtt_pass` entries, with a local `.pre-mqtt-init` backup;
   if `network_key` is missing, restores it from Zigbee2MQTT's
   `coordinator_backup.json`
+- `/opt/domum-core/compose/automation/zigbee2mqtt/devices.yaml` and
+  `groups.yaml` — runtime Zigbee device/group state, ignored by git
 
 The runtime `config/passwd` copy is ignored by git and exists only because
 Mosquitto runs as a non-root user inside the container. The files under
 `/etc/domum-core/secrets` remain root-only.
+Zigbee2MQTT device and group state is also ignored by git; the tracked
+`configuration.yaml` points Zigbee2MQTT at `devices.yaml` and `groups.yaml` so
+normal joins/renames do not dirty the repository.
 
 ## Stage Consumers Before Apply
 
