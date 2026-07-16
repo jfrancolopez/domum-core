@@ -67,6 +67,8 @@ network_key: '!secret network_key'
 ```
 
 Unquoted `!secret` tags fail validation in current Zigbee2MQTT versions.
+Zigbee network-key rotation is a separate disruptive maintenance operation; use
+the [Zigbee network key rotation runbook](../reference/zigbee-key-rotation.md).
 
 ## Apply And Verify
 

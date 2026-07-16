@@ -49,6 +49,7 @@ designed to be explicit and backup-aware.
 - [Remove a service](reference/removing-service.md)
 - [Git workflow](reference/git-workflow.md)
 - [Hardware devices](reference/hardware-devices.md)
+- [Zigbee network key rotation](reference/zigbee-key-rotation.md)
 - [MariaDB troubleshooting](reference/mariadb-troubleshoot.md)
 - [Secrets](reference/secrets.md)
 - [DNS](reference/dns.md)

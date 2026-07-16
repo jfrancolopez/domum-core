@@ -27,6 +27,10 @@ drift is fixed.
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.
 
+Zigbee2MQTT `secret.yaml` contains the live Zigbee network key. If the key needs
+to change, use the planned maintenance runbook:
+[Zigbee network key rotation](zigbee-key-rotation.md).
+
 ## Traefik Dashboard Auth
 
 The dashboard basic-auth file is mounted from
