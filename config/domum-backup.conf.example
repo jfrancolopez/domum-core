@@ -51,7 +51,7 @@ BACKUP_MAX_AGE_HOURS=48
 # SECTION: backup targets (ALL DISABLED by default)
 # ============================================================
 # Which target names exist. The CLI looks up BACKUP_TARGET_<UPPER>_* for each.
-BACKUP_TARGETS="local hetzner"
+BACKUP_TARGETS="local hetzner buffalo"
 
 # ---- Target: LOCAL (NAS mount / external disk) ----
 BACKUP_TARGET_LOCAL_ENABLED=0
@@ -73,6 +73,18 @@ BACKUP_TARGET_HETZNER_RETENTION="daily"
 BACKUP_TARGET_HETZNER_SFTP_KEY_FILE="/etc/domum-core/secrets/hetzner_storagebox_ed25519"
 BACKUP_TARGET_HETZNER_SFTP_KNOWN_HOSTS_FILE="/etc/domum-core/secrets/hetzner_storagebox_known_hosts"
 BACKUP_TARGET_HETZNER_SFTP_PORT="23"
+
+# ---- Target: BUFFALO / LAN NAS (SFTP, disabled by default) ----
+# Prefer SFTP over NFS/SMB mounts: no fstab dependency and no hung-mount risk at
+# boot. Use whichever LAN NAS is more reliable/always-on as the second nightly
+# target; replicate that repo NAS-side to the other NAS if desired.
+BACKUP_TARGET_BUFFALO_ENABLED=0
+BACKUP_TARGET_BUFFALO_REPOSITORY="sftp:backup@buffalo-nas:domum-core-restic"
+BACKUP_TARGET_BUFFALO_PASSWORD_FILE="/etc/domum-core/secrets/restic_password_buffalo"
+BACKUP_TARGET_BUFFALO_RETENTION="daily"
+BACKUP_TARGET_BUFFALO_SFTP_KEY_FILE="/etc/domum-core/secrets/buffalo_backup_ed25519"
+BACKUP_TARGET_BUFFALO_SFTP_KNOWN_HOSTS_FILE="/etc/domum-core/secrets/buffalo_known_hosts"
+BACKUP_TARGET_BUFFALO_SFTP_PORT="22"
 
 # ---- Target: CLOUD (Backblaze B2 / S3) — placeholder, commented ----
 # Add "cloud" to BACKUP_TARGETS above to enable this slot.

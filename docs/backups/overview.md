@@ -131,12 +131,31 @@ sudo apt-get install -y restic
 
 ## 2. Choose targets
 
-Edit `/opt/domum-core/config/domum-backup.conf`. Two slots are pre-wired:
+Edit `/opt/domum-core/config/domum-backup.conf`. Three scheduled target slots are
+pre-wired and disabled by default:
 
 - **LOCAL** — a local NAS mount or external disk (`/mnt/backup/domum-core`).
 - **HETZNER** — a Hetzner Storage Box over SFTP (port 23, SSH-key auth).
+- **BUFFALO** — a LAN NAS over SFTP (port 22, SSH-key auth).
 
 A commented **CLOUD** (Backblaze B2 / S3) slot is included as a template.
+
+Recommended destination shape:
+
+| Destination | How | Cadence | Restore speed | Independent? |
+|---|---|---|---|---|
+| Hetzner Storage Box | restic SFTP | nightly | slow WAN | yes |
+| Buffalo or Unraid NAS | restic SFTP | nightly | fast LAN | yes |
+| Second NAS | NAS-side repo sync | daily | fast LAN | replica |
+| USB disk | `domum-core backups usb` | manual | fastest | yes, offline |
+
+Decision: do **not** make the Pi push to every possible destination nightly.
+Four independent restic writes from the Pi means longer backup windows, more
+credentials, more prune/check work, and more ways for a flaky LAN target to page
+you. The standard shape is Hetzner + one reliable LAN NAS as first-class restic
+targets, then replicate that LAN repo NAS-side to the second NAS outside the
+02:00-04:00 backup window. A replicated restic repo restores with the same restic
+password as the source repo.
 
 ## 3. Create restic passwords
 
@@ -174,7 +193,13 @@ fail during `restic init`.
 # set BACKUP_TARGET_<NAME>_ENABLED=1 in domum-backup.conf first
 sudo domum-core backups init hetzner
 sudo domum-core backups init local      # only if LOCAL is enabled too
+sudo domum-core backups init buffalo    # only if BUFFALO is enabled too
 ```
+
+For Buffalo/LAN SFTP, create a dedicated NAS backup user, store its SSH key in
+`/etc/domum-core/secrets/buffalo_backup_ed25519`, pin the NAS host key in
+`/etc/domum-core/secrets/buffalo_known_hosts`, then enable the target in
+`domum-backup.conf`.
 
 ## 6. Dry run, then for real
 
@@ -196,6 +221,31 @@ sudo systemctl enable --now domum-core-backup-verify.timer
 sudo systemctl enable --now domum-core-restore-verify.timer
 sudo systemctl enable --now domum-core-recovery-pack.timer
 ```
+
+## Manual USB Backups
+
+USB backups are explicit and unscheduled: plug in a disk, mount it, run one
+command, unmount it, and store it offline.
+
+The USB repository lives at `<mount-point>/domum-core-restic` and uses the LOCAL
+restic password file (`BACKUP_TARGET_LOCAL_PASSWORD_FILE`). That is intentional:
+one fewer emergency password to preserve.
+
+```bash
+sudo mount /dev/disk/by-label/DOMUM-USB /mnt/domum-usb
+sudo domum-core backups usb /mnt/domum-usb
+sudo umount /mnt/domum-usb
+```
+
+The command refuses `/`, refuses unmounted directories, initializes the USB repo
+on first use, runs a restic backup with the normal source set, prints recent
+snapshots, and records `/var/lib/domum-core/backups/last-usb-success`. `checkup`
+shows that timestamp when present, but never warns about USB age because USB is
+manual by design.
+
+To restore from USB, mount the disk and temporarily define a normal restic target
+whose repository points at `<mount-point>/domum-core-restic`, using the LOCAL
+password file, then use the normal restore workflow.
 
 ## Retention
 

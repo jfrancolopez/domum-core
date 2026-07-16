@@ -1710,6 +1710,7 @@ backups_cmd() {
       if [[ -f "$(backup_history_log)" ]]; then cat "$(backup_history_log)"; else echo "No backup history yet."; fi
       ;;
     snapshots) "$bin" --snapshots ;;
+    usb)       "$bin" usb "$@" ;;
     prune)
       if [[ "${1:-}" == "--dry-run" ]]; then
         "$bin" --prune-dry-run
@@ -1718,7 +1719,7 @@ backups_cmd() {
       fi
       ;;
     init)      "$bin" init "$@" ;;
-    *) die "Usage: domum-core backups {run [--dry-run]|verify|verify-restore [--target <name>] [--keep-staging]|snapshots|history|prune [--dry-run]|init <target>}" ;;
+    *) die "Usage: domum-core backups {run [--dry-run]|verify|verify-restore [--target <name>] [--keep-staging]|snapshots|history|prune [--dry-run]|init <target>|usb <mount-point>}" ;;
   esac
 }
 
@@ -3507,6 +3508,12 @@ run_checkup() {
   else
     checkup_add warning "No restore verification has been recorded yet."
     checkup_add action "sudo domum-core backups verify-restore"
+  fi
+
+  local usb_hb
+  usb_hb="$STATE_ROOT/backups/last-usb-success"
+  if [[ -f "$usb_hb" ]]; then
+    checkup_add healthy "Last manual USB backup: $(cat "$usb_hb")."
   fi
 
   # --- service-level backups present ---
