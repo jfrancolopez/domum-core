@@ -85,7 +85,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 | 30 | [Compose + gitignore hygiene batch](task-30-compose-hygiene.md) | small-med | low-med |
 | 38 | [Ignore ESPHome live config and secrets](task-38-ignore-esphome-live-config.md) | ✅ done (10edf9e) | trivial | low |
 | 27 | [Rewrite install doc for NVMe / Debian 13](task-27-install-doc-rewrite.md) | small-med | none |
-| 12 | [Remove tracked traefik usersfile placeholder](task-12-remove-usersfile.md) | trivial | low |
+| 12 | [Remove tracked traefik usersfile placeholder](task-12-remove-usersfile.md) ✅ done (a644161) | trivial | low |
 | 14 | [Docs index completeness pass](task-14-docs-index.md) | trivial | none |
 | 15 | [Unified logging convention](task-15-logging-convention.md) **[shared-philosophy]** | small | low |
 | 16 | [Git workflow conventions doc](task-16-git-conventions.md) **[shared-philosophy]** | small | none |
