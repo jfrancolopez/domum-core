@@ -89,7 +89,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 | 14 | [Docs index completeness pass](task-14-docs-index.md) ✅ done (46541bf) | trivial | none |
 | 15 | [Unified logging convention](task-15-logging-convention.md) **[shared-philosophy]** | small | low |
 | 16 | [Git workflow conventions doc](task-16-git-conventions.md) **[shared-philosophy]** | small | none |
-| 35 | [Update/install must not depend on operator SSH identity](task-35-anonymous-fetch-resilience.md) | trivial-small | none |
+| 35 | [Update/install must not depend on operator SSH identity](task-35-anonymous-fetch-resilience.md) ✅ done (a60abad) | trivial-small | none |
 
 ### Phase 5 — Needs the operator (host access / maintenance window)
 
