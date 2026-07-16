@@ -55,7 +55,7 @@ Items A2–D of task 26 remain open.
 | # | Task | Complexity | Risk |
 |---|------|-----------|------|
 | 25 | [Weekly health report email](task-25-weekly-health-report.md) | medium | low |
-| 28 | [Checkup: USB radio device presence](task-28-checkup-usb-radio-presence.md) | small | low |
+| 28 | [Checkup: USB radio device presence](task-28-checkup-usb-radio-presence.md) ✅ done (623377c) | small | low |
 | 05 | [Fix stale documentation references](task-05-stale-doc-references.md) — ✅ done (a3ffbb4); remember `schedule install-maintenance` on the Pi to refresh installed units | small | none |
 
 ### Phase 3 — Update model hardening
