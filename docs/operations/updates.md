@@ -110,11 +110,11 @@ future major's migration notes.
 
 Current defaults:
 
-- Infrastructure can auto-update after short delays.
-- Home automation core is manual by default.
-- Stateful apps are mostly manual until task 36 implements the safer unattended
-  pipeline and image-age nags.
-- Home Assistant is manual because it is the main automation hub.
+- Traefik and AdGuard can auto-update after short delays.
+- Normal apps can auto-update after backup and delay gates.
+- MariaDB, Home Assistant, Zigbee2MQTT, and Z-Wave JS UI are protected manual
+  services because they can involve database migrations, HA behavior changes,
+  or radio network/device risk.
 
 ## Candidate lifecycle
 
