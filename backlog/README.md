@@ -81,7 +81,7 @@ rot-nagging); it supersedes 31. Order: 10 (formalize the emergency pin) →
 |---|------|-----------|------|
 | 06 | [Night profile: delete, or rebuild on the catalog](task-06-night-profile-from-catalog.md) ✅ done (bf8e59a) | medium | medium |
 | 07 | [CI cleanup and alignment with sibling](task-07-ci-cleanup.md) ✅ done (3248b53) **[shared-philosophy]** | small | low |
-| 08 | [Catalog-consistency smoke tests](task-08-catalog-smoke-tests.md) **[shared-philosophy]** | medium | low |
+| 08 | [Catalog-consistency smoke tests](task-08-catalog-smoke-tests.md) ✅ done (41bee61) **[shared-philosophy]** | medium | low |
 | 30 | [Compose + gitignore hygiene batch](task-30-compose-hygiene.md) | small-med | low-med |
 | 38 | [Ignore ESPHome live config and secrets](task-38-ignore-esphome-live-config.md) | ✅ done (10edf9e) | trivial | low |
 | 27 | [Rewrite install doc for NVMe / Debian 13](task-27-install-doc-rewrite.md) | small-med | none |
