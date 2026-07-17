@@ -58,6 +58,7 @@ Items A2–D of task 26 remain open.
 | 41 | [Weekly report: retro HTML email + mobile text](task-41-weekly-report-retro-html.md) ✅ code done (2a0d010, 2026-07-16); Pi send + mail-client check pending | small | low |
 | 42 | [Weekly report: extra content sections](task-42-weekly-report-extra-sections.md) ✅ done 2026-07-16 (sparklines, NVMe, power; rot table resolved as redundant; Pi-verified) | small | low |
 | 43 | [Weekly report: escalating attention colors](task-43-report-threshold-colors.md) ✅ done 2026-07-17 | small | low |
+| 44 | [Weekly report: monthly/yearly averages](task-44-report-monthly-averages.md) ✅ done 2026-07-17 | small | low |
 | 28 | [Checkup: USB radio device presence](task-28-checkup-usb-radio-presence.md) ✅ done (623377c) | small | low |
 | 05 | [Fix stale documentation references](task-05-stale-doc-references.md) — ✅ done (a3ffbb4); remember `schedule install-maintenance` on the Pi to refresh installed units | small | none |
 
