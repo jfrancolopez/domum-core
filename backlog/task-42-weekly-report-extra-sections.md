@@ -20,8 +20,17 @@
   add noise for a non-technical reader. Do not re-propose unless the
   findings path proves insufficient.
 - Verified off-Pi with stubbed smartctl/vcgencmd/history.csv and browser
-  render at iPhone + laptop widths; hardware-path check on the Pi remains
-  (run `report weekly --stdout` there once).
+  render at iPhone + laptop widths; hardware sections confirmed live on
+  the Pi 2026-07-16 (NVMe + PMIC lines rendered real values).
+- First Pi run exposed a latent task-25 bug: history.csv's trim
+  (`head -n1; tail -n 120`) re-included the header when the file was
+  short, stacking duplicate header lines; the trends parser then fed
+  header text into the sparkline math (negative levels → bash
+  `${glyphs[-]}` arithmetic error). Fixed: append now writes header +
+  deduped rows (one row per day — a re-run replaces today's row) and
+  strips legacy duplicate headers, so existing files self-heal on the
+  next run; trend values are additionally filtered to numerics and
+  sparkline levels clamped to 0–7.
 
 ## Objective
 Add more *useful* information to the weekly report without hurting its

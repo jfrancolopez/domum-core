@@ -3779,10 +3779,18 @@ report_append_history() {
   temp="$(pi_temp_c 2>/dev/null || true)"
   containers="$(docker ps --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')"
   journal_errors="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
-  printf '%s,%s,%s,%s,%s,%s\n' "$(date -I)" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}" >> "$hist"
-  local tmp
+  local today tmp
+  today="$(date -I)"
   tmp="$(mktemp)"
-  { head -n1 "$hist"; tail -n 120 "$hist"; } > "$tmp"
+  {
+    head -n 1 "$hist"
+    # One row per day: a re-run replaces today's row instead of stacking
+    # points, so trends stay week-by-week. The grep -v '^date,' also heals
+    # header lines duplicated by the old trim ('tail -n 120' re-included
+    # the header whenever the file was short).
+    tail -n +2 "$hist" | grep -v '^date,' | grep -v "^${today}," | tail -n 119 || true
+    printf '%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}"
+  } > "$tmp"
   mv "$tmp" "$hist"
   chmod 0640 "$hist"
 }
@@ -3804,11 +3812,16 @@ report_print_file_age() {
 report_sparkline() {
   local glyphs=(▁ ▂ ▃ ▄ ▅ ▆ ▇ █) levels out="" i
   levels="$(printf '%s\n' "$@" | awk '
-    NF { v[++n] = $1; if (min == "" || $1 < min) min = $1; if (max == "" || $1 > max) max = $1 }
+    NF { v[++n] = $1 + 0; if (n == 1 || v[n] < min) min = v[n]; if (n == 1 || v[n] > max) max = v[n] }
     END {
       if (n == 0) exit
       r = max - min
-      for (i = 1; i <= n; i++) printf "%d", (r == 0) ? 3 : int((v[i] - min) / r * 7 + 0.5)
+      for (i = 1; i <= n; i++) {
+        l = (r == 0) ? 3 : int((v[i] - min) / r * 7 + 0.5)
+        if (l < 0) l = 0
+        if (l > 7) l = 7
+        printf "%d", l
+      }
     }')"
   for (( i = 0; i < ${#levels}; i++ )); do out+="${glyphs[${levels:i:1}]}"; done
   printf '%s' "$out"
@@ -3818,7 +3831,7 @@ report_sparkline() {
 # history.csv column, and the latest value.
 report_trend_line() {
   local hist="$1" col="$2" label="$3" suffix="$4" vals last
-  vals="$(tail -n +2 "$hist" | tail -n 8 | awk -F, -v c="$col" '$c != "" { print $c }')"
+  vals="$(tail -n +2 "$hist" | tail -n 8 | awk -F, -v c="$col" '$c ~ /^[0-9]+([.][0-9]+)?$/ { print $c }')"
   [[ -n "$vals" ]] || return 0
   last="$(printf '%s\n' "$vals" | tail -n 1)"
   # shellcheck disable=SC2086
