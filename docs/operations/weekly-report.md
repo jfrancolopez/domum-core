@@ -7,9 +7,12 @@ suggested actions from `checkup`.
 
 The email is sent as `multipart/alternative`: a plain-text version (the
 source of truth) plus an HTML wrapper styled for phones and Gmail — single
-600px column, monospace, cream paper with terminal-green accents, `●/▲/✗`
-status glyphs, all styles inline, no images or scripts. Mail clients that
-prefer HTML show the styled version; everything else falls back to the text.
+600px column, monospace, dark phosphor-terminal palette (deep green-black
+paper, glowing green masthead, amber/red only for findings), `●/▲/✗` status
+glyphs, all styles inline, no images or scripts. The blinking terminal
+cursor animates in Apple Mail and degrades to a static cursor in Gmail.
+Mail clients that prefer HTML show the styled version; everything else
+falls back to the text.
 
 It sends at most one report when the systemd timer runs and
 `REPORT_EMAIL_ENABLED=1`. With email disabled, the timer exits cleanly without

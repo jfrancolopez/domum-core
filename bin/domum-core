@@ -3805,7 +3805,11 @@ report_render_weekly() {
   glyph="$(report_verdict_glyph)"
   report_append_history || warn "Could not append report history."
   {
-    printf '╔══ DOMUM-CORE // WEEKLY ══ %s ══╗\n' "$(date -I)"
+    printf '╔══════════════════════════════════════╗\n'
+    printf '║ %-36s ║\n' "DOMUM-CORE // HOUSEHOLD MONITOR"
+    printf '║ %-36s ║\n' "WEEKLY REPORT // $(date -I)"
+    printf '╚══════════════════════════════════════╝\n'
+    printf '> weekly self-diagnostic complete\n'
     printf 'Verdict: %s %s\n\n' "$glyph" "$verdict"
 
     report_hdr "BACKUPS"
@@ -3873,12 +3877,12 @@ report_render_weekly() {
         if [[ "$uready" == "yes" ]]; then
           upd_ready=$(( upd_ready + 1 ))
           if [[ "$uauto" == "enabled" ]]; then
-            upd_lines+=("$(printf '  %-18s ready — will auto-apply' "$usvc")")
+            upd_lines+=("$(printf '  %-16s ready — will auto-apply' "$usvc")")
           else
-            upd_lines+=("$(printf '  %-18s ready — apply manually' "$usvc")")
+            upd_lines+=("$(printf '  %-16s ready — apply manually' "$usvc")")
           fi
         else
-          upd_lines+=("$(printf '  %-18s waiting (safety delay)' "$usvc")")
+          upd_lines+=("$(printf '  %-16s waiting (safety delay)' "$usvc")")
         fi
       done < <(awk 'NR>1 {print $1, $2, $4, $NF}' <<<"$upd_out")
       if (( upd_pending == 0 )); then
@@ -3933,47 +3937,64 @@ html_escape() {
 # HTML rendering of the weekly report. The plain text IS the source: this
 # only wraps its lines (task 25 guard). Email-safe by construction: single
 # 600px column, all styles inline, monospace stack, no images/JS/remote
-# assets, cream palette that survives Gmail and Apple Mail dark modes.
-# Second task-25 guard: if this outgrows ~150 lines, simplify the design,
-# not the data.
+# assets. Dark phosphor-terminal palette (operator decision 2026-07-16,
+# supersedes the cream palette from task 25): explicit color-scheme:dark
+# hints keep Apple Mail from re-inverting it. The blinking cursor is
+# progressive enhancement — Apple Mail animates it, Gmail strips the
+# <style> block and shows a solid cursor, losing nothing. Second task-25
+# guard: if this outgrows ~150 lines, simplify the design, not the data.
 report_render_weekly_html() {
   local text="$1" out="$2"
   local mono="'SF Mono',Menlo,Consolas,'Courier New',monospace"
-  local paper="#f4efe6" ink="#2b2b26" green="#1f7a4d" amber="#8a6d0b"
-  local red="#b3362b" rule="#d9d0bf" dim="#7a7568"
-  local line esc title in_body=0 vcolor vtext
+  local paper="#141a15" ink="#cfe3cf" green="#42e07d" amber="#e5b567"
+  local red="#ff7a6e" rule="#2a352c" dim="#5f7263" boot="#6fbe8e"
+  local glow="text-shadow:0 0 6px rgba(66,224,125,0.45);"
+  local line esc title in_body=0 seen_verdict=0 vcolor vbg vtext
   {
     printf '<!DOCTYPE html><html><head><meta charset="utf-8">'
-    printf '<meta name="viewport" content="width=device-width"></head>\n'
-    printf '<body style="margin:0;padding:0;background-color:%s;">\n' "$paper"
-    printf '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:%s;"><tr><td align="center" style="padding:20px 10px;">\n' "$paper"
+    printf '<meta name="viewport" content="width=device-width">'
+    printf '<meta name="color-scheme" content="dark">'
+    printf '<meta name="supported-color-schemes" content="dark">\n'
+    printf '<style>:root{color-scheme:dark}@keyframes dcb{0%%,55%%{opacity:1}56%%,100%%{opacity:0}}.dcb{animation:dcb 1.1s step-end infinite}</style></head>\n'
+    printf '<body bgcolor="%s" style="margin:0;padding:0;background-color:%s;">\n' "$paper" "$paper"
+    printf '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" bgcolor="%s" style="background-color:%s;"><tr><td align="center" style="padding:24px 12px;">\n' "$paper" "$paper"
     printf '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;"><tr><td align="left">\n'
     while IFS= read -r line; do
       case "$line" in
-        ╔*)
-          printf '<div style="font-family:%s;font-size:12px;color:%s;white-space:pre-wrap;">%s</div>\n' \
-            "$mono" "$green" "$(html_escape "$line")"
+        ╔*|║*)
+          printf '<div style="font-family:%s;font-size:12px;line-height:1.35;color:%s;%swhite-space:pre-wrap;">%s</div>\n' \
+            "$mono" "$green" "$glow" "$(html_escape "$line")"
+          ;;
+        ╚*)
+          (( in_body == 0 )) || { printf '</div>\n'; in_body=0; }
+          if (( seen_verdict == 0 )); then
+            printf '<div style="font-family:%s;font-size:12px;line-height:1.35;color:%s;%swhite-space:pre-wrap;">%s</div>\n' \
+              "$mono" "$green" "$glow" "$(html_escape "$line")"
+          else
+            printf '<div style="margin-top:24px;font-family:%s;font-size:11px;color:%s;">%s</div>\n' \
+              "$mono" "$dim" "$(html_escape "$line")"
+          fi
+          ;;
+        "> "*)
+          printf '<div style="margin-top:8px;font-family:%s;font-size:12px;color:%s;">%s <span class="dcb" style="color:%s;">▌</span></div>\n' \
+            "$mono" "$boot" "$(html_escape "$line")" "$green"
           ;;
         "Verdict: "*)
+          seen_verdict=1
           vtext="${line#Verdict: }"
           case "$vtext" in
-            ▲*) vcolor="$amber" ;;
-            ✗*) vcolor="$red" ;;
-            *)  vcolor="$green" ;;
+            ▲*) vcolor="$amber"; vbg="#292217" ;;
+            ✗*) vcolor="$red";   vbg="#2a1a17" ;;
+            *)  vcolor="$green"; vbg="#18271c" ;;
           esac
-          printf '<div style="margin:14px 0 4px;border:1px solid %s;padding:10px 12px;font-family:%s;font-size:15px;font-weight:bold;color:%s;">%s</div>\n' \
-            "$vcolor" "$mono" "$vcolor" "$(html_escape "$vtext")"
+          printf '<div style="margin:14px 0 4px;border:1px solid %s;background-color:%s;padding:10px 12px;font-family:%s;font-size:15px;font-weight:bold;color:%s;">%s</div>\n' \
+            "$vcolor" "$vbg" "$mono" "$vcolor" "$(html_escape "$vtext")"
           ;;
         "── "*)
           (( in_body == 0 )) || { printf '</div>\n'; in_body=0; }
           title="${line#── }"; title="${title%% ─*}"
-          printf '<div style="margin-top:18px;padding-bottom:4px;border-bottom:1px solid %s;font-family:%s;font-size:11px;letter-spacing:2px;color:%s;">%s</div>\n' \
+          printf '<div style="margin-top:20px;padding-bottom:4px;border-bottom:1px solid %s;font-family:%s;font-size:11px;letter-spacing:2px;color:%s;">%s</div>\n' \
             "$rule" "$mono" "$green" "$(html_escape "$title")"
-          ;;
-        ╚*)
-          (( in_body == 0 )) || { printf '</div>\n'; in_body=0; }
-          printf '<div style="margin-top:22px;font-family:%s;font-size:11px;color:%s;">%s</div>\n' \
-            "$mono" "$dim" "$(html_escape "$line")"
           ;;
         "") : ;;
         *)
