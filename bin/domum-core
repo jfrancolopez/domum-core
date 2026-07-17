@@ -3754,6 +3754,21 @@ report_verdict_glyph() {
   esac
 }
 
+# report_flag <value> <soft> <strong> <crit> — escalation suffix for a
+# numeric value: nothing below soft, then ' ▴' (getting warm), ' ▲'
+# (attention), ' ✗' (act now). The HTML renderer colors whole lines by
+# these glyphs, so the decision lives here once and the plain-text
+# fallback carries the same signal. Visual attention only — verdict
+# policy stays in checkup (single source of truth).
+report_flag() {
+  local v="${1%%.*}" soft="$2" strong="$3" crit="$4"
+  [[ "$v" =~ ^[0-9]+$ ]] || return 0
+  if (( v >= crit )); then printf ' ✗'
+  elif (( v >= strong )); then printf ' ▲'
+  elif (( v >= soft )); then printf ' ▴'
+  fi
+}
+
 # ── TITLE ───── section divider. Padding is built by loop because printf
 # precision truncation counts bytes, not the 3-byte UTF-8 box characters.
 report_hdr() {
@@ -3879,9 +3894,9 @@ report_drive_health() {
   poh="$(awk -F: '/Power On Hours/ { gsub(/[ ,]/, "", $2); print $2; exit }' <<<"$out")"
   [[ -n "$wear" ]] || return 0
   report_hdr "DRIVE HEALTH"
-  printf '  %-16s %s%% of rated life used\n' "Wear" "$wear"
+  printf '  %-16s %s%% of rated life used%s\n' "Wear" "$wear" "$(report_flag "$wear" 70 85 95)"
   [[ -n "$written" ]] && printf '  %-16s %s written in total\n' "Data written" "$written"
-  [[ -n "$temp" ]] && printf '  %-16s %s°C\n' "Drive temp" "$temp"
+  [[ -n "$temp" ]] && printf '  %-16s %s°C%s\n' "Drive temp" "$temp" "$(report_flag "$temp" 55 65 70)"
   [[ -n "$spare" ]] && printf '  %-16s %s%% still available\n' "Spare cells" "$spare"
   if [[ "$wear" == "0" ]]; then
     printf '  In short: no wear yet — effectively new.\n'
@@ -3953,28 +3968,32 @@ report_render_weekly() {
     printf '\n'
 
     report_hdr "SYSTEM"
-    local m
+    local m dpct dfree
     for m in / /opt "$STATE_ROOT"; do
-      df -P -h "$m" 2>/dev/null \
-        | awk -v m="$m" 'NR==2 {gsub("%","",$5); printf "  %-20s %s%% used, %s free\n", "Disk "m, $5, $4}'
+      dpct=""; dfree=""
+      read -r dpct dfree < <(df -P -h "$m" 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5, $4}') || true
+      [[ -n "$dpct" ]] || continue
+      printf '  %-18s %s%% used, %s free%s\n' "Disk $m" "$dpct" "$dfree" "$(report_flag "$dpct" 70 80 90)"
     done
     if [[ -r /proc/meminfo ]]; then
-      local mt ma
+      local mt ma mpct
       mt="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
       ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
-      [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]] \
-        && printf '  %-20s %s%% used\n' "Memory" "$(( (mt - ma) * 100 / mt ))"
+      if [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]]; then
+        mpct=$(( (mt - ma) * 100 / mt ))
+        printf '  %-18s %s%% used%s\n' "Memory" "$mpct" "$(report_flag "$mpct" 75 85 93)"
+      fi
     fi
     local temp throttled
     temp="$(pi_temp_c 2>/dev/null || true)"
-    [[ -n "$temp" ]] && printf '  %-20s %s°C\n' "Temperature" "$temp"
+    [[ -n "$temp" ]] && printf '  %-18s %s°C%s\n' "Temperature" "$temp" "$(report_flag "$temp" 65 72 80)"
     throttled="$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2 || true)"
     if [[ "$throttled" == "0x0" ]]; then
-      printf '  %-20s none\n' "Throttling"
+      printf '  %-18s none\n' "Throttling"
     elif [[ -n "$throttled" ]]; then
-      printf '  %-20s ▲ flags %s (check power/cooling)\n' "Throttling" "$throttled"
+      printf '  %-18s ▲ flags %s (check power/cooling)\n' "Throttling" "$throttled"
     fi
-    cmd_exists uptime && printf '  %-20s %s\n' "Uptime" "$(uptime -p 2>/dev/null || true)"
+    cmd_exists uptime && printf '  %-18s %s\n' "Uptime" "$(uptime -p 2>/dev/null || true)"
     printf '\n'
 
     report_trends
@@ -4070,7 +4089,7 @@ report_render_weekly_html() {
   local text="$1" out="$2"
   local mono="'SF Mono',Menlo,Consolas,'Courier New',monospace"
   local paper="#141a15" ink="#cfe3cf" green="#42e07d" amber="#e5b567"
-  local red="#ff7a6e" rule="#2a352c" dim="#5f7263" boot="#6fbe8e"
+  local soft="#c2a35f" red="#ff7a6e" rule="#2a352c" dim="#5f7263" boot="#6fbe8e"
   local glow="text-shadow:0 0 6px rgba(66,224,125,0.45);"
   local line esc title in_body=0 seen_verdict=0 vcolor vbg vtext
   {
@@ -4129,6 +4148,7 @@ report_render_weekly_html() {
           case "$line" in
             *✗*) printf '<span style="color:%s;font-weight:bold;">%s</span>\n' "$red" "$esc" ;;
             *▲*) printf '<span style="color:%s;font-weight:bold;">%s</span>\n' "$amber" "$esc" ;;
+            *▴*) printf '<span style="color:%s;">%s</span>\n' "$soft" "$esc" ;;
             *)   printf '%s\n' "$esc" ;;
           esac
           ;;

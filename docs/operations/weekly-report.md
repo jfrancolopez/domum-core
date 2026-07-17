@@ -6,6 +6,13 @@ week-by-week trend sparklines, NVMe drive health, measured power draw,
 service counts, pending image updates, journal error count, and the top
 suggested actions from `checkup`.
 
+Values that deserve attention escalate through three visual levels — `▴`
+soft gold (getting warm), `▲` amber (attention), `✗` red (act now) — in
+both the text and HTML renderings. Thresholds: disk 70/80/90 % used,
+memory 75/85/93 %, CPU temperature 65/72/80 °C, drive temperature
+55/65/70 °C, drive wear 70/85/95 %. These flags are visual only; the
+verdict in the subject line still comes solely from `checkup`.
+
 Sections degrade honestly rather than guessing:
 
 - **Trends** draws 8-week Unicode sparklines from
