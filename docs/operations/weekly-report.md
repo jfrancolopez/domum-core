@@ -16,17 +16,22 @@ verdict in the subject line still comes solely from `checkup`.
 Sections degrade honestly rather than guessing:
 
 - **Trends** draws 8-week Unicode sparklines from
-  `/var/lib/domum-core/report/history.csv` (one row per run); the first
-  weeks show "still collecting" until there are two data points.
+  `/var/lib/domum-core/report/history.csv` (one row per day, last run
+  wins); the first weeks show "still collecting" until there are two data
+  points. Each line also shows a trailing-30-day average once two samples
+  exist in that window.
 - **Drive health** reads NVMe SMART data (`smartctl`) and adds one plain
   sentence ("roughly 10+ years of life left"); the section disappears if
   the device is absent.
 - **Power** sums the Pi 5 PMIC rails for measured watts (labeled approx).
-  Set `REPORT_KWH_RATE` (price per kWh, e.g. `0.16`) in
-  `config/domum-backup.conf` to add a yearly cost line like `~$6/year`;
-  leave unset to omit it. The currency symbol defaults to `$` and can be
-  changed with `REPORT_CURRENCY`. No PMIC ⇒ no section, never an
-  estimate.
+  Each report also stores the reading in the history file, so the section
+  grows a "Month average" line (trailing 30 days, with sample count) once
+  two readings exist, and a "Year average" once the history spans ~12
+  months. Set `REPORT_KWH_RATE` (price per kWh, e.g. `0.177`) in
+  `config/domum-backup.conf` to add a yearly cost line like `~$3/year` —
+  computed from the month average when available, otherwise the live
+  reading. The currency symbol defaults to `$` and can be changed with
+  `REPORT_CURRENCY`. No PMIC ⇒ no section, never an estimate.
 
 The email is sent as `multipart/alternative`: a plain-text version (the
 source of truth) plus an HTML wrapper styled for phones and Gmail — single

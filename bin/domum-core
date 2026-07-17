@@ -3779,10 +3779,10 @@ report_hdr() {
 }
 
 report_append_history() {
-  local hist disk mem temp containers journal_errors
+  local hist disk mem temp containers journal_errors watts
   hist="$(report_history_file)"
   install -d -m 0750 "$(dirname "$hist")"
-  [[ -f "$hist" ]] || printf 'date,disk_root_pct,mem_pct,temp_c,containers_running,journal_errors\n' > "$hist"
+  [[ -f "$hist" ]] || : > "$hist"
   disk="$(df -P / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')"
   mem=""
   if [[ -r /proc/meminfo ]]; then
@@ -3794,18 +3794,22 @@ report_append_history() {
   temp="$(pi_temp_c 2>/dev/null || true)"
   containers="$(docker ps --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')"
   journal_errors="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
+  watts="$(report_measure_watts || true)"
   local today tmp
   today="$(date -I)"
   tmp="$(mktemp)"
   {
-    head -n 1 "$hist"
+    # The canonical header is always rewritten (never copied from the old
+    # file), so schema additions like the watts column migrate old files
+    # automatically — column positions of existing fields never change.
+    printf 'date,disk_root_pct,mem_pct,temp_c,containers_running,journal_errors,watts\n'
     # One row per day, last run wins: keeps trends genuinely week-by-week
     # even when the report is run several times (re-runs replace, never
     # stack). grep -v '^date,' heals header lines duplicated by the old
     # trim ('tail -n 120' re-included the header when the file was short);
     # the awk pass collapses historical same-day stacks that bug left.
     { tail -n +2 "$hist" | grep -v '^date,' || true
-      printf '%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}"
+      printf '%s,%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}" "${watts:-}"
     } | awk -F, '{ row[$1] = $0; if (!seen[$1]++) order[++n] = $1 } END { for (i = 1; i <= n; i++) print row[order[i]] }' \
       | tail -n 120 || true
   } > "$tmp"
@@ -3846,14 +3850,21 @@ report_sparkline() {
 }
 
 # One TRENDS line: label, sparkline over the last 8 recorded values of one
-# history.csv column, and the latest value.
+# history.csv column, the latest value, and a trailing-30-day average when
+# at least two samples exist in that window.
 report_trend_line() {
-  local hist="$1" col="$2" label="$3" suffix="$4" vals last
+  local hist="$1" col="$2" label="$3" suffix="$4" vals last avg
   vals="$(tail -n +2 "$hist" | tail -n 8 | awk -F, -v c="$col" '$c ~ /^[0-9]+([.][0-9]+)?$/ { print $c }')"
   [[ -n "$vals" ]] || return 0
   last="$(printf '%s\n' "$vals" | tail -n 1)"
+  avg="$(report_history_avg "$col" "$(report_month_cutoff)")"
+  [[ -n "$avg" ]] && avg="$(awk -v x="${avg%% *}" 'BEGIN { printf "%.0f", x }')"
   # shellcheck disable=SC2086
-  printf '  %-12s %s  %s%s\n' "$label" "$(report_sparkline $vals)" "$last" "$suffix"
+  if [[ -n "$avg" ]]; then
+    printf '  %-12s %s  %s%s (avg %s%s)\n' "$label" "$(report_sparkline $vals)" "$last" "$suffix" "$avg" "$suffix"
+  else
+    printf '  %-12s %s  %s%s\n' "$label" "$(report_sparkline $vals)" "$last" "$suffix"
+  fi
 }
 
 report_trends() {
@@ -3871,6 +3882,7 @@ report_trends() {
     report_trend_line "$hist" 4 "Temperature" "°C"
     report_trend_line "$hist" 5 "Services on" ""
     report_trend_line "$hist" 6 "Log errors"  ""
+    report_trend_line "$hist" 7 "Power draw"  "W"
     printf '  (oldest → newest, up to 8 weeks)\n'
   fi
   printf '\n'
@@ -3908,25 +3920,62 @@ report_drive_health() {
   printf '\n'
 }
 
-# POWER — measured board draw summed from the Pi 5 PMIC rails (V × A,
-# ~±15%). Skips silently when the PMIC is not readable; never estimates
-# from load (task 25/42 decision).
-report_power() {
+# Measured board watts summed from the Pi 5 PMIC rails (V × A, ~±15%).
+# Empty output when the PMIC is not readable; never estimates from load
+# (task 25/42 decision). Shared by the POWER section and history rows.
+report_measure_watts() {
   cmd_exists vcgencmd || return 0
-  local watts
-  watts="$(vcgencmd pmic_read_adc 2>/dev/null | awk '
+  vcgencmd pmic_read_adc 2>/dev/null | awk '
     / current\(/ { n = $1; sub(/_A$/, "", n); v = $2; sub(/^[^=]*=/, "", v); sub(/A$/, "", v); cur[n] = v }
     / volt\(/    { n = $1; sub(/_V$/, "", n); v = $2; sub(/^[^=]*=/, "", v); sub(/V$/, "", v); volt[n] = v }
     END {
       for (n in cur) if (n in volt) w += cur[n] * volt[n]
       if (w > 0) printf "%.1f", w
-    }')"
+    }'
+}
+
+# ISO date cutoffs (GNU date on the Pi; BSD fallback keeps the dev-Mac
+# harness working). ISO strings compare correctly as plain text.
+report_month_cutoff() { date -I -d '-30 days' 2>/dev/null || date -v-30d +%Y-%m-%d; }
+report_year_cutoff()  { date -I -d '-350 days' 2>/dev/null || date -v-350d +%Y-%m-%d; }
+
+# report_history_avg <col> <cutoff> — mean of a history.csv column over
+# rows since <cutoff>; prints "<avg> <samples>", nothing under 2 samples
+# (an average of one reading is just the reading).
+report_history_avg() {
+  local col="$1" cutoff="$2" hist
+  hist="$(report_history_file)"
+  [[ -f "$hist" ]] || return 0
+  tail -n +2 "$hist" | awk -F, -v c="$col" -v d="$cutoff" \
+    '$1 >= d && $c ~ /^[0-9]+([.][0-9]+)?$/ { s += $c; n++ }
+     END { if (n >= 2) printf "%.1f %d", s / n, n }'
+}
+
+# POWER — live snapshot plus history-based averages. The cost estimate
+# uses the 30-day average when one exists (steadier than one snapshot);
+# a year line appears once the history actually spans ~12 months.
+report_power() {
+  local watts hist avg avg_w n_w cost_basis oldest yavg
+  watts="$(report_measure_watts)"
   [[ -n "$watts" ]] || return 0
   report_hdr "POWER"
   printf '  %-16s ~%s W (approx)\n' "Board draw" "$watts"
+  cost_basis="$watts"
+  avg="$(report_history_avg 7 "$(report_month_cutoff)")"
+  if [[ -n "$avg" ]]; then
+    read -r avg_w n_w <<<"$avg"
+    printf '  %-16s ~%s W (%s samples)\n' "Month average" "$avg_w" "$n_w"
+    cost_basis="$avg_w"
+  fi
+  hist="$(report_history_file)"
+  oldest="$([[ -f "$hist" ]] && awk -F, 'NR == 2 { print $1 }' "$hist")"
+  if [[ -n "$oldest" && "$oldest" < "$(report_year_cutoff)" ]]; then
+    yavg="$(report_history_avg 7 "$(report_year_cutoff)")"
+    [[ -n "$yavg" ]] && printf '  %-16s ~%s W\n' "Year average" "${yavg%% *}"
+  fi
   if [[ -n "${REPORT_KWH_RATE:-}" ]]; then
     local cost
-    cost="$(awk -v w="$watts" -v r="$REPORT_KWH_RATE" 'BEGIN { printf "%.0f", w / 1000 * 24 * 365 * r }')"
+    cost="$(awk -v w="$cost_basis" -v r="$REPORT_KWH_RATE" 'BEGIN { printf "%.0f", w / 1000 * 24 * 365 * r }')"
     printf '  %-16s ~%s%s/year if always on\n' "Running cost" "${REPORT_CURRENCY:-$}" "$cost"
   fi
   printf '\n'
