@@ -3784,12 +3784,15 @@ report_append_history() {
   tmp="$(mktemp)"
   {
     head -n 1 "$hist"
-    # One row per day: a re-run replaces today's row instead of stacking
-    # points, so trends stay week-by-week. The grep -v '^date,' also heals
-    # header lines duplicated by the old trim ('tail -n 120' re-included
-    # the header whenever the file was short).
-    tail -n +2 "$hist" | grep -v '^date,' | grep -v "^${today}," | tail -n 119 || true
-    printf '%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}"
+    # One row per day, last run wins: keeps trends genuinely week-by-week
+    # even when the report is run several times (re-runs replace, never
+    # stack). grep -v '^date,' heals header lines duplicated by the old
+    # trim ('tail -n 120' re-included the header when the file was short);
+    # the awk pass collapses historical same-day stacks that bug left.
+    { tail -n +2 "$hist" | grep -v '^date,' || true
+      printf '%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}"
+    } | awk -F, '{ row[$1] = $0; if (!seen[$1]++) order[++n] = $1 } END { for (i = 1; i <= n; i++) print row[order[i]] }' \
+      | tail -n 120 || true
   } > "$tmp"
   mv "$tmp" "$hist"
   chmod 0640 "$hist"
