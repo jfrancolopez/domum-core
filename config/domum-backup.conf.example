@@ -158,7 +158,9 @@ GMAIL_APP_PASSWORD_FILE="/etc/domum-core/secrets/gmail-app-password"
 REPORT_EMAIL_ENABLED=0
 # Default recipient is RECOVERY_EMAIL_TO, then DOMUM_EMAIL. Override if desired.
 REPORT_EMAIL_TO=""
-# Optional power-cost display for future report sections; unset means omitted.
+# Optional cost line in the report's POWER section: your electricity price
+# per kWh and its currency label (e.g. 0.25 and EUR). Unset = line omitted;
+# the measured watts line shows either way when the PMIC is readable.
 REPORT_KWH_RATE=""
 REPORT_CURRENCY=""
 # Optional Traefik request counting remains off by default because access logs

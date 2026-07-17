@@ -2,8 +2,22 @@
 
 `domum-core report weekly` renders a household health summary in plain
 language: backup freshness, restore verification, disk/memory/temperature,
+week-by-week trend sparklines, NVMe drive health, measured power draw,
 service counts, pending image updates, journal error count, and the top
 suggested actions from `checkup`.
+
+Sections degrade honestly rather than guessing:
+
+- **Trends** draws 8-week Unicode sparklines from
+  `/var/lib/domum-core/report/history.csv` (one row per run); the first
+  weeks show "still collecting" until there are two data points.
+- **Drive health** reads NVMe SMART data (`smartctl`) and adds one plain
+  sentence ("roughly 10+ years of life left"); the section disappears if
+  the device is absent.
+- **Power** sums the Pi 5 PMIC rails for measured watts (labeled approx).
+  Set `REPORT_KWH_RATE` (price per kWh) and `REPORT_CURRENCY` in
+  `config/domum-backup.conf` to add a yearly cost line; leave unset to
+  omit it. No PMIC ⇒ no section, never an estimate.
 
 The email is sent as `multipart/alternative`: a plain-text version (the
 source of truth) plus an HTML wrapper styled for phones and Gmail — single
