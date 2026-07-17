@@ -1,5 +1,28 @@
 # Task 42 — Weekly report: extra content sections (operator to pick)
 
+## Status — ✅ done 2026-07-16 (operator picked "all that make sense")
+- Section 1 (sparklines): shipped — `report_trends`/`report_sparkline`/
+  `report_trend_line`. Sparkline levels are computed as ASCII digits in
+  awk and mapped to glyphs in bash (multibyte `substr()` is
+  locale-dependent). Shows "still collecting" until 2 history rows exist.
+- Section 2 (NVMe): shipped — `report_drive_health`, plain-language lines
+  plus one derived "In short: roughly N years of life left" sentence
+  ((100−wear)/wear × power-on-hours, capped at "10+"). Skips silently
+  without smartctl/device.
+- Section 3 (power): shipped — `report_power`, V×A summed across PMIC
+  rails, "(approx)" label, optional cost line from REPORT_KWH_RATE/
+  REPORT_CURRENCY (documented in the overlay example). Skips silently
+  without vcgencmd/PMIC.
+- Section 4 (image rot table): **resolved as unnecessary** — task 36's
+  `image_rot_check` already runs in checkup and its warnings flow into
+  the report's FINDINGS section with plain wording ("manual pin review
+  due"). A weekly table of every image age would duplicate that data and
+  add noise for a non-technical reader. Do not re-propose unless the
+  findings path proves insufficient.
+- Verified off-Pi with stubbed smartctl/vcgencmd/history.csv and browser
+  render at iPhone + laptop widths; hardware-path check on the Pi remains
+  (run `report weekly --stdout` there once).
+
 ## Objective
 Add more *useful* information to the weekly report without hurting its
 under-a-minute readability. Each section below is independent; the operator
