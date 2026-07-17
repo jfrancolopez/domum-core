@@ -3746,6 +3746,23 @@ report_verdict() {
   fi
 }
 
+report_verdict_glyph() {
+  case "$(report_verdict)" in
+    OK*)       printf '●' ;;
+    WARNINGS*) printf '▲' ;;
+    *)         printf '✗' ;;
+  esac
+}
+
+# ── TITLE ───── section divider. Padding is built by loop because printf
+# precision truncation counts bytes, not the 3-byte UTF-8 box characters.
+report_hdr() {
+  local title="$1" pad="" n i
+  n=$(( 36 - ${#title} )); (( n < 3 )) && n=3
+  for (( i = 0; i < n; i++ )); do pad+="─"; done
+  printf '── %s %s\n' "$title" "$pad"
+}
+
 report_append_history() {
   local hist disk mem temp containers journal_errors
   hist="$(report_history_file)"
@@ -3770,77 +3787,132 @@ report_append_history() {
   chmod 0640 "$hist"
 }
 
+# Label + age only. State file contents are not echoed: some are env files
+# (restore verify), and the age is the fact a household reader acts on.
 report_print_file_age() {
   local label="$1" file="$2"
   if [[ -f "$file" ]]; then
-    printf '  %-28s %s (%s ago)\n' "$label" "$(cat "$file" 2>/dev/null || true)" "$(human_age_from_epoch "$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file")")"
+    printf '  %-20s %s ago\n' "$label" "$(human_age_from_epoch "$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file")")"
   else
-    printf '  %-28s not recorded\n' "$label"
+    printf '  %-20s not recorded yet\n' "$label"
   fi
 }
 
 report_render_weekly() {
-  local out="$1" verdict
+  local out="$1" verdict glyph
   run_checkup
   verdict="$(report_verdict)"
+  glyph="$(report_verdict_glyph)"
   report_append_history || warn "Could not append report history."
   {
-    printf 'DOMUM-CORE // WEEKLY // %s\n' "$(date -Iseconds)"
-    printf 'Verdict: %s\n\n' "$verdict"
+    printf '╔══ DOMUM-CORE // WEEKLY ══ %s ══╗\n' "$(date -I)"
+    printf 'Verdict: %s %s\n\n' "$glyph" "$verdict"
 
-    printf 'Backups\n'
-    report_print_file_age "last successful backup" "$STATE_ROOT/backups/last-success"
+    report_hdr "BACKUPS"
+    report_print_file_age "Last backup" "$STATE_ROOT/backups/last-success"
     local tf tname
     for tf in "$STATE_ROOT/backups"/last-success-*; do
       [[ -f "$tf" ]] || continue
       tname="${tf##*/last-success-}"
-      report_print_file_age "target $tname" "$tf"
+      report_print_file_age "Copy: $tname" "$tf"
     done
-    report_print_file_age "restore verification" "$(restore_verify_state_file)"
-    report_print_file_age "manual USB backup" "$STATE_ROOT/backups/last-usb-success"
+    local rv_state rv_status
+    rv_state="$(restore_verify_state_file)"
+    if [[ -f "$rv_state" ]]; then
+      # shellcheck disable=SC1090
+      rv_status="$( (STATUS=""; . "$rv_state" 2>/dev/null || true; printf '%s' "${STATUS:-unknown}") )"
+      printf '  %-20s %s, %s ago\n' "Restore check" "$rv_status" \
+        "$(human_age_from_epoch "$(stat -c %Y "$rv_state" 2>/dev/null || stat -f %m "$rv_state")")"
+    else
+      printf '  %-20s not run yet\n' "Restore check"
+    fi
+    report_print_file_age "USB backup" "$STATE_ROOT/backups/last-usb-success"
     printf '\n'
 
-    printf 'System\n'
-    df -h / /opt "$STATE_ROOT" 2>/dev/null | awk 'NR==1 || NR>1 {print "  "$0}'
+    report_hdr "SYSTEM"
+    local m
+    for m in / /opt "$STATE_ROOT"; do
+      df -P -h "$m" 2>/dev/null \
+        | awk -v m="$m" 'NR==2 {gsub("%","",$5); printf "  %-20s %s%% used, %s free\n", "Disk "m, $5, $4}'
+    done
     if [[ -r /proc/meminfo ]]; then
-      local mt ma used_pct
+      local mt ma
       mt="$(awk '/MemTotal/{print $2}' /proc/meminfo)"
       ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
-      [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]] && { used_pct=$(( (mt - ma) * 100 / mt )); printf '  Memory used: %s%%\n' "$used_pct"; }
+      [[ -n "$mt" && -n "$ma" && "$mt" -gt 0 ]] \
+        && printf '  %-20s %s%% used\n' "Memory" "$(( (mt - ma) * 100 / mt ))"
     fi
     local temp throttled
-    temp="$(pi_temp_c 2>/dev/null || true)"; [[ -n "$temp" ]] && printf '  Pi temperature: %s C\n' "$temp"
-    throttled="$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2 || true)"; [[ -n "$throttled" ]] && printf '  Pi throttling: %s\n' "$throttled"
-    cmd_exists uptime && printf '  Uptime: %s\n' "$(uptime -p 2>/dev/null || true)"
+    temp="$(pi_temp_c 2>/dev/null || true)"
+    [[ -n "$temp" ]] && printf '  %-20s %s°C\n' "Temperature" "$temp"
+    throttled="$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2 || true)"
+    if [[ "$throttled" == "0x0" ]]; then
+      printf '  %-20s none\n' "Throttling"
+    elif [[ -n "$throttled" ]]; then
+      printf '  %-20s ▲ flags %s (check power/cooling)\n' "Throttling" "$throttled"
+    fi
+    cmd_exists uptime && printf '  %-20s %s\n' "Uptime" "$(uptime -p 2>/dev/null || true)"
     printf '\n'
 
-    printf 'Docker\n'
-    status_counts | sed 's/^/  /'
+    report_hdr "SERVICES"
+    status_counts 2>/dev/null | grep -v '^===' | sed 's/^/  /' \
+      || printf '  service counts unavailable\n'
     printf '\n'
 
-    printf 'Updates\n'
-    updates_status 2>/dev/null | sed 's/^/  /' || printf '  updates status unavailable\n'
+    report_hdr "UPDATES"
+    local upd_out
+    upd_out="$(updates_status 2>/dev/null || true)"
+    if [[ -z "$upd_out" ]]; then
+      printf '  update status unavailable\n'
+    else
+      local -a upd_lines=()
+      local usvc uauto uready ucand upd_pending=0 upd_ready=0
+      while read -r usvc uauto uready ucand; do
+        [[ -n "$usvc" && "$ucand" != "-" ]] || continue
+        upd_pending=$(( upd_pending + 1 ))
+        if [[ "$uready" == "yes" ]]; then
+          upd_ready=$(( upd_ready + 1 ))
+          if [[ "$uauto" == "enabled" ]]; then
+            upd_lines+=("$(printf '  %-18s ready — will auto-apply' "$usvc")")
+          else
+            upd_lines+=("$(printf '  %-18s ready — apply manually' "$usvc")")
+          fi
+        else
+          upd_lines+=("$(printf '  %-18s waiting (safety delay)' "$usvc")")
+        fi
+      done < <(awk 'NR>1 {print $1, $2, $4, $NF}' <<<"$upd_out")
+      if (( upd_pending == 0 )); then
+        printf '  All container images up to date\n'
+      else
+        printf '  %s update(s) pending, %s ready\n' "$upd_pending" "$upd_ready"
+        printf '%s\n' "${upd_lines[@]}"
+      fi
+    fi
     printf '\n'
 
-    printf 'Journal\n'
+    report_hdr "LOG ERRORS (7 DAYS)"
     local err_count
     err_count="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
-    printf '  Error lines in last 7d: %s\n' "${err_count:-0}"
-    journalctl -p err --since -7d --no-pager 2>/dev/null \
-      | sed 's/[0-9][0-9:]\{7,8\}//g' \
-      | sort | uniq -c | sort -rn | head -n 3 \
-      | sed 's/^/  /' || true
+    printf '  Error lines this week: %s\n' "${err_count:-0}"
+    if [[ "${err_count:-0}" != "0" ]]; then
+      printf '  Most repeated:\n'
+      journalctl -p err --since -7d --no-pager 2>/dev/null \
+        | sed 's/[0-9][0-9:]\{7,8\}//g' \
+        | sort | uniq -c | sort -rn | head -n 3 \
+        | cut -c -110 \
+        | sed 's/^ */  /' || true
+    fi
     printf '\n'
 
-    printf 'Findings\n'
-    (( ${#CHECKUP_CRITICAL[@]} == 0 )) || printf '  CRITICAL: %s\n' "${CHECKUP_CRITICAL[@]}"
-    (( ${#CHECKUP_WARNINGS[@]} == 0 )) || printf '  WARNING: %s\n' "${CHECKUP_WARNINGS[@]}"
-    (( ${#CHECKUP_CRITICAL[@]} || ${#CHECKUP_WARNINGS[@]} )) || printf '  none\n'
+    report_hdr "FINDINGS"
+    (( ${#CHECKUP_CRITICAL[@]} == 0 )) || printf '  ✗ %s\n' "${CHECKUP_CRITICAL[@]}"
+    (( ${#CHECKUP_WARNINGS[@]} == 0 )) || printf '  ▲ %s\n' "${CHECKUP_WARNINGS[@]}"
+    (( ${#CHECKUP_CRITICAL[@]} || ${#CHECKUP_WARNINGS[@]} )) || printf '  ● all clear\n'
     printf '\n'
 
-    printf 'Suggested Actions\n'
+    report_hdr "SUGGESTED ACTIONS"
     if (( ${#CHECKUP_ACTIONS[@]} == 0 )); then
-      printf '  none\n'
+      printf '  none — enjoy the week\n'
     else
       local i=0 action
       for action in "${CHECKUP_ACTIONS[@]}"; do
@@ -3848,41 +3920,133 @@ report_render_weekly() {
         printf '  %d. %s\n' "$i" "$action"
       done
     fi
+    printf '\n╚══ end of report ══╝\n'
+  } > "$out"
+}
+
+# sed, not ${var//…/&lt;}: bash 5.2's default patsub_replacement expands &
+# in the replacement to the matched text, silently corrupting the escape.
+html_escape() {
+  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
+# HTML rendering of the weekly report. The plain text IS the source: this
+# only wraps its lines (task 25 guard). Email-safe by construction: single
+# 600px column, all styles inline, monospace stack, no images/JS/remote
+# assets, cream palette that survives Gmail and Apple Mail dark modes.
+# Second task-25 guard: if this outgrows ~150 lines, simplify the design,
+# not the data.
+report_render_weekly_html() {
+  local text="$1" out="$2"
+  local mono="'SF Mono',Menlo,Consolas,'Courier New',monospace"
+  local paper="#f4efe6" ink="#2b2b26" green="#1f7a4d" amber="#8a6d0b"
+  local red="#b3362b" rule="#d9d0bf" dim="#7a7568"
+  local line esc title in_body=0 vcolor vtext
+  {
+    printf '<!DOCTYPE html><html><head><meta charset="utf-8">'
+    printf '<meta name="viewport" content="width=device-width"></head>\n'
+    printf '<body style="margin:0;padding:0;background-color:%s;">\n' "$paper"
+    printf '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:%s;"><tr><td align="center" style="padding:20px 10px;">\n' "$paper"
+    printf '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;"><tr><td align="left">\n'
+    while IFS= read -r line; do
+      case "$line" in
+        ╔*)
+          printf '<div style="font-family:%s;font-size:12px;color:%s;white-space:pre-wrap;">%s</div>\n' \
+            "$mono" "$green" "$(html_escape "$line")"
+          ;;
+        "Verdict: "*)
+          vtext="${line#Verdict: }"
+          case "$vtext" in
+            ▲*) vcolor="$amber" ;;
+            ✗*) vcolor="$red" ;;
+            *)  vcolor="$green" ;;
+          esac
+          printf '<div style="margin:14px 0 4px;border:1px solid %s;padding:10px 12px;font-family:%s;font-size:15px;font-weight:bold;color:%s;">%s</div>\n' \
+            "$vcolor" "$mono" "$vcolor" "$(html_escape "$vtext")"
+          ;;
+        "── "*)
+          (( in_body == 0 )) || { printf '</div>\n'; in_body=0; }
+          title="${line#── }"; title="${title%% ─*}"
+          printf '<div style="margin-top:18px;padding-bottom:4px;border-bottom:1px solid %s;font-family:%s;font-size:11px;letter-spacing:2px;color:%s;">%s</div>\n' \
+            "$rule" "$mono" "$green" "$(html_escape "$title")"
+          ;;
+        ╚*)
+          (( in_body == 0 )) || { printf '</div>\n'; in_body=0; }
+          printf '<div style="margin-top:22px;font-family:%s;font-size:11px;color:%s;">%s</div>\n' \
+            "$mono" "$dim" "$(html_escape "$line")"
+          ;;
+        "") : ;;
+        *)
+          if (( in_body == 0 )); then
+            printf '<div style="font-family:%s;font-size:13px;line-height:1.6;color:%s;white-space:pre-wrap;padding-top:6px;">' "$mono" "$ink"
+            in_body=1
+          fi
+          esc="$(html_escape "$line")"
+          case "$line" in
+            *✗*) printf '<span style="color:%s;font-weight:bold;">%s</span>\n' "$red" "$esc" ;;
+            *▲*) printf '<span style="color:%s;font-weight:bold;">%s</span>\n' "$amber" "$esc" ;;
+            *)   printf '%s\n' "$esc" ;;
+          esac
+          ;;
+      esac
+    done < "$text"
+    (( in_body == 0 )) || printf '</div>\n'
+    printf '</td></tr></table></td></tr></table></body></html>\n'
   } > "$out"
 }
 
 report_cmd() {
   need_root
   load_cfg
-  local sub="${1:-}" stdout=0 dry=0 arg body subject verdict
-  [[ "$sub" == "weekly" ]] || die "Usage: domum-core report weekly [--stdout|--dry-run]"
+  local sub="${1:-}" stdout=0 html=0 dry=0 arg body htmlf multipart boundary subject verdict
+  [[ "$sub" == "weekly" ]] || die "Usage: domum-core report weekly [--stdout|--html|--dry-run]"
   shift || true
   while (( $# )); do
     arg="$1"; shift
     case "$arg" in
       --stdout) stdout=1 ;;
+      --html) html=1 ;;
       --dry-run) dry=1 ;;
-      *) die "Usage: domum-core report weekly [--stdout|--dry-run]" ;;
+      *) die "Usage: domum-core report weekly [--stdout|--html|--dry-run]" ;;
     esac
   done
   body="$(mktemp)"
   report_render_weekly "$body"
   verdict="$(report_verdict)"
+  # Subject stays ASCII: raw UTF-8 glyphs in headers would need RFC 2047
+  # encoded-words; not worth it — the verdict word does the inbox triage.
   subject="[domum-core] Weekly report - $verdict"
-  if (( stdout == 1 )); then
-    cat "$body"
-  elif (( dry == 1 )); then
-    send_email_body "$subject" "$body" "text/plain; charset=utf-8" 1
-  else
-    if [[ "${REPORT_EMAIL_ENABLED:-0}" != "1" ]]; then
-      log "Weekly report email disabled (set REPORT_EMAIL_ENABLED=1, or use --stdout/--dry-run)."
-      rm -f "$body"
-      return 0
+  if (( stdout == 1 || html == 1 )); then
+    if (( html == 1 )); then
+      htmlf="$(mktemp)"
+      report_render_weekly_html "$body" "$htmlf"
+      cat "$htmlf"
+      rm -f "$htmlf"
     fi
-    send_email_body "$subject" "$body" "text/plain; charset=utf-8" 0
-    log "Weekly report emailed to ${REPORT_EMAIL_TO:-${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}}."
+    (( stdout == 0 )) || cat "$body"
+    rm -f "$body"
+    return 0
   fi
-  rm -f "$body"
+  if (( dry == 0 )) && [[ "${REPORT_EMAIL_ENABLED:-0}" != "1" ]]; then
+    log "Weekly report email disabled (set REPORT_EMAIL_ENABLED=1, or use --stdout/--dry-run)."
+    rm -f "$body"
+    return 0
+  fi
+  # multipart/alternative: plain text first (fallback), HTML preferred.
+  htmlf="$(mktemp)"; multipart="$(mktemp)"
+  report_render_weekly_html "$body" "$htmlf"
+  boundary="=_domum_weekly_$(date +%s)_$$"
+  {
+    printf 'This is a MIME multipart message.\n'
+    printf '\n--%s\nContent-Type: text/plain; charset=utf-8\nContent-Transfer-Encoding: 8bit\n\n' "$boundary"
+    cat "$body"
+    printf '\n--%s\nContent-Type: text/html; charset=utf-8\nContent-Transfer-Encoding: 8bit\n\n' "$boundary"
+    cat "$htmlf"
+    printf '\n--%s--\n' "$boundary"
+  } > "$multipart"
+  send_email_body "$subject" "$multipart" "multipart/alternative; boundary=\"$boundary\"" "$dry"
+  (( dry == 1 )) || log "Weekly report emailed to ${REPORT_EMAIL_TO:-${RECOVERY_PACK_EMAIL_TO:-$DOMUM_EMAIL}}."
+  rm -f "$body" "$htmlf" "$multipart"
 }
 
 # ===========================================================================
@@ -4357,7 +4521,7 @@ Deployment:
 Health:
   domum-core checkup [--json|--quiet]
   domum-core doctor
-  domum-core report weekly [--stdout|--dry-run]
+  domum-core report weekly [--stdout|--html|--dry-run]
 
 Home Assistant:
   domum-core homeassistant audit          read-only HA dependency report

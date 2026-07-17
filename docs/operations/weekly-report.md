@@ -1,8 +1,15 @@
 # Weekly Health Report
 
-`domum-core report weekly` renders a plain-text household health summary: backup
-freshness, restore verification, disk/memory/temperature, Docker counts, update
-state, journal error count, and the top suggested actions from `checkup`.
+`domum-core report weekly` renders a household health summary in plain
+language: backup freshness, restore verification, disk/memory/temperature,
+service counts, pending image updates, journal error count, and the top
+suggested actions from `checkup`.
+
+The email is sent as `multipart/alternative`: a plain-text version (the
+source of truth) plus an HTML wrapper styled for phones and Gmail — single
+600px column, monospace, cream paper with terminal-green accents, `●/▲/✗`
+status glyphs, all styles inline, no images or scripts. Mail clients that
+prefer HTML show the styled version; everything else falls back to the text.
 
 It sends at most one report when the systemd timer runs and
 `REPORT_EMAIL_ENABLED=1`. With email disabled, the timer exits cleanly without
@@ -12,10 +19,11 @@ remain the normal real-time path.
 ## Preview
 
 ```bash
-sudo domum-core report weekly --stdout
+sudo domum-core report weekly --stdout   # plain-text rendering
+sudo domum-core report weekly --html     # HTML rendering (pipe to a file to open in a browser)
 ```
 
-This prints the report and appends one row to
+Either preview appends one row to
 `/var/lib/domum-core/report/history.csv`.
 
 ## Email Dry Run

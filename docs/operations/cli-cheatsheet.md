@@ -23,7 +23,7 @@ All commands run as root (`sudo`).
 | `domum-core checkup --json` | Same, machine-readable |
 | `domum-core checkup --quiet` | Print only critical lines |
 | `domum-core doctor` | checkup + compose validity, container map, SMART, binaries |
-| `domum-core report weekly [--stdout\|--dry-run]` | Render weekly health report; email only when configured |
+| `domum-core report weekly [--stdout\|--html\|--dry-run]` | Render weekly health report (text + HTML email); email only when configured |
 
 ## Backups
 
