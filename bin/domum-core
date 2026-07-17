@@ -3896,7 +3896,7 @@ report_power() {
   if [[ -n "${REPORT_KWH_RATE:-}" ]]; then
     local cost
     cost="$(awk -v w="$watts" -v r="$REPORT_KWH_RATE" 'BEGIN { printf "%.0f", w / 1000 * 24 * 365 * r }')"
-    printf '  %-16s ~%s %s/year if always on\n' "Running cost" "$cost" "${REPORT_CURRENCY:-EUR}"
+    printf '  %-16s ~%s%s/year if always on\n' "Running cost" "${REPORT_CURRENCY:-$}" "$cost"
   fi
   printf '\n'
 }

@@ -159,8 +159,9 @@ REPORT_EMAIL_ENABLED=0
 # Default recipient is RECOVERY_EMAIL_TO, then DOMUM_EMAIL. Override if desired.
 REPORT_EMAIL_TO=""
 # Optional cost line in the report's POWER section: your electricity price
-# per kWh and its currency label (e.g. 0.25 and EUR). Unset = line omitted;
-# the measured watts line shows either way when the PMIC is readable.
+# per kWh (e.g. 0.16) and a currency symbol prefixed to the amount
+# (default $, shown as "~$6/year"). Unset rate = line omitted; the
+# measured watts line shows either way when the PMIC is readable.
 REPORT_KWH_RATE=""
 REPORT_CURRENCY=""
 # Optional Traefik request counting remains off by default because access logs

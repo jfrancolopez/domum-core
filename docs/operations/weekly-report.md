@@ -15,9 +15,11 @@ Sections degrade honestly rather than guessing:
   sentence ("roughly 10+ years of life left"); the section disappears if
   the device is absent.
 - **Power** sums the Pi 5 PMIC rails for measured watts (labeled approx).
-  Set `REPORT_KWH_RATE` (price per kWh) and `REPORT_CURRENCY` in
-  `config/domum-backup.conf` to add a yearly cost line; leave unset to
-  omit it. No PMIC ⇒ no section, never an estimate.
+  Set `REPORT_KWH_RATE` (price per kWh, e.g. `0.16`) in
+  `config/domum-backup.conf` to add a yearly cost line like `~$6/year`;
+  leave unset to omit it. The currency symbol defaults to `$` and can be
+  changed with `REPORT_CURRENCY`. No PMIC ⇒ no section, never an
+  estimate.
 
 The email is sent as `multipart/alternative`: a plain-text version (the
 source of truth) plus an HTML wrapper styled for phones and Gmail — single
