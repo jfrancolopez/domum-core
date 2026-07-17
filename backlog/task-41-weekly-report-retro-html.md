@@ -33,10 +33,25 @@ All in `bin/domum-core`, weekly-report section only:
 2. **HTML renderer** (`report_render_weekly_html`) — wraps the *rendered
    text lines* (the text stays the single source of truth, per task-25
    guard). Email-safe by construction: single 600px column, all styles
-   inline, monospace stack, cream `#f4efe6` / ink `#2b2b26` / green
-   `#1f7a4d` / amber `#8a6d0b` / red `#b3362b`, no images/JS/webfonts/
-   remote assets. Verdict banner color keys off the glyph; lines
-   containing `✗`/`▲` are colorized.
+   inline, monospace stack, no images/JS/webfonts/remote assets. Verdict
+   banner color keys off the glyph; lines containing `✗`/`▲` are
+   colorized.
+   **Palette (operator revision, 2026-07-16):** dark phosphor terminal —
+   paper `#141a15` (deep green-black, deliberately not pure black), body
+   `#cfe3cf`, phosphor green `#42e07d` with a soft CRT text-shadow glow on
+   the masthead, amber `#e5b567`, red `#ff7a6e`, tinted verdict-banner
+   backgrounds. This supersedes task 25's cream-palette decision: the
+   operator uses dark mode everywhere and accepted the residual risk that
+   some dark-mode email clients re-theme content; `color-scheme: dark`
+   meta hints plus `bgcolor` attributes minimize it.
+   **Animation:** one blinking terminal cursor `▌` after the masthead boot
+   line, via a tiny `<style>` keyframe — progressive enhancement only:
+   Apple Mail animates it, Gmail strips the style and shows a solid
+   cursor. Rejected anything heavier (GIFs, scanline overlays) — images
+   are banned by the spec and the email must stay light.
+   Masthead is now a 4-line ASCII box + `>` boot line; box contents are
+   kept pure ASCII because printf `%-36s` pads by bytes and multibyte `─`
+   inside the field breaks alignment.
 3. **Send path** (`report_cmd`): builds `multipart/alternative`
    (text part first, HTML second) and passes it through the existing
    `send_email_body` — its content-type was already a parameter, so no
@@ -56,9 +71,11 @@ All in `bin/domum-core`, weekly-report section only:
   `●/▲/✗` glyph in the subject: raw UTF-8 in headers needs RFC 2047
   encoded-words; not worth the machinery, the verdict word already does
   inbox triage.
-- **Rejected** dark background (dark-mode clients invert unpredictably —
-  per task-25 spec), external templating, images, a second SMTP block,
-  and `<style>` blocks (Gmail strips them).
+- **Rejected** external templating, images, a second SMTP block, and any
+  `<style>` usage the email depends on (Gmail strips `<style>`; the only
+  one shipped is the optional cursor keyframe). Task 25's "no dark
+  background" rule was consciously overridden by the operator — see the
+  palette note above; do not flip it back without asking.
 - **Kept ASCII-safe fallback**: every glyph used (`─ ╔ ╝ ● ▲ ✗`) renders
   in the plain-text part too, so the fallback loses color, not meaning.
 
