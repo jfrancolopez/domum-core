@@ -3795,21 +3795,23 @@ report_append_history() {
   containers="$(docker ps --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')"
   journal_errors="$(journalctl -p err --since -7d --no-pager 2>/dev/null | wc -l | tr -d ' ')"
   watts="$(report_measure_watts || true)"
+  local drive_temp
+  drive_temp="$(report_nvme_smart | awk -F: '/^Temperature:/ { gsub(/[^0-9]/, "", $2); print $2; exit }' || true)"
   local today tmp
   today="$(date -I)"
   tmp="$(mktemp)"
   {
     # The canonical header is always rewritten (never copied from the old
-    # file), so schema additions like the watts column migrate old files
+    # file), so schema additions like watts/drive-temp columns migrate old files
     # automatically — column positions of existing fields never change.
-    printf 'date,disk_root_pct,mem_pct,temp_c,containers_running,journal_errors,watts\n'
+    printf 'date,disk_root_pct,mem_pct,temp_c,containers_running,journal_errors,watts,drive_temp_c\n'
     # One row per day, last run wins: keeps trends genuinely week-by-week
     # even when the report is run several times (re-runs replace, never
     # stack). grep -v '^date,' heals header lines duplicated by the old
     # trim ('tail -n 120' re-included the header when the file was short);
     # the awk pass collapses historical same-day stacks that bug left.
     { tail -n +2 "$hist" | grep -v '^date,' || true
-      printf '%s,%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}" "${watts:-}"
+      printf '%s,%s,%s,%s,%s,%s,%s,%s\n' "$today" "${disk:-}" "${mem:-}" "${temp:-}" "${containers:-0}" "${journal_errors:-0}" "${watts:-}" "${drive_temp:-}"
     } | awk -F, '{ row[$1] = $0; if (!seen[$1]++) order[++n] = $1 } END { for (i = 1; i <= n; i++) print row[order[i]] }' \
       | tail -n 120 || true
   } > "$tmp"
@@ -3883,20 +3885,30 @@ report_trends() {
     report_trend_line "$hist" 5 "Services on" ""
     report_trend_line "$hist" 6 "Log errors"  ""
     report_trend_line "$hist" 7 "Power draw"  "W"
+    report_trend_line "$hist" 8 "Drive temp"  "°C"
     printf '  (oldest → newest, up to 8 weeks)\n'
   fi
   printf '\n'
 }
 
-# DRIVE HEALTH — NVMe SMART data in plain language. Skips silently when
-# smartctl or the device is absent; never fakes a value (task 42).
-report_drive_health() {
+# SMART attribute dump for the NVMe system drive; empty when smartctl or
+# the device is absent. Shared by the DRIVE HEALTH section and history.
+report_nvme_smart() {
   cmd_exists smartctl || return 0
   local out="" dev
   for dev in /dev/nvme0 /dev/nvme0n1; do
-    out="$(smartctl -A "$dev" 2>/dev/null)" && [[ -n "$out" ]] && break
-    out=""
+    if out="$(smartctl -A "$dev" 2>/dev/null)" && [[ -n "$out" ]]; then
+      printf '%s\n' "$out"
+      return 0
+    fi
   done
+}
+
+# DRIVE HEALTH — NVMe SMART data in plain language. Skips silently when
+# smartctl or the device is absent; never fakes a value (task 42).
+report_drive_health() {
+  local out
+  out="$(report_nvme_smart)"
   [[ -n "$out" ]] || return 0
   local wear temp spare written poh
   wear="$(awk -F: '/Percentage Used/ { gsub(/[ %]/, "", $2); print $2; exit }' <<<"$out")"
@@ -3908,7 +3920,12 @@ report_drive_health() {
   report_hdr "DRIVE HEALTH"
   printf '  %-16s %s%% of rated life used%s\n' "Wear" "$wear" "$(report_flag "$wear" 70 85 95)"
   [[ -n "$written" ]] && printf '  %-16s %s written in total\n' "Data written" "$written"
-  [[ -n "$temp" ]] && printf '  %-16s %s°C%s\n' "Drive temp" "$temp" "$(report_flag "$temp" 55 65 70)"
+  if [[ -n "$temp" ]]; then
+    local dtavg
+    dtavg="$(report_history_avg 8 "$(report_month_cutoff)")"
+    [[ -n "$dtavg" ]] && dtavg="$(awk -v x="${dtavg%% *}" 'BEGIN { printf " (avg %.0f°C)", x }')"
+    printf '  %-16s %s°C%s%s\n' "Drive temp" "$temp" "$(report_flag "$temp" 55 65 70)" "${dtavg:-}"
+  fi
   [[ -n "$spare" ]] && printf '  %-16s %s%% still available\n' "Spare cells" "$spare"
   if [[ "$wear" == "0" ]]; then
     printf '  In short: no wear yet — effectively new.\n'

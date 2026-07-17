@@ -19,10 +19,13 @@ Sections degrade honestly rather than guessing:
   `/var/lib/domum-core/report/history.csv` (one row per day, last run
   wins); the first weeks show "still collecting" until there are two data
   points. Each line also shows a trailing-30-day average once two samples
-  exist in that window.
+  exist in that window. Tracked dashboard metrics include disk, memory, CPU
+  temperature, service count, log errors, power draw, and NVMe drive
+  temperature.
 - **Drive health** reads NVMe SMART data (`smartctl`) and adds one plain
   sentence ("roughly 10+ years of life left"); the section disappears if
-  the device is absent.
+  the device is absent. Drive temperature also shows a trailing-30-day
+  average once the history has at least two samples.
 - **Power** sums the Pi 5 PMIC rails for measured watts (labeled approx).
   Each report also stores the reading in the history file, so the section
   grows a "Month average" line (trailing 30 days, with sample count) once
