@@ -1,18 +1,30 @@
-title: Domum
-description: Home automation and operations
+title: Domum Core
+description: Home automation and operations portal
 theme: dark
-color: slate
-target: _blank
+color: violet
+target: _self
 hideVersion: true
 disableUpdateCheck: true
 statusStyle: dot
+headerStyle: boxed
+iconStyle: theme
+fullWidth: true
+useEqualHeights: true
+quicklaunch:
+  searchDescriptions: true
+  provider: duckduckgo
+  target: _blank
+  mobileButtonPosition: bottom-right
 layout:
-  Core:
+  Home Automation:
     style: row
     columns: 3
-  Operations:
+  Infrastructure:
     style: row
     columns: 4
-  Personal:
+  Applications:
+    style: row
+    columns: 3
+  External Systems:
     style: row
     columns: 3

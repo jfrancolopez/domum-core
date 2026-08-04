@@ -6,7 +6,7 @@ services:
     networks:
       - domum-proxy
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=homepage.${DOMUM_DOMAIN},portal-preview.${DOMUM_DOMAIN}
+      - HOMEPAGE_ALLOWED_HOSTS=home.${DOMUM_DOMAIN},homepage.${DOMUM_DOMAIN},portal-preview.${DOMUM_DOMAIN}
       - HOMEPAGE_VAR_DOMUM_DOMAIN=${DOMUM_DOMAIN}
       - LOG_TARGETS=stdout
     volumes:
@@ -20,6 +20,12 @@ services:
       - traefik.http.routers.homepage.tls.certresolver=cf
       - traefik.http.routers.homepage.middlewares=securityHeaders@file
       - traefik.http.services.homepage.loadbalancer.server.port=3000
+      - traefik.http.routers.home.rule=Host(`home.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.home.entrypoints=websecure
+      - traefik.http.routers.home.tls=true
+      - traefik.http.routers.home.tls.certresolver=cf
+      - traefik.http.routers.home.middlewares=securityHeaders@file
+      - traefik.http.routers.home.service=homepage
       - traefik.http.routers.homepage-preview.rule=Host(`portal-preview.${DOMUM_DOMAIN}`)
       - traefik.http.routers.homepage-preview.entrypoints=websecure
       - traefik.http.routers.homepage-preview.tls=true

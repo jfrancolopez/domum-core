@@ -1,4 +1,4 @@
-- External:
+- Reference:
     - GitHub:
         - abbr: GH
           href: https://github.com/jfrancolopez/domum-core
@@ -8,3 +8,6 @@
     - selfh.st:
         - abbr: SH
           href: https://selfh.st/
+    - Beszel Docs:
+        - abbr: BZ
+          href: https://beszel.dev/

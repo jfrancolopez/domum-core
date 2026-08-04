@@ -1,41 +1,109 @@
-- Core:
+- Home Automation:
     - Home Assistant:
         href: https://ha.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Automation dashboard
         icon: home-assistant.png
-    - Actual Budget:
-        href: https://budget.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Family budget
-        icon: actual-budget.png
-    - Vaultwarden:
-        href: https://vault.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Password manager
-        icon: vaultwarden.png
+        siteMonitor: http://homeassistant:8123
+    - Zigbee2MQTT:
+        href: https://z2m.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Zigbee network and devices
+        icon: zigbee2mqtt.png
+        siteMonitor: http://zigbee2mqtt:8080
+    - Z-Wave JS UI:
+        href: https://zwave.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Z-Wave network control
+        icon: zwave-js-ui.png
+        siteMonitor: http://zwave-js-ui:8091
+    - Node-RED:
+        href: https://nodered.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Automation flows
+        icon: node-red.png
+        siteMonitor: http://nodered:1880
+    - ESPHome:
+        href: https://esphome.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Device firmware dashboard
+        icon: esphome.png
+        siteMonitor: http://esphome:6052
+    - Music Assistant:
+        href: https://ma.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Whole-home music control
+        icon: music-assistant.png
+        siteMonitor: http://musicassistant:8095
 
-- Operations:
+- Infrastructure:
+    - Beszel:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Host and container history
+        icon: beszel.png
+        siteMonitor: http://beszel:8090
     - Glance:
         href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Lightweight dashboard
+        description: Daily operations overview
         icon: glance.png
+        siteMonitor: http://glance:8080
+    - Traefik:
+        href: https://traefik.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Protected reverse proxy control
+        icon: traefik.png
+    - AdGuard Home:
+        href: https://dns.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: DNS and network protection
+        icon: adguard-home.png
+        siteMonitor: http://adguard-home:3000
+    - Healthchecks:
+        href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Scheduled task monitoring
+        icon: healthchecks.png
+        siteMonitor: http://healthchecks:8000
     - Dozzle:
         href: https://logs.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Docker logs
+        description: Protected Docker logs
         icon: dozzle.png
+        siteMonitor: http://dozzle:8080
     - ntfy:
         href: https://ntfy.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Notifications
         icon: ntfy.png
-    - IT-Tools:
-        href: https://tools.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Utility toolbox
-        icon: it-tools.png
+        siteMonitor: http://ntfy:80
+    - Cockpit:
+        href: https://cockpit.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Host administration
+        icon: cockpit.png
 
-- Personal:
+- Applications:
     - Memos:
         href: https://memos.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Notes
+        description: Private notes
         icon: memos.png
-    - Obsidian Sync:
-        href: https://obsidian.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: CouchDB sync backend
-        icon: obsidian.png
+        siteMonitor: http://memos:5230
+    - Actual Budget:
+        href: https://budget.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Family budget
+        icon: actual-budget.png
+        siteMonitor: http://actual-budget:5006
+    - Karakeep:
+        href: https://karakeep.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Bookmark archive
+        icon: karakeep.png
+        siteMonitor: http://karakeep:3000
+    - FreshRSS:
+        href: https://rss.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Self-hosted feed reader
+        icon: freshrss.png
+        siteMonitor: http://freshrss:80
+    - Stirling PDF:
+        href: https://pdf.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Protected PDF tools
+        icon: stirling-pdf.png
+        siteMonitor: http://stirling-pdf:8080
+    - IT-Tools:
+        href: https://tools.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Browser-based utilities
+        icon: it-tools.png
+        siteMonitor: http://it-tools:80
+
+- External Systems:
+    - Domum Core Repository:
+        href: https://github.com/jfrancolopez/domum-core
+        description: Infrastructure source and history
+        icon: si-github
