@@ -143,6 +143,7 @@ load_cfg() {
   BACKUP_MEMOS="${BACKUP_MEMOS:-1}"
   BACKUP_BESZEL="${BACKUP_BESZEL:-1}"
   BACKUP_HEALTHCHECKS="${BACKUP_HEALTHCHECKS:-1}"
+  BACKUP_KARAKEEP="${BACKUP_KARAKEEP:-1}"
 
   # Tailscale is optional remote transport for this host. Keep host DNS under
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
@@ -224,6 +225,8 @@ load_cfg() {
   BESZEL_UPDATE_DELAY_DAYS="${BESZEL_UPDATE_DELAY_DAYS:-14}"
   HEALTHCHECKS_AUTO_UPDATE="${HEALTHCHECKS_AUTO_UPDATE:-0}"
   HEALTHCHECKS_UPDATE_DELAY_DAYS="${HEALTHCHECKS_UPDATE_DELAY_DAYS:-14}"
+  KARAKEEP_AUTO_UPDATE="${KARAKEEP_AUTO_UPDATE:-0}"
+  KARAKEEP_UPDATE_DELAY_DAYS="${KARAKEEP_UPDATE_DELAY_DAYS:-14}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -785,6 +788,7 @@ healthchecks|ENABLE_HEALTHCHECKS|monitoring|cron-monitor|BACKUP_HEALTHCHECKS|com
 adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 memos|ENABLE_MEMOS|productivity|stateful-app|BACKUP_MEMOS|compose/productivity/memos.yml|-
+karakeep|ENABLE_KARAKEEP|productivity|bookmark-archive|BACKUP_KARAKEEP|compose/productivity/karakeep.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
 obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
 it-tools|ENABLE_IT_TOOLS|productivity|stateless-app|-|compose/productivity/it-tools.yml|-
@@ -1207,6 +1211,7 @@ backup_src_dir_for() {
     memos)          echo "$DOMUM_DIR/compose/productivity/memos/data" ;;
     beszel)         echo "$DOMUM_DIR/compose/monitoring/beszel/data" ;;
     healthchecks)   echo "$DOMUM_DIR/compose/monitoring/healthchecks/data" ;;
+    karakeep)       echo "$DOMUM_DIR/compose/productivity/karakeep/data" ;;
     *) echo "" ;;
   esac
 }
@@ -1228,7 +1233,7 @@ validate_backup_artifact() {
 # when it matters most. (Actual Budget has its own quiesce in actual_backup.)
 service_needs_sqlite_quiesce() {
   case "$1" in
-    vaultwarden|ntfy|memos|beszel|healthchecks) return 0 ;;
+    vaultwarden|ntfy|memos|beszel|healthchecks|karakeep) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -2487,7 +2492,7 @@ update_delay_days_for() {
 
 service_requires_backup() {
   case "$(normalize_service_name "$1")" in
-    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos|beszel|healthchecks) return 0 ;;
+    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos|beszel|healthchecks|karakeep) return 0 ;;
     *) return 1 ;;
   esac
 }

@@ -50,6 +50,7 @@ designed to be explicit and backup-aware.
 - [Homepage](services/homepage.md)
 - [Beszel](services/beszel.md)
 - [Healthchecks](services/healthchecks.md)
+- [Karakeep](services/karakeep.md)
 
 ## Reference
 
