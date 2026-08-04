@@ -3,12 +3,12 @@ services:
     image: stirlingtools/stirling-pdf:latest-ultra-lite
     container_name: stirling-pdf
     restart: unless-stopped
-    mem_limit: 768m
     networks:
       - domum-proxy
     environment:
       - SECURITY_ENABLELOGIN=false
       - SYSTEM_DEFAULTLOCALE=en-US
+      - JAVA_CUSTOM_OPTS=-XX:MaxRAM=768m
     volumes:
       - /opt/domum-core/compose/productivity/stirling-pdf/configs:/configs
       - /opt/domum-core/compose/productivity/stirling-pdf/logs:/logs
