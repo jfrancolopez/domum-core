@@ -49,6 +49,7 @@ designed to be explicit and backup-aware.
 - [Memos](services/memos.md)
 - [Homepage](services/homepage.md)
 - [Beszel](services/beszel.md)
+- [Healthchecks](services/healthchecks.md)
 
 ## Reference
 

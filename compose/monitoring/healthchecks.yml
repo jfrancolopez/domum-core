@@ -1,0 +1,41 @@
+services:
+  healthchecks:
+    image: healthchecks/healthchecks:latest
+    container_name: healthchecks
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+      - domum-data
+    environment:
+      - SITE_ROOT=https://checks.${DOMUM_DOMAIN}
+      - ALLOWED_HOSTS=checks.${DOMUM_DOMAIN}
+      - SECRET_KEY_FILE=/run/secrets/healthchecks_secret_key
+      - DB=sqlite
+      - DB_NAME=/data/hc.sqlite
+      - DEBUG=False
+      - REGISTRATION_OPEN=False
+      - SITE_NAME=Domum Checks
+      - DEFAULT_FROM_EMAIL=healthchecks@${DOMUM_DOMAIN}
+      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+      - UWSGI_PROCESSES=2
+      - UWSGI_DISABLE_LOGGING=1
+    volumes:
+      - /opt/domum-core/compose/monitoring/healthchecks/data:/data
+      - /etc/domum-core/secrets/healthchecks_secret_key:/run/secrets/healthchecks_secret_key:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.healthchecks.rule=Host(`checks.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.healthchecks.entrypoints=websecure
+      - traefik.http.routers.healthchecks.tls=true
+      - traefik.http.routers.healthchecks.tls.certresolver=cf
+      - traefik.http.routers.healthchecks.middlewares=securityHeaders@file,forwardedHeaders@file
+      - traefik.http.services.healthchecks.loadbalancer.server.port=8000
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
+  domum-data:
+    external: true

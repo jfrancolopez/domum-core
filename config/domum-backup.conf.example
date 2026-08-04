@@ -115,6 +115,7 @@ BACKUP_ADGUARD=1
 BACKUP_NTFY=1
 BACKUP_MEMOS=1
 BACKUP_BESZEL=1
+BACKUP_HEALTHCHECKS=1
 
 # ============================================================
 # SECTION: per-service backup tuning
