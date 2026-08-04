@@ -35,6 +35,7 @@ designed to be explicit and backup-aware.
 ## Services
 
 - [Dashboard architecture](dashboard-architecture.md)
+- [Live service inventory](service-inventory.md)
 
 - [Home Assistant](services/home-assistant.md)
 - [MQTT](services/mqtt.md)
