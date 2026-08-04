@@ -216,6 +216,8 @@ load_cfg() {
   NTFY_UPDATE_DELAY_DAYS="${NTFY_UPDATE_DELAY_DAYS:-14}"
   MEMOS_AUTO_UPDATE="${MEMOS_AUTO_UPDATE:-0}"
   MEMOS_UPDATE_DELAY_DAYS="${MEMOS_UPDATE_DELAY_DAYS:-14}"
+  HOMEPAGE_AUTO_UPDATE="${HOMEPAGE_AUTO_UPDATE:-0}"
+  HOMEPAGE_UPDATE_DELAY_DAYS="${HOMEPAGE_UPDATE_DELAY_DAYS:-7}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -771,6 +773,7 @@ uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|infrastructure|-|compose/monitoring/up
 glance|ENABLE_GLANCE|monitoring|dashboard|-|compose/monitoring/glance.yml|-
 dozzle|ENABLE_DOZZLE|monitoring|operator-tool|-|compose/monitoring/dozzle.yml|-
 ntfy|ENABLE_NTFY|monitoring|notification-service|BACKUP_NTFY|compose/monitoring/ntfy.yml|-
+homepage|ENABLE_HOMEPAGE|monitoring|dashboard|-|compose/monitoring/homepage.yml|-
 adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 memos|ENABLE_MEMOS|productivity|stateful-app|BACKUP_MEMOS|compose/productivity/memos.yml|-
@@ -841,6 +844,7 @@ export_env_for_compose() {
   export OBSIDIAN_DOMAIN="${OBSIDIAN_DOMAIN:-obsidian.${DOMUM_DOMAIN}}"
   export OBSIDIAN_COUCHDB_USER="${OBSIDIAN_COUCHDB_USER:-obsidian}"
   export OBSIDIAN_COUCHDB_PASSWORD="${OBSIDIAN_COUCHDB_PASSWORD:-changeme}"
+  export HOMEPAGE_VAR_DOMUM_DOMAIN="${HOMEPAGE_VAR_DOMUM_DOMAIN:-$DOMUM_DOMAIN}"
 
   if [[ -z "${CF_DNS_API_TOKEN:-}" && -f "$SECRETS_DIR/cloudflare_api_token" ]]; then
     CF_DNS_API_TOKEN="$(cat "$SECRETS_DIR/cloudflare_api_token")"

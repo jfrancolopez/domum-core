@@ -1,0 +1,28 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=homepage.${DOMUM_DOMAIN}
+      - HOMEPAGE_VAR_DOMUM_DOMAIN=${DOMUM_DOMAIN}
+      - LOG_TARGETS=stdout
+    volumes:
+      - /opt/domum-core/compose/monitoring/homepage:/app/config:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.homepage.rule=Host(`homepage.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.homepage.entrypoints=websecure
+      - traefik.http.routers.homepage.tls=true
+      - traefik.http.routers.homepage.tls.certresolver=cf
+      - traefik.http.routers.homepage.middlewares=securityHeaders@file
+      - traefik.http.services.homepage.loadbalancer.server.port=3000
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true

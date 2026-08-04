@@ -1,0 +1,41 @@
+- Core:
+    - Home Assistant:
+        href: https://ha.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Automation dashboard
+        icon: home-assistant.png
+    - Actual Budget:
+        href: https://budget.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Family budget
+        icon: actual-budget.png
+    - Vaultwarden:
+        href: https://vault.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Password manager
+        icon: vaultwarden.png
+
+- Operations:
+    - Glance:
+        href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Lightweight dashboard
+        icon: glance.png
+    - Dozzle:
+        href: https://logs.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Docker logs
+        icon: dozzle.png
+    - ntfy:
+        href: https://ntfy.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Notifications
+        icon: ntfy.png
+    - IT-Tools:
+        href: https://tools.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Utility toolbox
+        icon: it-tools.png
+
+- Personal:
+    - Memos:
+        href: https://memos.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Notes
+        icon: memos.png
+    - Obsidian Sync:
+        href: https://obsidian.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: CouchDB sync backend
+        icon: obsidian.png

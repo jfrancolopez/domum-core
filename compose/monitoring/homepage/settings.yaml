@@ -1,0 +1,18 @@
+title: Domum
+description: Home automation and operations
+theme: dark
+color: slate
+target: _blank
+hideVersion: true
+disableUpdateCheck: true
+statusStyle: dot
+layout:
+  Core:
+    style: row
+    columns: 3
+  Operations:
+    style: row
+    columns: 4
+  Personal:
+    style: row
+    columns: 3
