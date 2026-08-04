@@ -10,6 +10,7 @@ services:
       - APP_URL=https://beszel.${DOMUM_DOMAIN}
     volumes:
       - /opt/domum-core/compose/monitoring/beszel/data:/beszel_data
+      - /opt/domum-core/compose/monitoring/beszel/socket:/beszel_socket
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy
@@ -19,6 +20,43 @@ services:
       - traefik.http.routers.beszel.tls.certresolver=cf
       - traefik.http.routers.beszel.middlewares=securityHeaders@file
       - traefik.http.services.beszel.loadbalancer.server.port=8090
+    profiles:
+      - core
+
+  beszel-agent:
+    image: henrygd/beszel-agent:alpine
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - LISTEN=/beszel_socket/beszel.sock
+      - HUB_URL=https://beszel.${DOMUM_DOMAIN}
+      - KEY_FILE=/run/secrets/beszel_agent_key
+      - TOKEN_FILE=/run/secrets/beszel_agent_token
+      - DATA_DIR=/var/lib/beszel-agent
+      - SYSTEM_NAME=domum-core
+      - NICS=eth0,tailscale0
+      - SMART_DEVICES=/dev/nvme0:nvme
+      - SMART_INTERVAL=1h
+      - PRIMARY_SENSOR=cpu_thermal
+      - SERVICE_PATTERNS=beszel*,docker*,tailscaled*
+    volumes:
+      - /opt/domum-core/compose/monitoring/beszel/agent:/var/lib/beszel-agent
+      - /opt/domum-core/compose/monitoring/beszel/socket:/beszel_socket
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/domum-core/secrets/beszel_agent_key:/run/secrets/beszel_agent_key:ro
+      - /etc/domum-core/secrets/beszel_agent_token:/run/secrets/beszel_agent_token:ro
+    devices:
+      - /dev/nvme0:/dev/nvme0
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN
+    healthcheck:
+      test: ["CMD", "/agent", "health"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     profiles:
       - core
 
