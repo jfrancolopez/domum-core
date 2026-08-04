@@ -49,12 +49,10 @@
         href: https://dns.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: DNS and network protection
         icon: adguard-home.png
-        siteMonitor: http://adguard-home:3000
     - Healthchecks:
         href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Scheduled task monitoring
         icon: healthchecks.png
-        siteMonitor: http://healthchecks:8000
     - Dozzle:
         href: https://logs.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Protected Docker logs
