@@ -26,8 +26,7 @@ matching DNS CNAME before using it from the LAN.
 Public registration is closed. Create the first user inside the container:
 
 ```bash
-sudo docker exec -it healthchecks \
-  /opt/healthchecks/manage.py createsuperuser
+sudo docker exec -it healthchecks /opt/healthchecks/manage.py createsuperuser
 ```
 
 Keep the credentials in Vaultwarden.
