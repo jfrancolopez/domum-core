@@ -100,8 +100,6 @@ pages:
                 title: CNCF
               - url: https://www.bleepingcomputer.com/feed/
                 title: BleepingComputer
-              - url: https://www.3dprinting.com/feed/
-                title: 3D Printing
       - size: small
         widgets:
           - type: bookmarks
