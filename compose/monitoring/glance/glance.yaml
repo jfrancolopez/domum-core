@@ -88,6 +88,18 @@ pages:
     columns:
       - size: full
         widgets:
+          - type: releases
+            title: Installed software releases
+            cache: 6h
+            limit: 8
+            collapse-after: 5
+            show-source-icon: true
+            repositories:
+              - home-assistant/core
+              - traefik/traefik
+              - gethomepage/homepage
+              - glanceapp/glance
+              - henrygd/beszel
           - type: rss
             title: Self-hosting and Security
             style: detailed-list
