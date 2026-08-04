@@ -11,3 +11,31 @@
     - Beszel Docs:
         - abbr: BZ
           href: https://beszel.dev/
+
+- Automation Docs:
+    - ESPHome:
+        - abbr: ES
+          href: https://esphome.io/guides/
+    - Zigbee2MQTT:
+        - abbr: Z2
+          href: https://www.zigbee2mqtt.io/guide/
+    - Node-RED:
+        - abbr: NR
+          href: https://nodered.org/docs/
+    - Z-Wave JS UI:
+        - abbr: ZW
+          href: https://zwave-js.github.io/zwave-js-ui/
+
+- Operations Docs:
+    - Traefik:
+        - abbr: TR
+          href: https://doc.traefik.io/traefik/
+    - Docker:
+        - abbr: DK
+          href: https://docs.docker.com/
+    - Tailscale:
+        - abbr: TS
+          href: https://login.tailscale.com/admin/machines
+    - Cloudflare:
+        - abbr: CF
+          href: https://dash.cloudflare.com/

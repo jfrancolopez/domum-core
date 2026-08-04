@@ -28,3 +28,9 @@ layout:
   External Systems:
     style: row
     columns: 3
+  Automation Docs:
+    style: row
+    columns: 4
+  Operations Docs:
+    style: row
+    columns: 4
