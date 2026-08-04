@@ -3,6 +3,9 @@ services:
     image: glanceapp/glance:latest
     container_name: glance
     restart: unless-stopped
+    command:
+      - --config
+      - /app/config/glance.yaml
     networks:
       - domum-proxy
     environment:

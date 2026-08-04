@@ -20,7 +20,7 @@ The service is exposed as `https://glance.${DOMUM_DOMAIN}` through Traefik.
 The tracked config lives at:
 
 ```text
-compose/monitoring/glance/glance.yml
+compose/monitoring/glance/glance.yaml
 ```
 
 Keep secrets out of this file. If a future widget needs a token, store the token
