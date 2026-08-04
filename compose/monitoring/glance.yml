@@ -1,0 +1,27 @@
+services:
+  glance:
+    image: glanceapp/glance:latest
+    container_name: glance
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+    environment:
+      - TZ=America/New_York
+      - DOMUM_DOMAIN=${DOMUM_DOMAIN}
+    volumes:
+      - /opt/domum-core/compose/monitoring/glance:/app/config:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.glance.rule=Host(`glance.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.glance.entrypoints=websecure
+      - traefik.http.routers.glance.tls=true
+      - traefik.http.routers.glance.tls.certresolver=cf
+      - traefik.http.routers.glance.middlewares=securityHeaders@file
+      - traefik.http.services.glance.loadbalancer.server.port=8080
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true

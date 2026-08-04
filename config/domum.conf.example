@@ -46,6 +46,7 @@ ENABLE_MA=1
 # Monitoring
 # ============================================================
 # ENABLE_UPTIME_KUMA=0
+ENABLE_GLANCE=0
 
 # ============================================================
 # DNS role: only for Tailscale split DNS
@@ -155,6 +156,8 @@ OBSIDIAN_SYNC_AUTO_UPDATE=1
 OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
 IT_TOOLS_AUTO_UPDATE=1
 IT_TOOLS_UPDATE_DELAY_DAYS=7
+GLANCE_AUTO_UPDATE=1
+GLANCE_UPDATE_DELAY_DAYS=7
 UPDATE_ROT_AUTO_DAYS=60
 UPDATE_ROT_MANUAL_DAYS=270
 

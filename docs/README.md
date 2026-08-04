@@ -43,6 +43,7 @@ designed to be explicit and backup-aware.
 - [Obsidian Sync](services/obsidian-sync.md)
 - [Music Assistant](services/music-assistant.md)
 - [IT-Tools](services/it-tools.md)
+- [Glance](services/glance.md)
 
 ## Reference
 

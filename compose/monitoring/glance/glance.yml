@@ -1,0 +1,45 @@
+server:
+  proxied: true
+
+branding:
+  app-name: Domum
+  logo-text: Domum
+
+theme:
+  background-color: 222 22 10
+  primary-color: 42 82 62
+  positive-color: 128 45 56
+  negative-color: 0 70 62
+  contrast-multiplier: 1.15
+
+pages:
+  - name: Domum
+    width: slim
+    hide-desktop-navigation: true
+    center-vertically: true
+    columns:
+      - size: full
+        widgets:
+          - type: search
+            autofocus: true
+            search-engine: duckduckgo
+            new-tab: true
+
+          - type: bookmarks
+            groups:
+              - title: Core
+                links:
+                  - title: Home Assistant
+                    url: https://ha.${DOMUM_DOMAIN}
+                  - title: Actual Budget
+                    url: https://budget.${DOMUM_DOMAIN}
+                  - title: Vaultwarden
+                    url: https://vault.${DOMUM_DOMAIN}
+              - title: Operations
+                links:
+                  - title: Traefik
+                    url: https://traefik.${DOMUM_DOMAIN}
+                  - title: IT-Tools
+                    url: https://tools.${DOMUM_DOMAIN}
+                  - title: AdGuard Home
+                    url: https://adguard.${DOMUM_DOMAIN}
