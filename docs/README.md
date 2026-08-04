@@ -51,6 +51,7 @@ designed to be explicit and backup-aware.
 - [Beszel](services/beszel.md)
 - [Healthchecks](services/healthchecks.md)
 - [Karakeep](services/karakeep.md)
+- [Stirling PDF](services/stirling-pdf.md)
 
 ## Reference
 

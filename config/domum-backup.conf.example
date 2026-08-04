@@ -117,6 +117,7 @@ BACKUP_MEMOS=1
 BACKUP_BESZEL=1
 BACKUP_HEALTHCHECKS=1
 BACKUP_KARAKEEP=1
+BACKUP_STIRLING_PDF=1
 
 # ============================================================
 # SECTION: per-service backup tuning

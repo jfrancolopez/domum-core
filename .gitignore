@@ -25,6 +25,9 @@ compose/networking/adguard/work/
 # Live Karakeep search index; primary app data is covered by **/data/.
 compose/productivity/karakeep/meilisearch/
 
+# Live Stirling PDF config, logs, OCR data, and pipelines.
+compose/productivity/stirling-pdf/
+
 # Live ESPHome bind-mount config; backed up, never committed.
 compose/automation/esphome/
 

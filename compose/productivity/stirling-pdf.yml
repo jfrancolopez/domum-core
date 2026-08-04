@@ -1,0 +1,30 @@
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest-ultra-lite
+    container_name: stirling-pdf
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+    environment:
+      - SECURITY_ENABLELOGIN=false
+      - SYSTEM_DEFAULTLOCALE=en-US
+    volumes:
+      - /opt/domum-core/compose/productivity/stirling-pdf/configs:/configs
+      - /opt/domum-core/compose/productivity/stirling-pdf/logs:/logs
+      - /opt/domum-core/compose/productivity/stirling-pdf/pipeline:/pipeline
+      - /opt/domum-core/compose/productivity/stirling-pdf/tessdata:/usr/share/tessdata
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.stirling-pdf.rule=Host(`pdf.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.stirling-pdf.entrypoints=websecure
+      - traefik.http.routers.stirling-pdf.tls=true
+      - traefik.http.routers.stirling-pdf.tls.certresolver=cf
+      - traefik.http.routers.stirling-pdf.middlewares=securityHeaders@file,forwardedHeaders@file,traefik-auth@file
+      - traefik.http.services.stirling-pdf.loadbalancer.server.port=8080
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
