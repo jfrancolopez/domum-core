@@ -2,44 +2,88 @@ server:
   proxied: true
 
 branding:
-  app-name: Domum
-  logo-text: Domum
+  app-name: Domum Core
+  logo-text: DC
 
 theme:
-  background-color: 222 22 10
-  primary-color: 42 82 62
-  positive-color: 128 45 56
-  negative-color: 0 70 62
-  contrast-multiplier: 1.15
+  background-color: 240 10 7
+  primary-color: 267 85 72
+  positive-color: 142 65 54
+  negative-color: 350 78 65
+  contrast-multiplier: 1.2
 
 pages:
   - name: Domum
-    width: slim
-    hide-desktop-navigation: true
-    center-vertically: true
+    width: wide
     columns:
-      - size: full
+      - size: small
         widgets:
           - type: search
             autofocus: true
             search-engine: duckduckgo
             new-tab: true
-
           - type: bookmarks
             groups:
-              - title: Core
+              - title: Portal
                 links:
+                  - title: Homepage
+                    url: https://home.${DOMUM_DOMAIN}
+                  - title: Beszel
+                    url: https://beszel.${DOMUM_DOMAIN}
                   - title: Home Assistant
                     url: https://ha.${DOMUM_DOMAIN}
                   - title: Actual Budget
                     url: https://budget.${DOMUM_DOMAIN}
-                  - title: Vaultwarden
-                    url: https://vault.${DOMUM_DOMAIN}
-              - title: Operations
-                links:
                   - title: Traefik
                     url: https://traefik.${DOMUM_DOMAIN}
-                  - title: IT-Tools
-                    url: https://tools.${DOMUM_DOMAIN}
-                  - title: AdGuard Home
-                    url: https://adguard.${DOMUM_DOMAIN}
+                  - title: Dozzle
+                    url: https://logs.${DOMUM_DOMAIN}
+      - size: full
+        widgets:
+          - type: rss
+            title: Infrastructure and AI
+            style: detailed-list
+            limit: 12
+            collapse-after: 6
+            feeds:
+              - url: https://www.home-assistant.io/atom.xml
+                title: Home Assistant
+              - url: https://kubernetes.io/feed.xml
+                title: Kubernetes
+              - url: https://www.docker.com/blog/feed/
+                title: Docker
+              - url: https://feeds.arstechnica.com/arstechnica/technology-lab
+                title: Ars Technica AI
+  - name: Technology
+    width: wide
+    columns:
+      - size: full
+        widgets:
+          - type: rss
+            title: Self-hosting and Security
+            style: detailed-list
+            limit: 15
+            collapse-after: 8
+            feeds:
+              - url: https://selfh.st/rss/
+                title: selfh.st
+              - url: https://www.cncf.io/feed/
+                title: CNCF
+              - url: https://www.bleepingcomputer.com/feed/
+                title: BleepingComputer
+              - url: https://www.3dprinting.com/feed/
+                title: 3D Printing
+      - size: small
+        widgets:
+          - type: bookmarks
+            groups:
+              - title: Watch and Read
+                links:
+                  - title: Linus Tech Tips
+                    url: https://www.youtube.com/@LinusTechTips
+                  - title: The Primeagen
+                    url: https://www.youtube.com/@ThePrimeTimeagen
+                  - title: Joe Rogan
+                    url: https://www.youtube.com/@joerogan
+                  - title: Hacker News
+                    url: https://news.ycombinator.com/

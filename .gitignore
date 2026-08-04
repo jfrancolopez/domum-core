@@ -8,6 +8,8 @@ secrets/
 data/
 logs/
 **/data/
+compose/monitoring/beszel/agent/
+compose/monitoring/beszel/socket/
 **/*.log
 compose/automation/zigbee2mqtt/secret.yaml
 compose/automation/zigbee2mqtt/secret.yaml.pre-mqtt-init
