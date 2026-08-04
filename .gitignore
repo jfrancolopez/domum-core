@@ -28,6 +28,9 @@ compose/productivity/karakeep/meilisearch/
 # Live Stirling PDF config, logs, OCR data, and pipelines.
 compose/productivity/stirling-pdf/
 
+# Live FreshRSS data, SQLite databases, and extensions.
+compose/productivity/freshrss/
+
 # Live ESPHome bind-mount config; backed up, never committed.
 compose/automation/esphome/
 

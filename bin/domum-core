@@ -145,6 +145,7 @@ load_cfg() {
   BACKUP_HEALTHCHECKS="${BACKUP_HEALTHCHECKS:-1}"
   BACKUP_KARAKEEP="${BACKUP_KARAKEEP:-1}"
   BACKUP_STIRLING_PDF="${BACKUP_STIRLING_PDF:-1}"
+  BACKUP_FRESHRSS="${BACKUP_FRESHRSS:-1}"
 
   # Tailscale is optional remote transport for this host. Keep host DNS under
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
@@ -230,6 +231,8 @@ load_cfg() {
   KARAKEEP_UPDATE_DELAY_DAYS="${KARAKEEP_UPDATE_DELAY_DAYS:-14}"
   STIRLING_PDF_AUTO_UPDATE="${STIRLING_PDF_AUTO_UPDATE:-0}"
   STIRLING_PDF_UPDATE_DELAY_DAYS="${STIRLING_PDF_UPDATE_DELAY_DAYS:-14}"
+  FRESHRSS_AUTO_UPDATE="${FRESHRSS_AUTO_UPDATE:-0}"
+  FRESHRSS_UPDATE_DELAY_DAYS="${FRESHRSS_UPDATE_DELAY_DAYS:-14}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -793,6 +796,7 @@ actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compo
 memos|ENABLE_MEMOS|productivity|stateful-app|BACKUP_MEMOS|compose/productivity/memos.yml|-
 karakeep|ENABLE_KARAKEEP|productivity|bookmark-archive|BACKUP_KARAKEEP|compose/productivity/karakeep.yml|-
 stirling-pdf|ENABLE_STIRLING_PDF|productivity|document-tool|BACKUP_STIRLING_PDF|compose/productivity/stirling-pdf.yml|-
+freshrss|ENABLE_FRESHRSS|productivity|rss-reader|BACKUP_FRESHRSS|compose/productivity/freshrss.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
 obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
 it-tools|ENABLE_IT_TOOLS|productivity|stateless-app|-|compose/productivity/it-tools.yml|-
@@ -1217,6 +1221,7 @@ backup_src_dir_for() {
     healthchecks)   echo "$DOMUM_DIR/compose/monitoring/healthchecks/data" ;;
     karakeep)       echo "$DOMUM_DIR/compose/productivity/karakeep/data" ;;
     stirling-pdf)   echo "$DOMUM_DIR/compose/productivity/stirling-pdf" ;;
+    freshrss)       echo "$DOMUM_DIR/compose/productivity/freshrss" ;;
     *) echo "" ;;
   esac
 }
@@ -1238,7 +1243,7 @@ validate_backup_artifact() {
 # when it matters most. (Actual Budget has its own quiesce in actual_backup.)
 service_needs_sqlite_quiesce() {
   case "$1" in
-    vaultwarden|ntfy|memos|beszel|healthchecks|karakeep) return 0 ;;
+    vaultwarden|ntfy|memos|beszel|healthchecks|karakeep|freshrss) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -2497,7 +2502,7 @@ update_delay_days_for() {
 
 service_requires_backup() {
   case "$(normalize_service_name "$1")" in
-    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos|beszel|healthchecks|karakeep|stirling-pdf) return 0 ;;
+    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos|beszel|healthchecks|karakeep|stirling-pdf|freshrss) return 0 ;;
     *) return 1 ;;
   esac
 }

@@ -52,6 +52,7 @@ designed to be explicit and backup-aware.
 - [Healthchecks](services/healthchecks.md)
 - [Karakeep](services/karakeep.md)
 - [Stirling PDF](services/stirling-pdf.md)
+- [FreshRSS](services/freshrss.md)
 
 ## Reference
 
