@@ -233,6 +233,8 @@ load_cfg() {
   STIRLING_PDF_UPDATE_DELAY_DAYS="${STIRLING_PDF_UPDATE_DELAY_DAYS:-14}"
   FRESHRSS_AUTO_UPDATE="${FRESHRSS_AUTO_UPDATE:-0}"
   FRESHRSS_UPDATE_DELAY_DAYS="${FRESHRSS_UPDATE_DELAY_DAYS:-14}"
+  EXCALIDRAW_AUTO_UPDATE="${EXCALIDRAW_AUTO_UPDATE:-0}"
+  EXCALIDRAW_UPDATE_DELAY_DAYS="${EXCALIDRAW_UPDATE_DELAY_DAYS:-14}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -797,6 +799,7 @@ memos|ENABLE_MEMOS|productivity|stateful-app|BACKUP_MEMOS|compose/productivity/m
 karakeep|ENABLE_KARAKEEP|productivity|bookmark-archive|BACKUP_KARAKEEP|compose/productivity/karakeep.yml|-
 stirling-pdf|ENABLE_STIRLING_PDF|productivity|document-tool|BACKUP_STIRLING_PDF|compose/productivity/stirling-pdf.yml|-
 freshrss|ENABLE_FRESHRSS|productivity|rss-reader|BACKUP_FRESHRSS|compose/productivity/freshrss.yml|-
+excalidraw|ENABLE_EXCALIDRAW|productivity|stateless-app|-|compose/productivity/excalidraw.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
 obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
 it-tools|ENABLE_IT_TOOLS|productivity|stateless-app|-|compose/productivity/it-tools.yml|-

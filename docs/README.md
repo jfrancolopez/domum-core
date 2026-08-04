@@ -53,6 +53,7 @@ designed to be explicit and backup-aware.
 - [Karakeep](services/karakeep.md)
 - [Stirling PDF](services/stirling-pdf.md)
 - [FreshRSS](services/freshrss.md)
+- [Excalidraw](services/excalidraw.md)
 
 ## Reference
 
