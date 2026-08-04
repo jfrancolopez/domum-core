@@ -45,6 +45,7 @@ designed to be explicit and backup-aware.
 - [IT-Tools](services/it-tools.md)
 - [Glance](services/glance.md)
 - [Dozzle](services/dozzle.md)
+- [ntfy](services/ntfy.md)
 
 ## Reference
 
