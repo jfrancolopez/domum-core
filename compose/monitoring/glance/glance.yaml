@@ -6,11 +6,23 @@ branding:
   logo-text: DC
 
 theme:
-  background-color: 240 10 7
-  primary-color: 267 85 72
-  positive-color: 142 65 54
-  negative-color: 350 78 65
+  background-color: 231 15 21
+  primary-color: 265 89 79
+  positive-color: 135 94 66
+  negative-color: 0 100 67
   contrast-multiplier: 1.2
+  presets:
+    catppuccin-macchiato:
+      background-color: 232 23 18
+      primary-color: 220 83 75
+      positive-color: 105 48 72
+      negative-color: 351 74 73
+      contrast-multiplier: 1.2
+    gruvbox-dark:
+      background-color: 0 0 16
+      primary-color: 43 59 81
+      positive-color: 61 66 44
+      negative-color: 6 96 59
 
 pages:
   - name: Domum
@@ -88,6 +100,15 @@ pages:
     columns:
       - size: full
         widgets:
+          - type: videos
+            title: Homelab video updates
+            style: horizontal-cards
+            limit: 6
+            collapse-after: 3
+            include-shorts: false
+            channels:
+              - UCXuqSBlHAE6Xw-yeJA0Tunw # Linus Tech Tips
+              - UCR-DXc1voovS8nhAvccRZhg # Jeff Geerling
           - type: releases
             title: Installed software releases
             cache: 6h

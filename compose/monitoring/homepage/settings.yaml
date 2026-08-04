@@ -1,12 +1,12 @@
 title: Domum Core
-description: Home automation and operations portal
+description: Home automation // observability portal
 theme: dark
 color: violet
 target: _self
 hideVersion: true
 disableUpdateCheck: true
 statusStyle: dot
-headerStyle: boxed
+headerStyle: clean
 iconStyle: theme
 fullWidth: true
 useEqualHeights: true

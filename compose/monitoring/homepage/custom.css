@@ -1,11 +1,33 @@
-/* Readability comes first; the terminal accent stays deliberately subtle. */
+/* Dracula-inspired terminal framing, kept deliberately calm for daily use. */
 body {
-  background-color: #101014;
-  background-image: linear-gradient(rgba(139, 92, 246, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-color: #282a36;
+  background-image: linear-gradient(rgba(189, 147, 249, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(189, 147, 249, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.service-group-name,
+.bookmark-group-name,
+.service-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.service-card {
+  border: 1px solid rgba(189, 147, 249, 0.16);
+  box-shadow: 0 10px 24px rgba(15, 16, 24, 0.22);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.service-card:hover {
+  border-color: rgba(189, 147, 249, 0.52);
+  box-shadow: 0 12px 28px rgba(15, 16, 24, 0.34), 0 0 18px rgba(189, 147, 249, 0.1);
+  transform: translateY(-1px);
+}
+
+.service-description {
+  letter-spacing: 0.01em;
 }
 
 ::selection {
-  background: #7c3aed;
-  color: #ffffff;
+  background: #bd93f9;
+  color: #282a36;
 }
