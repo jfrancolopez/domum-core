@@ -21,6 +21,7 @@ services:
       - UWSGI_DISABLE_LOGGING=1
     volumes:
       - /opt/domum-core/compose/monitoring/healthchecks/data:/data
+      - /opt/domum-core/compose/monitoring/healthchecks/local_settings.py:/opt/healthchecks/hc/local_settings.py:ro
       - /etc/domum-core/secrets/healthchecks_secret_key:/run/secrets/healthchecks_secret_key:ro
     labels:
       - traefik.enable=true

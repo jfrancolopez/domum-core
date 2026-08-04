@@ -1,0 +1,5 @@
+import os
+
+CSRF_TRUSTED_ORIGINS = [os.environ["SITE_ROOT"]]
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
