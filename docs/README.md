@@ -48,6 +48,7 @@ designed to be explicit and backup-aware.
 - [ntfy](services/ntfy.md)
 - [Memos](services/memos.md)
 - [Homepage](services/homepage.md)
+- [Beszel](services/beszel.md)
 
 ## Reference
 

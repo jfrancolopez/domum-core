@@ -1,0 +1,29 @@
+services:
+  beszel:
+    image: henrygd/beszel:latest
+    container_name: beszel
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+      - domum-data
+    environment:
+      - APP_URL=https://beszel.${DOMUM_DOMAIN}
+    volumes:
+      - /opt/domum-core/compose/monitoring/beszel/data:/beszel_data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.beszel.rule=Host(`beszel.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.beszel.entrypoints=websecure
+      - traefik.http.routers.beszel.tls=true
+      - traefik.http.routers.beszel.tls.certresolver=cf
+      - traefik.http.routers.beszel.middlewares=securityHeaders@file
+      - traefik.http.services.beszel.loadbalancer.server.port=8090
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
+  domum-data:
+    external: true

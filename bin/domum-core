@@ -141,6 +141,7 @@ load_cfg() {
   BACKUP_ADGUARD="${BACKUP_ADGUARD:-1}"
   BACKUP_NTFY="${BACKUP_NTFY:-1}"
   BACKUP_MEMOS="${BACKUP_MEMOS:-1}"
+  BACKUP_BESZEL="${BACKUP_BESZEL:-1}"
 
   # Tailscale is optional remote transport for this host. Keep host DNS under
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
@@ -218,6 +219,8 @@ load_cfg() {
   MEMOS_UPDATE_DELAY_DAYS="${MEMOS_UPDATE_DELAY_DAYS:-14}"
   HOMEPAGE_AUTO_UPDATE="${HOMEPAGE_AUTO_UPDATE:-0}"
   HOMEPAGE_UPDATE_DELAY_DAYS="${HOMEPAGE_UPDATE_DELAY_DAYS:-7}"
+  BESZEL_AUTO_UPDATE="${BESZEL_AUTO_UPDATE:-0}"
+  BESZEL_UPDATE_DELAY_DAYS="${BESZEL_UPDATE_DELAY_DAYS:-14}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -774,6 +777,7 @@ glance|ENABLE_GLANCE|monitoring|dashboard|-|compose/monitoring/glance.yml|-
 dozzle|ENABLE_DOZZLE|monitoring|operator-tool|-|compose/monitoring/dozzle.yml|-
 ntfy|ENABLE_NTFY|monitoring|notification-service|BACKUP_NTFY|compose/monitoring/ntfy.yml|-
 homepage|ENABLE_HOMEPAGE|monitoring|dashboard|-|compose/monitoring/homepage.yml|-
+beszel|ENABLE_BESZEL|monitoring|monitoring-hub|BACKUP_BESZEL|compose/monitoring/beszel.yml|-
 adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 memos|ENABLE_MEMOS|productivity|stateful-app|BACKUP_MEMOS|compose/productivity/memos.yml|-
@@ -1197,6 +1201,7 @@ backup_src_dir_for() {
     obsidian-sync)  echo "$DOMUM_DIR/compose/productivity/obsidian-sync/data" ;;
     ntfy)           echo "$DOMUM_DIR/compose/monitoring/ntfy/data" ;;
     memos)          echo "$DOMUM_DIR/compose/productivity/memos/data" ;;
+    beszel)         echo "$DOMUM_DIR/compose/monitoring/beszel/data" ;;
     *) echo "" ;;
   esac
 }
@@ -1218,7 +1223,7 @@ validate_backup_artifact() {
 # when it matters most. (Actual Budget has its own quiesce in actual_backup.)
 service_needs_sqlite_quiesce() {
   case "$1" in
-    vaultwarden|ntfy|memos) return 0 ;;
+    vaultwarden|ntfy|memos|beszel) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -2477,7 +2482,7 @@ update_delay_days_for() {
 
 service_requires_backup() {
   case "$(normalize_service_name "$1")" in
-    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos) return 0 ;;
+    home-assistant|mariadb|actual-budget|vaultwarden|obsidian-sync|zigbee2mqtt|zwave-js-ui|nodered|mqtt|adguard-home|ntfy|memos|beszel) return 0 ;;
     *) return 1 ;;
   esac
 }
