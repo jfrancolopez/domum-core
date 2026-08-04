@@ -3,6 +3,7 @@ services:
     image: stirlingtools/stirling-pdf:latest-ultra-lite
     container_name: stirling-pdf
     restart: unless-stopped
+    mem_limit: 768m
     networks:
       - domum-proxy
     environment:

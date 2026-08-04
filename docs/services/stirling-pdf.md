@@ -4,6 +4,10 @@ Stirling PDF provides browser-based PDF tools. This deployment uses the
 `latest-ultra-lite` image to keep Raspberry Pi CPU, memory, and disk pressure
 lower than the standard image.
 
+The container is capped at 768 MiB so the JVM does not size itself against the
+whole host. Ultra-lite intentionally disables heavyweight OCR and Office
+conversion features; switch images only after checking idle memory and thermals.
+
 ## Enable the Service
 
 Stirling PDF is disabled by default:
