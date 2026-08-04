@@ -11,7 +11,9 @@ Healthchecks is disabled by default. It requires a local secret first:
 ```bash
 sudo install -d -m 0700 /etc/domum-core/secrets
 sudo sh -c 'openssl rand -hex 48 > /etc/domum-core/secrets/healthchecks_secret_key'
-sudo chmod 0600 /etc/domum-core/secrets/healthchecks_secret_key
+sudo chmod 0644 /etc/domum-core/secrets/healthchecks_secret_key
+sudo install -d -m 0750 -o 999 -g 999 \
+  /opt/domum-core/compose/monitoring/healthchecks/data
 sudo domum-core configure
 sudo domum-core apply
 ```
