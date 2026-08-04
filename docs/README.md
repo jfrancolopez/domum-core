@@ -34,6 +34,8 @@ designed to be explicit and backup-aware.
 
 ## Services
 
+- [Dashboard architecture](dashboard-architecture.md)
+
 - [Home Assistant](services/home-assistant.md)
 - [MQTT](services/mqtt.md)
 - [AdGuard Tailscale DNS](services/adguard-tailscale-dns.md)

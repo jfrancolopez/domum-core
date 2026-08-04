@@ -1,7 +1,8 @@
 # Homepage
 
-Homepage is a service launcher dashboard. This deployment uses static tracked
-configuration only and intentionally does not mount the Docker socket.
+Homepage is the authoritative Domum Core service directory at
+`https://home.${DOMUM_DOMAIN}`. `https://homepage.${DOMUM_DOMAIN}` remains a
+direct route for recovery and bookmarks.
 
 ## Enable the Service
 
@@ -12,8 +13,9 @@ sudo domum-core configure
 sudo domum-core apply
 ```
 
-The service is exposed as `https://homepage.${DOMUM_DOMAIN}` through Traefik.
-Add a matching DNS CNAME before using it from the LAN.
+The portal uses compact Home Automation, Infrastructure, Applications, and
+External Systems groups. Cards use internal HTTP site monitors where possible;
+the browser-facing link always uses HTTPS.
 
 ## Configuration
 
@@ -32,7 +34,10 @@ environment variable.
 
 Homepage does not have the Docker socket mounted. That means it cannot show live
 container stats, but a web compromise of Homepage also cannot talk to the Docker
-API.
+API. Detailed host and container monitoring belongs in Beszel.
+
+Traefik applies `X-Frame-Options: DENY`. Homepage is intentionally not embedded
+in Glance; use the explicit Glance and Beszel links instead.
 
 Runtime logs go to Docker stdout only. The tracked config mount is read-only.
 

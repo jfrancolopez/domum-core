@@ -1,8 +1,8 @@
 # Glance
 
-Glance is a lightweight dashboard for bookmarks and small status widgets. In
-this deployment it starts with a deliberately quiet config: search plus links to
-existing domum services, with no Docker socket and no feed/API polling.
+Glance is the complementary daily overview at `https://glance.${DOMUM_DOMAIN}`.
+It provides portal links and curated technology feeds, not a second service
+directory or a replacement for Beszel's historical metrics.
 
 ## Enable the Service
 
@@ -26,6 +26,9 @@ compose/monitoring/glance/glance.yaml
 Keep secrets out of this file. If a future widget needs a token, store the token
 under `/etc/domum-core/secrets` and pass it through a file-backed environment
 variable instead of committing it.
+
+Glance has no Docker socket or host filesystem mounts. Do not present its
+container-local values as Raspberry Pi metrics; use Beszel for those values.
 
 ## Data and Backups
 

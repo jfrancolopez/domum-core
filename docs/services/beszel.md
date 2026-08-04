@@ -1,8 +1,9 @@
 # Beszel
 
-Beszel is a lightweight server monitoring UI. This first deployment runs the hub
-only. The local agent is intentionally not added yet because it needs a token/key
-created from the hub UI and requires Docker socket or host metric access.
+Beszel is the detailed Domum monitoring UI at
+`https://beszel.${DOMUM_DOMAIN}`. The local agent monitors the Pi, selected
+network interfaces, NVMe SMART data, Docker lifecycle/CPU/network data, and
+selected systemd services.
 
 ## Enable the Hub
 
@@ -21,14 +22,26 @@ matching DNS CNAME before using it from the LAN.
 Open the hub and create the first admin account. Keep the credentials in
 Vaultwarden.
 
-## Agent Follow-Up
+## Local Agent
 
-Do not add the local agent by hand outside git. After the hub is running, create
-the local system/token in the Beszel UI, then add a follow-up compose change for
-`beszel-agent` using secrets or local config for the generated token/key.
+The agent uses Unix-socket mode and does not publish port 45876. In the Beszel
+system configuration, set Host / IP to `/beszel_socket/beszel.sock`.
 
-That follow-up should explicitly review Docker socket exposure and Pi resource
-impact.
+Its public key and token are root-owned files under `/etc/domum-core/secrets`.
+They are mounted read-only through `KEY_FILE` and `TOKEN_FILE`; never put them
+in Compose, Git, or the Beszel UI notes.
+
+The agent has read-only Docker socket access, `/dev/nvme0`, and the two SMART
+capabilities required by `smartctl`. Docker currently reports `0B / 0B` memory
+for every container, so per-container memory metrics are unavailable until the
+Docker/cgroup reporting issue is resolved. CPU, lifecycle, and network metrics
+remain available.
+
+Configure these conservative alerts in the authenticated Beszel UI: host
+unavailable; root filesystem warning at 80% and critical at 90%; sustained host
+memory at 90%; sustained CPU temperature at 80 C; sustained abnormal load; and
+critical automation containers stopped unexpectedly. SMART failures notify
+automatically once a Beszel notification channel exists.
 
 ## Data and Backups
 
