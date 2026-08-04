@@ -67,6 +67,7 @@ ENABLE_OBSIDIAN_SYNC=0
 # OBSIDIAN_COUCHDB_USER="obsidian"
 # Required when ENABLE_OBSIDIAN_SYNC=1; never leave this as changeme.
 # OBSIDIAN_COUCHDB_PASSWORD="set-a-long-random-password"
+ENABLE_IT_TOOLS=0
 
 # Removed / intentionally not part of domum-core:
 # go2rtc, frigate, jellyfin, and portainer belong outside this Pi profile.
@@ -152,6 +153,8 @@ VAULTWARDEN_AUTO_UPDATE=1
 VAULTWARDEN_UPDATE_DELAY_DAYS=14
 OBSIDIAN_SYNC_AUTO_UPDATE=1
 OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
+IT_TOOLS_AUTO_UPDATE=1
+IT_TOOLS_UPDATE_DELAY_DAYS=7
 UPDATE_ROT_AUTO_DAYS=60
 UPDATE_ROT_MANUAL_DAYS=270
 

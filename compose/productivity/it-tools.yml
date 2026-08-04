@@ -1,0 +1,22 @@
+services:
+  it-tools:
+    image: ghcr.io/corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.it-tools.rule=Host(`tools.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.it-tools.entrypoints=websecure
+      - traefik.http.routers.it-tools.tls=true
+      - traefik.http.routers.it-tools.tls.certresolver=cf
+      - traefik.http.routers.it-tools.middlewares=securityHeaders@file
+      - traefik.http.services.it-tools.loadbalancer.server.port=80
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true

@@ -204,6 +204,8 @@ load_cfg() {
   VAULTWARDEN_UPDATE_DELAY_DAYS="${VAULTWARDEN_UPDATE_DELAY_DAYS:-14}"
   OBSIDIAN_SYNC_AUTO_UPDATE="${OBSIDIAN_SYNC_AUTO_UPDATE:-0}"
   OBSIDIAN_SYNC_UPDATE_DELAY_DAYS="${OBSIDIAN_SYNC_UPDATE_DELAY_DAYS:-7}"
+  IT_TOOLS_AUTO_UPDATE="${IT_TOOLS_AUTO_UPDATE:-0}"
+  IT_TOOLS_UPDATE_DELAY_DAYS="${IT_TOOLS_UPDATE_DELAY_DAYS:-7}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -760,6 +762,7 @@ adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compos
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-
 obsidian-sync|ENABLE_OBSIDIAN_SYNC|productivity|stateful-app|BACKUP_OBSIDIAN|compose/productivity/obsidian-sync.yml|-
+it-tools|ENABLE_IT_TOOLS|productivity|stateless-app|-|compose/productivity/it-tools.yml|-
 EOF
 }
 
