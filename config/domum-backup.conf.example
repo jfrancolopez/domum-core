@@ -113,6 +113,7 @@ BACKUP_ESPHOME=1
 BACKUP_MUSICASSISTANT=1
 BACKUP_ADGUARD=1
 BACKUP_NTFY=1
+BACKUP_MEMOS=1
 
 # ============================================================
 # SECTION: per-service backup tuning

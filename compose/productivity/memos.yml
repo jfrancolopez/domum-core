@@ -1,0 +1,27 @@
+services:
+  memos:
+    image: neosmemo/memos:stable
+    container_name: memos
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+      - domum-data
+    volumes:
+      - /opt/domum-core/compose/productivity/memos/data:/var/opt/memos
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.memos.rule=Host(`memos.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.memos.entrypoints=websecure
+      - traefik.http.routers.memos.tls=true
+      - traefik.http.routers.memos.tls.certresolver=cf
+      - traefik.http.routers.memos.middlewares=securityHeaders@file
+      - traefik.http.services.memos.loadbalancer.server.port=5230
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true
+  domum-data:
+    external: true

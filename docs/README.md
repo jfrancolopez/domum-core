@@ -46,6 +46,7 @@ designed to be explicit and backup-aware.
 - [Glance](services/glance.md)
 - [Dozzle](services/dozzle.md)
 - [ntfy](services/ntfy.md)
+- [Memos](services/memos.md)
 
 ## Reference
 
