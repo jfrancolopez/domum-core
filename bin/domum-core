@@ -208,6 +208,8 @@ load_cfg() {
   IT_TOOLS_UPDATE_DELAY_DAYS="${IT_TOOLS_UPDATE_DELAY_DAYS:-7}"
   GLANCE_AUTO_UPDATE="${GLANCE_AUTO_UPDATE:-0}"
   GLANCE_UPDATE_DELAY_DAYS="${GLANCE_UPDATE_DELAY_DAYS:-7}"
+  DOZZLE_AUTO_UPDATE="${DOZZLE_AUTO_UPDATE:-0}"
+  DOZZLE_UPDATE_DELAY_DAYS="${DOZZLE_UPDATE_DELAY_DAYS:-7}"
   UPDATE_ROT_AUTO_DAYS="${UPDATE_ROT_AUTO_DAYS:-60}"
   UPDATE_ROT_MANUAL_DAYS="${UPDATE_ROT_MANUAL_DAYS:-270}"
 
@@ -761,6 +763,7 @@ esphome|ENABLE_ESP_HOME|automation|home-automation-core|BACKUP_ESPHOME|compose/a
 musicassistant|ENABLE_MA|automation|optional-media|BACKUP_MUSICASSISTANT|compose/automation/music-assistant.yml|-
 uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|infrastructure|-|compose/monitoring/uptime-kuma.yml|-
 glance|ENABLE_GLANCE|monitoring|dashboard|-|compose/monitoring/glance.yml|-
+dozzle|ENABLE_DOZZLE|monitoring|operator-tool|-|compose/monitoring/dozzle.yml|-
 adguard-home|ENABLE_ADGUARD_HOME|networking|infrastructure|BACKUP_ADGUARD|compose/networking/adguard-home.yml|-
 actual-budget|ENABLE_ACTUAL_BUDGET|productivity|stateful-app|BACKUP_ACTUAL|compose/productivity/actual-budget.yml|-
 vaultwarden|ENABLE_VAULTWARDEN|security|stateful-app|BACKUP_VAULTWARDEN|compose/security/vaultwarden.yml|-

@@ -47,6 +47,7 @@ ENABLE_MA=1
 # ============================================================
 # ENABLE_UPTIME_KUMA=0
 ENABLE_GLANCE=0
+ENABLE_DOZZLE=0
 
 # ============================================================
 # DNS role: only for Tailscale split DNS
@@ -158,6 +159,8 @@ IT_TOOLS_AUTO_UPDATE=1
 IT_TOOLS_UPDATE_DELAY_DAYS=7
 GLANCE_AUTO_UPDATE=1
 GLANCE_UPDATE_DELAY_DAYS=7
+DOZZLE_AUTO_UPDATE=0
+DOZZLE_UPDATE_DELAY_DAYS=7
 UPDATE_ROT_AUTO_DAYS=60
 UPDATE_ROT_MANUAL_DAYS=270
 

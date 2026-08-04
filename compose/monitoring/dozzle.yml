@@ -1,0 +1,26 @@
+services:
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    command:
+      - --no-analytics
+    networks:
+      - domum-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=domum-proxy
+      - traefik.http.routers.dozzle.rule=Host(`logs.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.dozzle.entrypoints=websecure
+      - traefik.http.routers.dozzle.tls=true
+      - traefik.http.routers.dozzle.tls.certresolver=cf
+      - traefik.http.routers.dozzle.middlewares=securityHeaders@file,traefik-auth@file
+      - traefik.http.services.dozzle.loadbalancer.server.port=8080
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true

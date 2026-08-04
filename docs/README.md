@@ -44,6 +44,7 @@ designed to be explicit and backup-aware.
 - [Music Assistant](services/music-assistant.md)
 - [IT-Tools](services/it-tools.md)
 - [Glance](services/glance.md)
+- [Dozzle](services/dozzle.md)
 
 ## Reference
 
