@@ -16,21 +16,31 @@ quicklaunch:
   target: _blank
   mobileButtonPosition: bottom-right
 layout:
+  Overview:
+    tab: Overview
+    style: row
+    columns: 1
   Home Automation:
+    tab: Services
     style: row
     columns: 3
   Infrastructure:
+    tab: Operations
     style: row
     columns: 4
   Applications:
+    tab: Services
     style: row
     columns: 3
   External Systems:
+    tab: Operations
     style: row
     columns: 3
   Automation Docs:
+    tab: Reference
     style: row
     columns: 4
   Operations Docs:
+    tab: Reference
     style: row
     columns: 4

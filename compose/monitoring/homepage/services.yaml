@@ -1,3 +1,17 @@
+- Overview:
+    - Glance Daily Overview:
+        href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Live operational overview
+        icon: glance.png
+        widget:
+          type: iframe
+          name: Glance
+          src: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+          classes: h-[70vh]
+          referrerPolicy: same-origin
+          allowScrolling: "no"
+          loadingStrategy: eager
+
 - Home Automation:
     - Home Assistant:
         href: https://ha.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
@@ -101,6 +115,10 @@
         siteMonitor: http://it-tools:80
 
 - External Systems:
+    - UniFi Network:
+        href: https://unifi
+        description: Network gateway and Wi-Fi management
+        icon: unifi.png
     - Domum Core Repository:
         href: https://github.com/jfrancolopez/domum-core
         description: Infrastructure source and history

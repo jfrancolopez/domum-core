@@ -67,10 +67,6 @@ pages:
                 url: https://beszel.${DOMUM_DOMAIN}
                 check-url: http://beszel:8090
                 icon: si:beszel
-              - title: AdGuard Home
-                url: https://dns.${DOMUM_DOMAIN}
-                check-url: http://adguard-home:3000
-                icon: si:adguard
               - title: Zigbee2MQTT
                 url: https://z2m.${DOMUM_DOMAIN}
                 check-url: http://zigbee2mqtt:8080
