@@ -20,3 +20,12 @@ SECURITY_PATCH_REBOOT_POLICY="manual"
 `security-apply` uses Debian unattended-upgrades for security patches only. It never
 reboots automatically. If `/var/run/reboot-required` exists after patching, the CLI reports
 it and leaves reboot timing to the operator.
+
+The allowed origins are Debian Security only:
+
+```text
+origin=Debian,codename=trixie,label=Debian-Security
+origin=Debian,codename=trixie-security,label=Debian-Security
+```
+
+Raspberry Pi Foundation, Docker, Tailscale, and other third-party origins are not included.

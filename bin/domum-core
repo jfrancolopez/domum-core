@@ -3061,7 +3061,10 @@ os_updates_security_apply() {
     "$([[ -f /var/run/reboot-required ]] && echo 1 || echo 0)" \
     "${SECURITY_PATCH_REBOOT_POLICY:-manual}" \
     >> "$(os_updates_history_dir)/history.log"
-  [[ -f /var/run/reboot-required ]] && warn "Reboot required; policy is manual, so no reboot was attempted."
+  if [[ -f /var/run/reboot-required ]]; then
+    warn "Reboot required; policy is manual, so no reboot was attempted."
+  fi
+  return 0
 }
 
 os_updates_history() {
