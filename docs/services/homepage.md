@@ -15,8 +15,8 @@ sudo domum-core apply
 
 The portal uses four operator tabs:
 
-- `System` for the Raspberry Pi 5, network operations, fleet hosts, and home
-  automation status.
+- `System` for the Raspberry Pi 5, core status, network, calendar, servers, and
+  home automation status.
 - `Apps` for infrastructure, productivity apps, and security tools.
 - `Feeds` for the embedded Glance daily overview and reference bookmarks.
 - `Media` for Plex/Jellyfin/Immich and the external media hosts.
@@ -106,13 +106,16 @@ HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL="https://calendar.google.com/calendar/ical
 8. Run `sudo domum-core apply` or restart Homepage.
 
 The dashboard currently shows the monthly calendar even before the private iCal
-URL is enabled.
+URL is enabled. It is intentionally constrained to half width on desktop and
+uses `maxEvents: 4` so meetings stay subtle below the month grid.
 
 ## Metric Widgets
 
 Native Homepage widgets can replace the placeholder cards once read-only
-credentials exist. Add credentials to `config/homepage.env`, then add the widget
-block to the relevant service in `compose/monitoring/homepage/services.yaml`.
+credentials exist. The dashboard CSS and `blockHighlights` settings are already
+prepared for `good`, `warn`, and `danger` states. Add credentials to
+`config/homepage.env`, then add the widget block to the relevant service in
+`compose/monitoring/homepage/services.yaml`.
 
 Beszel overview or per-host metrics:
 
@@ -124,6 +127,32 @@ widget:
   password: "{{HOMEPAGE_VAR_BESZEL_PASSWORD}}"
   systemId: "{{HOMEPAGE_VAR_BESZEL_PI_SYSTEM_ID}}"
   version: 2
+  fields: ["name", "status", "updated", "cpu", "memory", "disk", "network"]
+  highlight:
+    status:
+      string:
+        - level: danger
+          when: regex
+          value: "(?i)(down|offline|failed)"
+        - level: good
+          when: regex
+          value: "(?i)(up|online|running)"
+    cpu:
+      numeric:
+        - level: danger
+          when: gte
+          value: 90
+        - level: warn
+          when: gte
+          value: 75
+    memory:
+      numeric:
+        - level: danger
+          when: gte
+          value: 90
+        - level: warn
+          when: gte
+          value: 80
 ```
 
 Use `HOMEPAGE_VAR_BESZEL_MEDIA_SYSTEM_ID` for `domum-core-media` and
@@ -139,6 +168,7 @@ widget:
   site: "{{HOMEPAGE_VAR_UNIFI_SITE}}"
   username: "{{HOMEPAGE_VAR_UNIFI_USERNAME}}"
   password: "{{HOMEPAGE_VAR_UNIFI_PASSWORD}}"
+  fields: ["wan", "lan_users", "wlan_users", "wlan_devices"]
 ```
 
 Create a local UniFi account with read-only access. If using an API key instead,
@@ -152,6 +182,16 @@ widget:
   url: http://adguard-home:3000
   username: "{{HOMEPAGE_VAR_ADGUARD_USERNAME}}"
   password: "{{HOMEPAGE_VAR_ADGUARD_PASSWORD}}"
+  fields: ["queries", "blocked", "filtered", "latency"]
+  highlight:
+    latency:
+      numeric:
+        - level: danger
+          when: gte
+          value: 100
+        - level: warn
+          when: gte
+          value: 50
 ```
 
 Allowed fields include queries, blocked, filtered, and latency.
@@ -164,6 +204,7 @@ widget:
   url: http://traefik:8080
   username: "{{HOMEPAGE_VAR_TRAEFIK_USERNAME}}"
   password: "{{HOMEPAGE_VAR_TRAEFIK_PASSWORD}}"
+  fields: ["routers", "services", "middleware"]
 ```
 
 Allowed fields include routers, services, and middleware.
@@ -175,6 +216,16 @@ widget:
   type: healthchecks
   url: http://healthchecks:8000
   key: "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}"
+  fields: ["up", "down"]
+  highlight:
+    down:
+      numeric:
+        - level: danger
+          when: gt
+          value: 0
+        - level: good
+          when: eq
+          value: 0
 ```
 
 Plex:
@@ -184,6 +235,13 @@ widget:
   type: plex
   url: "{{HOMEPAGE_VAR_PLEX_URL}}"
   key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}"
+  fields: ["streams", "albums", "movies", "tv"]
+  highlight:
+    streams:
+      numeric:
+        - level: warn
+          when: gte
+          value: 3
 ```
 
 Jellyfin:
@@ -206,6 +264,7 @@ widget:
   url: "{{HOMEPAGE_VAR_IMMICH_URL}}"
   key: "{{HOMEPAGE_VAR_IMMICH_KEY}}"
   version: 2
+  fields: ["users", "photos", "videos", "storage"]
 ```
 
 Restart Homepage after each widget batch and check logs before adding the next
@@ -215,6 +274,20 @@ batch:
 docker restart homepage
 docker logs --since 60s homepage
 ```
+
+## Restore Readiness
+
+All non-secret dashboard state is tracked in git: layout, tabs, cards, CSS,
+background assets, and the `homepage.env.example` template. A fresh Raspberry Pi
+restore gets those back through the normal repo bootstrap and `sudo domum-core
+apply` flow.
+
+The only Homepage-specific values that are not tracked are live API credentials
+and private URLs in `config/homepage.env`. If you want credentialed widgets to
+come back after bare-metal restore, keep a copy of those values in the same
+password manager entry or recovery notes used for other Domum secrets. Recreate
+`config/homepage.env` from `config/homepage.env.example` after restore, then
+restart Homepage.
 
 ## Security Model
 

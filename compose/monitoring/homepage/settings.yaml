@@ -11,6 +11,11 @@ iconStyle: theme
 fullWidth: true
 useEqualHeights: true
 cardBlur: md
+blockHighlights:
+  levels:
+    good: "bg-emerald-500/20 text-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200"
+    warn: "bg-amber-400/20 text-amber-100 dark:bg-amber-900/45 dark:text-amber-100"
+    danger: "bg-rose-500/25 text-rose-100 dark:bg-rose-950/60 dark:text-rose-100"
 background:
   image: /images/domum-background.svg
   blur: sm
@@ -27,15 +32,15 @@ layout:
     tab: System
     style: row
     columns: 3
+  Network:
+    tab: System
+    style: row
+    columns: 3
   Calendar:
     tab: System
     style: row
     columns: 1
-  Network Operations:
-    tab: System
-    style: row
-    columns: 4
-  Host Fleet:
+  Servers:
     tab: System
     style: row
     columns: 3

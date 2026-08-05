@@ -1,12 +1,11 @@
 - logo:
     icon: mdi-server
 - resources:
-    label: RPi5
+    label: Compute
     cpu: true
     memory: true
     cputemp: true
-    uptime: true
-    units: imperial
+    units: metric
     refresh: 5000
 - resources:
     label: Storage
@@ -15,6 +14,10 @@
       - /host-cache
     expanded: true
     diskUnits: bytes
+    refresh: 30000
+- resources:
+    label: Uptime
+    uptime: true
     refresh: 30000
 - datetime:
     text_size: xl
@@ -30,7 +33,7 @@
     latitude: 35.994
     longitude: -78.8986
     timezone: America/New_York
-    units: imperial
+    units: metric
     cache: 5
     format:
       maximumFractionDigits: 0

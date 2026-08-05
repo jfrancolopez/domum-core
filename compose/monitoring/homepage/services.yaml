@@ -27,29 +27,7 @@
         description: Restic targets, schedule health, and last-run alerts
         icon: mdi-cloud-sync
 
-- Calendar:
-    - Gmail Calendar:
-        href: https://calendar.google.com/calendar/u/0/r?cid=jfrancolopez.dev@gmail.com
-        description: Month view; add private iCal URL by following docs
-        icon: google-calendar.png
-        widget:
-          type: calendar
-          firstDayInWeek: sunday
-          view: monthly
-          maxEvents: 10
-          showTime: true
-          timezone: America/New_York
-          # After creating config/homepage.env, uncomment this integration and
-          # restart Homepage to show private Google Calendar events.
-          # integrations:
-          #   - type: ical
-          #     url: "{{HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL}}"
-          #     name: Gmail
-          #     color: violet
-          #     params:
-          #       showName: false
-
-- Network Operations:
+- Network:
     - UniFi Network:
         href: https://unifi
         description: Gateway, Wi-Fi clients, WAN, LAN, switches, APs
@@ -71,7 +49,29 @@
         description: Scheduled jobs, backup pings, patch timers, failure alerts
         icon: healthchecks.png
 
-- Host Fleet:
+- Calendar:
+    - Gmail Calendar:
+        href: https://calendar.google.com/calendar/u/0/r?cid=jfrancolopez.dev@gmail.com
+        description: Monthly view; private events appear subtly below calendar
+        icon: google-calendar.png
+        widget:
+          type: calendar
+          firstDayInWeek: sunday
+          view: monthly
+          maxEvents: 4
+          showTime: true
+          timezone: America/New_York
+          # After creating config/homepage.env, uncomment this integration and
+          # restart Homepage to show private Google Calendar events.
+          # integrations:
+          #   - type: ical
+          #     url: "{{HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL}}"
+          #     name: Gmail
+          #     color: violet
+          #     params:
+          #       showName: false
+
+- Servers:
     - Unraid:
         href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: CPU, memory, RX/TX, containers, uptime, array free space
