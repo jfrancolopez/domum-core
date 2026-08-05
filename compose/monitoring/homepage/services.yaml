@@ -26,10 +26,28 @@
         href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Restic targets, schedule health, and last-run alerts
         icon: mdi-cloud-sync
-    - Cockpit:
-        href: https://cockpit.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Host administration, updates, disks, and services
-        icon: cockpit.png
+
+- Calendar:
+    - Gmail Calendar:
+        href: https://calendar.google.com/calendar/u/0/r?cid=jfrancolopez.dev@gmail.com
+        description: Month view; add private iCal URL by following docs
+        icon: google-calendar.png
+        widget:
+          type: calendar
+          firstDayInWeek: sunday
+          view: monthly
+          maxEvents: 10
+          showTime: true
+          timezone: America/New_York
+          # After creating config/homepage.env, uncomment this integration and
+          # restart Homepage to show private Google Calendar events.
+          # integrations:
+          #   - type: ical
+          #     url: "{{HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL}}"
+          #     name: Gmail
+          #     color: violet
+          #     params:
+          #       showName: false
 
 - Network Operations:
     - UniFi Network:

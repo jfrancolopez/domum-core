@@ -1,12 +1,28 @@
 - logo:
     icon: mdi-server
+- resources:
+    label: RPi5
+    cpu: true
+    memory: true
+    cputemp: true
+    uptime: true
+    units: imperial
+    refresh: 5000
+- resources:
+    label: Storage
+    disk:
+      - /domum-core
+      - /host-cache
+    expanded: true
+    diskUnits: bytes
+    refresh: 30000
 - datetime:
     text_size: xl
     format:
       dateStyle: long
       timeStyle: short
 - search:
-    provider: duckduckgo
+    provider: google
     target: _self
     showSearchSuggestions: true
 - openmeteo:

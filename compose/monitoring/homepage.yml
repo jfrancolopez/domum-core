@@ -9,8 +9,15 @@ services:
       - HOMEPAGE_ALLOWED_HOSTS=home.${DOMUM_DOMAIN},homepage.${DOMUM_DOMAIN},portal-preview.${DOMUM_DOMAIN}
       - HOMEPAGE_VAR_DOMUM_DOMAIN=${DOMUM_DOMAIN}
       - LOG_TARGETS=stdout
+    env_file:
+      - path: ../../config/homepage.env
+        required: false
     volumes:
       - /opt/domum-core/compose/monitoring/homepage:/app/config:ro
+      - /opt/domum-core/compose/monitoring/homepage/assets:/app/public/images:ro
+      - /sys:/sys:ro
+      - /opt/domum-core:/domum-core:ro
+      - /var/cache:/host-cache:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy

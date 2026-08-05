@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2560 1440" role="img" aria-label="Abstract dark mountain and network background">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#15171f"/>
+      <stop offset="0.45" stop-color="#282a36"/>
+      <stop offset="1" stop-color="#1b1e29"/>
+    </linearGradient>
+    <radialGradient id="violet" cx="28%" cy="22%" r="58%">
+      <stop offset="0" stop-color="#bd93f9" stop-opacity="0.42"/>
+      <stop offset="0.45" stop-color="#bd93f9" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#bd93f9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyan" cx="76%" cy="18%" r="48%">
+      <stop offset="0" stop-color="#8be9fd" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#8be9fd" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#8be9fd" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#violet)"/>
+  <rect width="2560" height="1440" fill="url(#cyan)"/>
+  <g opacity="0.18" stroke="#f8f8f2" stroke-width="1">
+    <path d="M0 290H2560M0 430H2560M0 570H2560M0 710H2560M0 850H2560M0 990H2560M0 1130H2560"/>
+    <path d="M220 0V1440M500 0V1440M780 0V1440M1060 0V1440M1340 0V1440M1620 0V1440M1900 0V1440M2180 0V1440"/>
+  </g>
+  <g filter="url(#soft)" opacity="0.78">
+    <path d="M0 990L290 795L580 920L870 650L1140 875L1420 610L1720 825L1980 660L2260 855L2560 710V1440H0Z" fill="#191b25"/>
+    <path d="M0 1110L360 930L680 1040L980 835L1310 1015L1590 790L1880 1020L2200 850L2560 1030V1440H0Z" fill="#10131b"/>
+  </g>
+  <g opacity="0.55">
+    <circle cx="420" cy="360" r="4" fill="#8be9fd"/>
+    <circle cx="760" cy="520" r="3" fill="#bd93f9"/>
+    <circle cx="1160" cy="420" r="4" fill="#50fa7b"/>
+    <circle cx="1560" cy="560" r="3" fill="#ff79c6"/>
+    <circle cx="2020" cy="420" r="4" fill="#8be9fd"/>
+    <path d="M420 360L760 520L1160 420L1560 560L2020 420" fill="none" stroke="#8be9fd" stroke-opacity="0.28" stroke-width="2"/>
+  </g>
+</svg>
