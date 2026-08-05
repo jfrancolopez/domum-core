@@ -9,7 +9,7 @@
           src: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
           classes: h-screen
           referrerPolicy: same-origin
-          allowScrolling: "no"
+          allowScrolling: "yes"
           loadingStrategy: eager
 
 - Home Automation:
