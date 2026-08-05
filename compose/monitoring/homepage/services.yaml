@@ -1,4 +1,4 @@
-- Overview:
+- Glance:
     - Glance Daily Overview:
         href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Live operational overview
@@ -7,7 +7,7 @@
           type: iframe
           name: Glance
           src: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-          classes: h-[70vh]
+          classes: h-screen
           referrerPolicy: same-origin
           allowScrolling: "no"
           loadingStrategy: eager
