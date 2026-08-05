@@ -1,18 +1,22 @@
-- Reference:
-    - GitHub:
+- Feed Bookmarks:
+    - Domum Core:
         - abbr: GH
           href: https://github.com/jfrancolopez/domum-core
-    - Home Assistant Docs:
-        - abbr: HA
-          href: https://www.home-assistant.io/docs/
+    - FreshRSS:
+        - abbr: RSS
+          href: https://rss.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+    - Glance Direct:
+        - abbr: GL
+          href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
     - selfh.st:
         - abbr: SH
           href: https://selfh.st/
+    - Home Assistant:
+        - abbr: HA
+          href: https://www.home-assistant.io/docs/
     - Beszel Docs:
         - abbr: BZ
           href: https://beszel.dev/
-
-- Automation Docs:
     - ESPHome:
         - abbr: ES
           href: https://esphome.io/guides/
@@ -25,8 +29,6 @@
     - Z-Wave JS UI:
         - abbr: ZW
           href: https://zwave-js.github.io/zwave-js-ui/
-
-- Operations Docs:
     - Traefik:
         - abbr: TR
           href: https://doc.traefik.io/traefik/

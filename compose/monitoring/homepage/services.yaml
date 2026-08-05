@@ -1,7 +1,7 @@
 - Glance:
     - Glance Daily Overview:
         href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Live operational overview
+        description: Embedded live feeds and release radar
         icon: glance.png
         widget:
           type: iframe
@@ -12,75 +12,118 @@
           allowScrolling: "yes"
           loadingStrategy: eager
 
+- Core Status:
+    - domum-core:
+        href: https://cockpit.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: "RPi 5 host console: CPU, RAM, temp, uptime, storage"
+        icon: mdi-server
+    - Beszel Live Metrics:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Host, container, disk, network, and alert history
+        icon: beszel.png
+        siteMonitor: http://beszel:8090
+    - Backups:
+        href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Restic targets, schedule health, and last-run alerts
+        icon: mdi-cloud-sync
+    - Cockpit:
+        href: https://cockpit.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Host administration, updates, disks, and services
+        icon: cockpit.png
+
+- Network Operations:
+    - UniFi Network:
+        href: https://unifi
+        description: Gateway, Wi-Fi clients, WAN, LAN, switches, APs
+        icon: unifi.png
+    - AdGuard Home:
+        href: https://dns.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Queries, blocked domains, filtering, latency, DNS health
+        icon: adguard-home.png
+    - Traefik:
+        href: https://traefik.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Routers, services, middleware, certs, and proxy health
+        icon: traefik.png
+    - Speedtest:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: WAN throughput belongs here once a tracker/API is enabled
+        icon: mdi-speedometer
+    - Healthchecks:
+        href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Scheduled jobs, backup pings, patch timers, failure alerts
+        icon: healthchecks.png
+
+- Host Fleet:
+    - Unraid:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: CPU, memory, RX/TX, containers, uptime, array free space
+        icon: unraid.png
+    - domum-core-media:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: "N100 media host: CPU, memory, RX/TX, uptime, disk free"
+        icon: mdi-nas
+    - Raspberry Pi 5:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Local agent metrics, NVMe SMART, containers, alerts
+        icon: mdi-raspberry-pi
+
 - Home Automation:
     - Home Assistant:
         href: https://ha.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Automation dashboard
+        description: Automations, entities, integrations, alerts
         icon: home-assistant.png
         siteMonitor: http://homeassistant:8123
     - Zigbee2MQTT:
         href: https://z2m.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Zigbee network and devices
+        description: Zigbee coordinator, device links, LQI, availability
         icon: zigbee2mqtt.png
         siteMonitor: http://zigbee2mqtt:8080
     - Z-Wave JS UI:
         href: https://zwave.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Z-Wave network control
+        description: Z-Wave controller, node health, security, routes
         icon: zwave-js-ui.png
         siteMonitor: http://zwave-js-ui:8091
     - Node-RED:
         href: https://nodered.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Automation flows
+        description: Automation flows, deploy state, runtime logs
         icon: node-red.png
         siteMonitor: http://nodered:1880
     - ESPHome:
         href: https://esphome.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Device firmware dashboard
+        description: Device firmware builds, update status, node logs
         icon: esphome.png
         siteMonitor: http://esphome:6052
     - Music Assistant:
         href: https://ma.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Whole-home music control
+        description: Whole-home music, players, queues, providers
         icon: music-assistant.png
         siteMonitor: http://musicassistant:8095
 
 - Infrastructure:
     - Beszel:
         href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Host and container history
+        description: Systems, containers, uptime, disks, network, alerts
         icon: beszel.png
         siteMonitor: http://beszel:8090
     - Glance:
         href: https://glance.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Daily operations overview
+        description: Feeds, release tracking, and daily operational view
         icon: glance.png
         siteMonitor: http://glance:8080
-    - Traefik:
-        href: https://traefik.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Protected reverse proxy control
-        icon: traefik.png
-    - AdGuard Home:
-        href: https://dns.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: DNS and network protection
-        icon: adguard-home.png
-    - Healthchecks:
-        href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Scheduled task monitoring
-        icon: healthchecks.png
     - Dozzle:
         href: https://logs.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Protected Docker logs
+        description: Protected live Docker logs and container troubleshooting
         icon: dozzle.png
         siteMonitor: http://dozzle:8080
     - ntfy:
         href: https://ntfy.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Notifications
+        description: Notifications, topic delivery, message history
         icon: ntfy.png
         siteMonitor: http://ntfy:80
-    - Cockpit:
-        href: https://cockpit.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Host administration
-        icon: cockpit.png
+    - Uptime Kuma:
+        href: https://uptime.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: External checks and synthetic availability monitors
+        icon: uptime-kuma.png
 
 - Applications:
     - Memos:
@@ -95,7 +138,7 @@
         siteMonitor: http://actual-budget:5006
     - Karakeep:
         href: https://karakeep.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Bookmark archive
+        description: Bookmark archive and read-later queue
         icon: karakeep.png
         siteMonitor: http://karakeep:3000
     - FreshRSS:
@@ -110,16 +153,48 @@
         siteMonitor: http://stirling-pdf:8080
     - IT-Tools:
         href: https://tools.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Browser-based utilities
+        description: Browser utilities, encoders, generators, diagnostics
         icon: it-tools.png
         siteMonitor: http://it-tools:80
 
-- External Systems:
-    - UniFi Network:
-        href: https://unifi
-        description: Network gateway and Wi-Fi management
-        icon: unifi.png
+- Security:
+    - Vaultwarden:
+        href: https://vault.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Password vault, admin status, backup criticality
+        icon: vaultwarden.png
     - Domum Core Repository:
         href: https://github.com/jfrancolopez/domum-core
-        description: Infrastructure source and history
+        description: Infrastructure source, issues, commits, release history
         icon: si-github
+    - Cloudflare:
+        href: https://dash.cloudflare.com/
+        description: DNS, tunnels, access policy, and certificate visibility
+        icon: cloudflare.png
+
+- Media Services:
+    - Plex:
+        href: https://plex.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Streams, movies, shows, albums, bandwidth, uptime
+        icon: plex.png
+    - Jellyfin:
+        href: https://jellyfin.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Sessions, libraries, transcodes, bandwidth, uptime
+        icon: jellyfin.png
+    - Immich:
+        href: https://immich.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Photos, videos, jobs, storage, backup health
+        icon: immich.png
+
+- Media Infrastructure:
+    - Unraid Media Host:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Array free space, Docker count, VM state, RX/TX, uptime
+        icon: unraid.png
+    - domum-core-media N100:
+        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: CPU, memory, storage, network, running/stopped services
+        icon: mdi-nas
+    - Media Logs:
+        href: https://logs.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Jump to container logs while media widgets are finalized
+        icon: dozzle.png

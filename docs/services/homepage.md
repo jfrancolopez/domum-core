@@ -13,9 +13,16 @@ sudo domum-core configure
 sudo domum-core apply
 ```
 
-The portal uses compact Home Automation, Infrastructure, Applications, and
-External Systems groups. Cards use internal HTTP site monitors where possible;
-the browser-facing link always uses HTTPS.
+The portal uses four operator tabs:
+
+- `System` for the Raspberry Pi 5, network operations, fleet hosts, and home
+  automation status.
+- `Apps` for infrastructure, productivity apps, and security tools.
+- `Feeds` for the embedded Glance daily overview and reference bookmarks.
+- `Media` for Plex/Jellyfin/Immich and the external media hosts.
+
+Cards use internal HTTP site monitors where possible; the browser-facing link
+always uses HTTPS.
 
 ## Configuration
 
@@ -29,6 +36,13 @@ The config uses `.yaml` files so CI does not treat them as Docker Compose
 fragments. Keep secrets out of these files. If a future widget needs an API key,
 store it under `/etc/domum-core/secrets` and pass it with a `HOMEPAGE_FILE_*`
 environment variable.
+
+The current dashboard intentionally does not commit credentialed service widgets.
+Detailed metrics for Gmail Calendar, UniFi, AdGuard Home, Traefik, Plex,
+Jellyfin, Immich, Unraid, and Beszel require API credentials or dedicated
+read-only endpoints. Add those only with file-backed secrets; never place OAuth
+tokens, API keys, usernames, or passwords in `services.yaml`, `widgets.yaml`, or
+`settings.yaml`.
 
 ## Security Model
 

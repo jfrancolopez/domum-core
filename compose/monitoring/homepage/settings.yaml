@@ -1,46 +1,69 @@
 title: Domum Core
 description: Home automation // observability portal
 theme: dark
-color: violet
+color: slate
 target: _self
 hideVersion: true
 disableUpdateCheck: true
 statusStyle: dot
-headerStyle: clean
+headerStyle: boxedWidgets
 iconStyle: theme
 fullWidth: true
 useEqualHeights: true
+cardBlur: md
+background:
+  image: https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2560&q=80
+  blur: sm
+  saturate: 50
+  brightness: 50
+  opacity: 30
 quicklaunch:
   searchDescriptions: true
   provider: duckduckgo
   target: _blank
   mobileButtonPosition: bottom-right
 layout:
+  Core Status:
+    tab: System
+    style: row
+    columns: 4
+  Network Operations:
+    tab: System
+    style: row
+    columns: 4
+  Host Fleet:
+    tab: System
+    style: row
+    columns: 3
   Home Automation:
-    tab: Overview
+    tab: System
     style: row
     columns: 3
   Infrastructure:
-    tab: Overview
+    tab: Apps
     style: row
     columns: 4
   Applications:
-    tab: Overview
+    tab: Apps
     style: row
     columns: 3
-  External Systems:
-    tab: Overview
+  Security:
+    tab: Apps
     style: row
     columns: 3
-  Automation Docs:
-    tab: Overview
+  Media Services:
+    tab: Media
     style: row
-    columns: 4
-  Operations Docs:
-    tab: Overview
+    columns: 3
+  Media Infrastructure:
+    tab: Media
+    style: row
+    columns: 3
+  Feed Bookmarks:
+    tab: Feeds
     style: row
     columns: 4
   Glance:
-    tab: Glance
+    tab: Feeds
     style: row
     columns: 1
