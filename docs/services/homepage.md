@@ -15,11 +15,11 @@ sudo domum-core apply
 
 The portal uses four operator tabs:
 
-- `System` for the Raspberry Pi 5, core status, network, calendar, servers, and
+- `SYSTEM` for the Raspberry Pi 5, core status, network, calendar, servers, and
   home automation status.
-- `Apps` for infrastructure, productivity apps, and security tools.
-- `Feeds` for the embedded Glance daily overview and reference bookmarks.
-- `Media` for Plex/Jellyfin/Immich and the external media hosts.
+- `APPS` for infrastructure, productivity apps, and security tools.
+- `MEDIA` for Plex/Jellyfin/Immich and the external media hosts.
+- `FEEDS` for the embedded Glance daily overview and reference bookmarks.
 
 Cards use internal HTTP site monitors where possible; the browser-facing link
 always uses HTTPS.
@@ -53,12 +53,53 @@ chmod 600 config/homepage.env
 
 `config/*.env` is ignored by git. Do not commit the live file.
 
-The current dashboard intentionally does not commit credentialed service widgets.
-Detailed metrics for Gmail Calendar, UniFi, AdGuard Home, Traefik, Plex,
-Jellyfin, Immich, Unraid, and Beszel require API credentials or dedicated
-read-only endpoints. Add those only with file-backed secrets; never place OAuth
+The dashboard commits only environment-variable references. Never place OAuth
 tokens, API keys, usernames, or passwords in `services.yaml`, `widgets.yaml`, or
 `settings.yaml`.
+
+## Live Data Sources
+
+| Feature | Data source | Credential | Refresh | Failure behavior |
+|---|---|---|---|---|
+| Homepage runtime CPU/RAM | Native Homepage `resources` widget through `systeminformation` | None | 5 seconds | Widget shows unavailable/error state |
+| Raspberry Pi temperature | Native Homepage `resources` widget reading mounted `/sys` | None | 5 seconds | Widget omits value if unsupported |
+| Root NVMe storage | Native Homepage `resources` widget using `/domum-core` mount | None | 30 seconds | Widget shows unavailable/error state |
+| Uptime | Native Homepage `resources` widget | None | 30 seconds | Widget shows unavailable/error state |
+| Date/time | Browser `Intl.DateTimeFormat` via Homepage widget | None | Browser-rendered | Browser local rendering |
+| Google search | Native Homepage search widget | None | On search | Opens Google search target |
+| Durham weather | Native Open-Meteo widget | None | 5 minute cache | Widget shows unavailable/error state |
+| Beszel fleet overview | Native Beszel service widget at `http://beszel:8090` | `HOMEPAGE_VAR_BESZEL_USERNAME`, `HOMEPAGE_VAR_BESZEL_PASSWORD` | Homepage widget polling | API error if credentials/system IDs fail |
+| Beszel Pi host card | Native Beszel widget with verified Pi system ID | Beszel credentials and Pi system ID var | Homepage widget polling | API error if credentials or the Pi system ID fail |
+| AdGuard Home | Native AdGuard widget at `http://adguard-home` | `HOMEPAGE_VAR_ADGUARD_USERNAME`, `HOMEPAGE_VAR_ADGUARD_PASSWORD` | Homepage widget polling | API error if credentials fail |
+| Google Calendar | Native Calendar widget with iCal integration | `HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL` | Homepage widget polling | Calendar shell remains, events absent/error |
+| ESPHome | Native ESPHome widget at `http://esphome:6052` | None unless ESPHome auth is enabled | Homepage widget polling | API error if auth is required |
+| Service reachability | Homepage `siteMonitor` HEAD/GET to internal URLs | None | Homepage polling | Dot/status becomes unavailable |
+| Glance iframe | Native iframe widget to `https://glance.${DOMUM_DOMAIN}` | Browser session/cookies only if Glance requires them | Browser-loaded | Browser shows frame failure; direct link remains |
+| Traefik counts | Native Traefik widget through `https://traefik.${DOMUM_DOMAIN}/api/overview` | `HOMEPAGE_VAR_TRAEFIK_USERNAME`, `HOMEPAGE_VAR_TRAEFIK_PASSWORD` | Homepage widget polling | API error if basic auth or dashboard route fails |
+| Node-RED flow count | Native Custom API widget at `http://nodered:1880/flows` | None in current runtime | 30 seconds | API error if Node-RED auth is later enabled |
+| Backups | Not yet authoritative in Homepage | Healthchecks read-only API key needed | N/A | Shows setup-required card only |
+| Plex/Jellyfin/Immich | Not currently enabled | Service URLs and API tokens needed | N/A | Shows API-access-required cards only |
+
+Native `resources` CPU and memory values are Homepage runtime/container values,
+not a substitute for Beszel host CPU and memory. Use the Beszel cards for host
+metrics. Do not relabel those native values as Raspberry Pi host CPU/RAM unless
+Homepage is changed to use a verified host metrics source.
+
+## Operations Center TODO
+
+These signals are intentionally not faked. Add them only when the listed data
+source is available and verified from inside the Homepage container.
+
+| Signal | Why it is not live yet | Requirement | Expected result |
+|---|---|---|---|
+| Healthchecks job totals and backup status | `HOMEPAGE_VAR_HEALTHCHECKS_KEY` is not present | Create a Healthchecks read-only API key and set it in `config/homepage.env` | Healthchecks card shows `up` and `down`; backup checks can become the source for overdue/failed backups |
+| Home Assistant automation/device health | Home Assistant API requires a long-lived token and `HOMEPAGE_VAR_HOMEASSISTANT_KEY` is not present | Create a read-only HA long-lived access token and choose up to four Homepage custom template metrics | Home Assistant card can show unavailable devices, lights/switches on, or template-based warnings |
+| UniFi internet/client health | UniFi URL/account/API key variables are not present | Add a local read-only UniFi account or API key to `config/homepage.env` | UniFi card can show WAN/LAN/client/AP counts through the native widget |
+| Unraid rich host health | Direct Unraid URL/key are not present; per-host Beszel IDs produced widget API errors in testing | Add `HOMEPAGE_VAR_UNRAID_URL` and `HOMEPAGE_VAR_UNRAID_KEY`, or verify the Beszel system IDs | Unraid card can show CPU, memory, array usage, and notifications |
+| N100 rich host health | Per-host Beszel ID produced widget API errors in testing | Verify the `domum-core-media` Beszel system ID and credentials | Media host card can show CPU, RAM, disk, and network via Beszel |
+| Traefik certificates and HTTP error rates | Native Homepage Traefik widget exposes routers/services/middleware only | Enable Traefik metrics or a tiny read-only exporter for cert expiry/access-log summaries | Dashboard can report soon-expiring certs and 5xx/404 spikes |
+| Zigbee/Z-Wave device health | Frontends are reachable, but no Homepage native widget or simple verified JSON health endpoint is configured | Use Home Assistant templates, MQTT exporter, or a tiny read-only endpoint | Cards can show offline devices, low batteries, dead nodes, and interview failures |
+| Speedtest trend | No Speedtest Tracker or historical API is running | Deploy a lightweight Speedtest Tracker or expose an existing test result JSON | Network section can show ping, jitter, last run, and trend |
 
 ## Background Image
 
@@ -68,15 +109,16 @@ The background is tracked in git at:
 compose/monitoring/homepage/assets/domum-background.svg
 ```
 
-Homepage serves that directory at `/images`, and `settings.yaml` points to:
+Homepage serves that directory at `/images` on the direct recovery route, and
+`settings.yaml` points to:
 
 ```yaml
 background:
-  image: /images/domum-background.svg
-  blur: sm
-  saturate: 50
-  brightness: 50
-  opacity: 30
+  image: https://homepage.ladomum.com/images/domum-background.svg
+  blur: none
+  saturate: 100
+  brightness: 100
+  opacity: 100
 ```
 
 To replace it, commit a new file at the same path. Use `2560x1440` or wider
@@ -84,10 +126,62 @@ To replace it, commit a new file at the same path. Use `2560x1440` or wider
 images because Homepage adds glass panels and text on top. After the next
 `sudo domum-core update`, restart/recreate Homepage with the normal apply flow.
 
+If a browser still shows the old flat background or vertical tabs after a
+Homepage restart, bypass the browser cache before debugging further:
+
+- macOS: `Cmd+Shift+R`
+- Linux/Windows: `Ctrl+Shift+R`
+
+Homepage v1.13 renders the dashboard background as `#background`, the root app
+as `#__next`, tabs as `#tabs #myTab > li > button`, and top resource cards as
+`#information-widgets .widget-container` containing `.information-widget-resource`
+pills. Keep custom CSS scoped to those rendered structures instead of guessing
+generic widget selectors.
+
+The native datetime widget emits one localized text node such as
+`August 5, 2026 at 7:05 PM`. `custom.js` rewrites only that widget into separate
+live-updating time and date spans so CSS can render time first and date second
+without changing service integrations.
+
+Responsive layout is handled in `custom.css` at these breakpoints:
+
+- Wide desktop: `min-width: 1360px`, tested at `1440px`, `1600px`, and
+  `1920px`. Branding is left-aligned in the same row as the five system metrics.
+- Desktop: default styles below the wide breakpoint, tested at `1200px`.
+- Tablet: `max-width: 900px`, tested at `1024px` and `768px` boundaries.
+- Mobile: `max-width: 640px`, tested at `430px` and `390px`.
+- Small mobile refinements: `max-width: 480px`.
+
+The top header is intentionally modeled as semantic regions added by
+`custom.js`: `.domum-branding`, `.domum-primary-metrics`, `.domum-disk-metric`,
+`.domum-uptime-metric`, `.domum-metrics-row`, and `.domum-utility-row`. Those
+classes let CSS Grid place branding, primary metrics, secondary metrics, and
+utility widgets without depending on Homepage's native flex wrapping. At wide
+desktop widths, `custom.css` uses a bounded identity column plus a five-column
+metrics strip; smaller widths keep the centered identity above the metrics.
+
+The `SYSTEM` tab service groups are also given semantic classes by `custom.js`:
+`.domum-group-core-status`, `.domum-group-servers`, `.domum-group-calendar`,
+`.domum-group-network`, and `.domum-group-home-automation`. When all five are
+present, `#layout-groups.domum-system-layout` becomes a two-column CSS Grid at
+`900px` and wider: Core Status spans the full width, Servers and Calendar use
+equal `1fr` columns, and Network plus Home Automation return to full-width rows.
+Below `900px`, Homepage keeps the native stacked group flow. The Servers group
+intentionally includes only Unraid and `domum-core-media`; the Raspberry Pi is
+already represented in the header and Core Status.
+
+Unraid and `domum-core-media` link to Beszel but do not currently render native
+Beszel metric blocks on the dashboard. A test using the tracked
+`HOMEPAGE_VAR_BESZEL_UNRAID_SYSTEM_ID` and `HOMEPAGE_VAR_BESZEL_MEDIA_SYSTEM_ID`
+placeholders produced Homepage widget API errors in the current runtime, so the
+cards remain clean links until those per-host Beszel widget IDs are verified.
+
 ## Google Calendar
 
 Homepage supports Google Calendar through an iCal URL, not OAuth username and
-password login.
+password login. The dashboard uses the private iCal URL in
+`HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL` when it is present in
+`config/homepage.env`.
 
 1. Open Google Calendar in the browser.
 2. Go to `Settings`.
@@ -101,23 +195,22 @@ password login.
 HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL="https://calendar.google.com/calendar/ical/.../basic.ics"
 ```
 
-7. In `compose/monitoring/homepage/services.yaml`, uncomment the `integrations`
-   block under the `Gmail Calendar` widget.
-8. Run `sudo domum-core apply` or restart Homepage.
+7. Run `sudo domum-core apply` or restart Homepage.
 
-The dashboard currently shows the monthly calendar even before the private iCal
-URL is enabled. It is intentionally constrained to half width on desktop and
-uses `maxEvents: 4` so meetings stay subtle below the month grid.
+The dashboard shows the monthly calendar shell even before the private iCal URL
+is enabled. It sits next to the server summary in the `SYSTEM` tab order. The
+widget remains configured with `maxEvents: 4`, but Homepage v1.13's native
+monthly calendar view does not render a separate upcoming-events list below the
+month grid; no custom event renderer is used.
 
 ## Metric Widgets
 
-Native Homepage widgets can replace the placeholder cards once read-only
-credentials exist. The dashboard CSS and `blockHighlights` settings are already
-prepared for `good`, `warn`, and `danger` states. Add credentials to
-`config/homepage.env`, then add the widget block to the relevant service in
-`compose/monitoring/homepage/services.yaml`.
+Native Homepage widgets should only be enabled when a real API endpoint and
+credential are available. The dashboard CSS and `blockHighlights` settings are
+prepared for `good`, `warn`, and `danger` states, but colors must come from
+Homepage widget output or explicit highlight rules, not invented status text.
 
-Beszel overview or per-host metrics:
+Beszel overview or verified per-host metrics:
 
 ```yaml
 widget:
@@ -155,9 +248,11 @@ widget:
           value: 80
 ```
 
-Use `HOMEPAGE_VAR_BESZEL_MEDIA_SYSTEM_ID` for `domum-core-media` and
-`HOMEPAGE_VAR_BESZEL_UNRAID_SYSTEM_ID` for Unraid. Beszel currently requires a
-superuser for the Homepage API widget.
+Only enable per-host widgets for system IDs that have been verified from the
+Beszel API. The live dashboard keeps Unraid and `domum-core-media` as clean
+Beszel links until those IDs are confirmed, avoiding persistent Homepage API
+error banners. Beszel currently requires a superuser for the Homepage API
+widget.
 
 UniFi network summary:
 
@@ -196,7 +291,12 @@ widget:
 
 Allowed fields include queries, blocked, filtered, and latency.
 
-Traefik proxy stats:
+Traefik proxy stats are not currently enabled because `http://traefik:8080` is
+not reachable from Homepage in this deployment. Enabling the Traefik API or
+changing Traefik middleware is outside the Homepage-only scope and requires
+operator approval.
+
+If an approved, reachable endpoint exists later:
 
 ```yaml
 widget:
@@ -209,7 +309,7 @@ widget:
 
 Allowed fields include routers, services, and middleware.
 
-Healthchecks backup/job summary:
+Healthchecks backup/job summary requires a read-only Healthchecks API key:
 
 ```yaml
 widget:
@@ -227,6 +327,9 @@ widget:
           when: eq
           value: 0
 ```
+
+Plex, Jellyfin, and Immich are shown as setup-required until their real service
+URLs and tokens are present in `config/homepage.env`. Do not commit token values.
 
 Plex:
 
@@ -283,20 +386,20 @@ restore gets those back through the normal repo bootstrap and `sudo domum-core
 apply` flow.
 
 The only Homepage-specific values that are not tracked are live API credentials
-and private URLs in `config/homepage.env`. If you want credentialed widgets to
-come back after bare-metal restore, keep a copy of those values in the same
-password manager entry or recovery notes used for other Domum secrets. Recreate
-`config/homepage.env` from `config/homepage.env.example` after restore, then
-restart Homepage.
+and private URLs in `config/homepage.env`. Keep that file mode `600`. If you want
+credentialed widgets to come back after bare-metal restore, keep a copy of those
+values in the same password manager entry or recovery notes used for other Domum
+secrets. Recreate `config/homepage.env` from `config/homepage.env.example` after
+restore, then restart Homepage.
 
 ## Security Model
 
 Homepage does not have the Docker socket mounted. That means it cannot show live
-container stats, but a web compromise of Homepage also cannot talk to the Docker
-API. Detailed host and container monitoring belongs in Beszel.
+Docker container stats, but a web compromise of Homepage also cannot talk to the
+Docker API. Detailed host and container monitoring belongs in Beszel.
 
-Traefik applies `X-Frame-Options: DENY`. Homepage is intentionally not embedded
-in Glance; use the explicit Glance and Beszel links instead.
+Glance is framed only by Homepage through the `glanceEmbedHeaders` middleware.
+Do not weaken frame protection globally to make other embeds work.
 
 Runtime logs go to Docker stdout only. The tracked config mount is read-only.
 

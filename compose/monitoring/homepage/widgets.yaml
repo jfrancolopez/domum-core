@@ -1,17 +1,15 @@
 - logo:
     icon: mdi-server
 - resources:
-    label: Compute
+    label: Homepage Runtime
     cpu: true
     memory: true
     cputemp: true
     units: metric
     refresh: 5000
 - resources:
-    label: Storage
-    disk:
-      - /domum-core
-      - /host-cache
+    label: Root NVMe
+    disk: /domum-core
     expanded: true
     diskUnits: bytes
     refresh: 30000
@@ -29,7 +27,7 @@
     target: _self
     showSearchSuggestions: true
 - openmeteo:
-    label: Durham, NC 27703
+    label: Durham
     latitude: 35.994
     longitude: -78.8986
     timezone: America/New_York
