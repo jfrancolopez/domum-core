@@ -66,9 +66,10 @@
           password: "{{HOMEPAGE_VAR_TRAEFIK_PASSWORD}}"
           fields: ["routers", "services", "middleware"]
     - Speedtest:
-        href: https://beszel.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
-        description: Not configured yet
+        href: https://speedtest.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
+        description: Internet speed history
         icon: mdi-speedometer
+        siteMonitor: http://speedtest-tracker
     - Healthchecks:
         href: https://checks.{{HOMEPAGE_VAR_DOMUM_DOMAIN}}
         description: Live totals need an API key

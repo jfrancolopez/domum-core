@@ -53,6 +53,7 @@ designed to be explicit and backup-aware.
 - [Homepage](services/homepage.md)
 - [Beszel](services/beszel.md)
 - [Healthchecks](services/healthchecks.md)
+- [Speedtest Tracker](services/speedtest-tracker.md)
 - [Karakeep](services/karakeep.md)
 - [Stirling PDF](services/stirling-pdf.md)
 - [FreshRSS](services/freshrss.md)

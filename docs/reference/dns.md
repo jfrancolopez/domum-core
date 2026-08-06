@@ -6,6 +6,7 @@ Traefik serves HTTPS for services like:
 - budget.ladomum.com
 - dns.ladomum.com
 - z2m.ladomum.com
+- speedtest.ladomum.com
 
 Clients must resolve those names to the Traefik host.
 

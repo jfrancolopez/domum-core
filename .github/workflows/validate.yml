@@ -60,6 +60,7 @@ jobs:
       DOMUM_TS_IP: 127.0.0.1
       CF_DNS_API_TOKEN: ci-dummy
       DOMUM_MARIADB_ENV_FILE: ${{ github.workspace }}/.ci/mariadb.env
+      DOMUM_SPEEDTEST_ENV_FILE: ${{ github.workspace }}/.ci/speedtest-tracker.env
     steps:
       - uses: actions/checkout@v4
       - name: Render with all services enabled
@@ -67,6 +68,7 @@ jobs:
           set -euo pipefail
           mkdir -p .ci
           touch "$DOMUM_MARIADB_ENV_FILE"
+          cp config/speedtest-tracker.env.example "$DOMUM_SPEEDTEST_ENV_FILE"
 
           files=(-f compose/base.yml)
           while IFS= read -r -d '' f; do

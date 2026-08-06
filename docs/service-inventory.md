@@ -7,7 +7,7 @@ operator reference.
 | Category | Services |
 |---|---|
 | Home automation | Home Assistant, MariaDB, MQTT, Zigbee2MQTT, Z-Wave JS UI, Node-RED, ESPHome, Music Assistant |
-| Monitoring | Homepage, Glance, Beszel Hub/Agent, Healthchecks, Dozzle, ntfy |
+| Monitoring | Homepage, Glance, Beszel Hub/Agent, Healthchecks, Dozzle, ntfy, Speedtest Tracker |
 | Networking/security | Traefik, AdGuard Home, Vaultwarden, Tailscale |
 | Applications | Actual Budget, Memos, Karakeep, FreshRSS, Stirling PDF, Obsidian Sync, IT-Tools |
 | Supporting containers | Karakeep Chrome and Meilisearch |
@@ -25,6 +25,7 @@ operator reference.
 | Job | Schedule | Healthchecks candidate |
 |---|---|---|
 | Backups | Daily 02:30 | Yes |
+| Speed tests | 00:30 / 06:30 / 12:30 / 18:30 | Optional |
 | Backup verification | Sunday 04:30 | Yes |
 | Restore verification | First day of month 04:45 | Yes |
 | Recovery pack | Sunday 03:30 | Yes |
