@@ -10,7 +10,7 @@ services:
       - HOMEPAGE_VAR_DOMUM_DOMAIN=${DOMUM_DOMAIN}
       - LOG_TARGETS=stdout
     env_file:
-      - path: ../../config/homepage.env
+      - path: /opt/domum-core/config/homepage.env
         required: false
     volumes:
       - /opt/domum-core/compose/monitoring/homepage:/app/config:ro

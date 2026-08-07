@@ -47,7 +47,7 @@ compose-validate workflow copies it to `.ci/speedtest-tracker.env` and sets
   `securityHeaders@file`). Requires the `speedtest.ladomum.com` DNS record to
   point at the Pi (`10.0.10.2`), the same pattern as the other `*.ladomum.com`
   services.
-- Internal URL: `http://speedtest-tracker` (on `domum-internal` and
+- Internal URL: `http://speedtest-tracker` (on `domum-data` and
   `domum-proxy`), reachable from other containers.
 - Health endpoint: `http://speedtest-tracker/api/healthcheck` → `200` + JSON.
 
@@ -85,7 +85,7 @@ while tarring the directory so the SQLite file is consistent.
 | Image | `lscr.io/linuxserver/speedtest-tracker:latest` |
 | Compose file | `compose/monitoring/speedtest-tracker.yml` |
 | Portal URL | `https://speedtest.ladumom.com` (via Traefik, `domum-proxy`) |
-| Internal URL | `http://speedtest-tracker` (on `domum-internal` and `domum-proxy`) |
+| Internal URL | `http://speedtest-tracker` (on `domum-data` and `domum-proxy`) |
 | Health endpoint | `http://speedtest-tracker/api/healthcheck` → `200` + JSON |
 | Database | SQLite (`database.sqlite` under `/config`) |
 | Data directory | `/opt/domum-core/compose/monitoring/speedtest-tracker/data` |

@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     networks:
       - domum-proxy
-      - domum-internal
+      - domum-data
     environment:
       - PUID=1000
       - PGID=1000
@@ -36,5 +36,5 @@ services:
 networks:
   domum-proxy:
     external: true
-  domum-internal:
+  domum-data:
     external: true
