@@ -62,6 +62,13 @@ Log in once via the portal URL (or from inside the Docker network) and change
 the password and email immediately in the account settings. Keep the new
 credentials in Vaultwarden.
 
+If the stored admin password is unknown, reset it with the app's own command:
+
+```bash
+docker exec -it speedtest-tracker \
+  sh -lc 'cd /app/www && php artisan app:user-reset-password'
+```
+
 ## Data and Backups
 
 SQLite state and configuration live at:
@@ -104,7 +111,8 @@ Environment variables are split between the compose fragment and
 
 Only variable names and safe examples are committed in
 `config/speedtest-tracker.env.example`. `APP_KEY` never appears in compose, git,
-or logs.
+or logs. The separate Homepage widget API token lives in
+`config/homepage.env` as `HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY`.
 
 ## Schedule
 
@@ -261,11 +269,21 @@ set: a CPU quota would distort test results, and there is no cap on networking.
 ## Homepage Link
 
 The Homepage portal shows a **Speedtest** card under *Network* that opens
-`https://speedtest.ladumom.com` and health-checks the internal service URL
-(`siteMonitor: http://speedtest-tracker`). The card lives in
-`compose/monitoring/homepage/services.yaml`.
+`https://speedtest.ladumom.com`, health-checks the internal service URL
+(`siteMonitor: http://speedtest-tracker`), and displays latest download,
+upload, and ping through the native Speedtest Tracker widget.
 
-The native Speedtest Tracker metric widget (live download/upload/ping numbers on
-the card, via the `/api/` endpoint and a read-only API token) is **not** wired
-up yet — that is a separate follow-up task once the API key and widget version
-are configured and tested.
+The widget uses `http://speedtest-tracker/api/v1/results/latest` from inside
+Homepage. Create a token with only the `results:read` ability and set it in the
+ignored live file:
+
+```text
+config/homepage.env
+```
+
+```env
+HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY=<read-only token>
+```
+
+The card config lives in `compose/monitoring/homepage/services.yaml` and must
+reference only the environment variable, never the token value.

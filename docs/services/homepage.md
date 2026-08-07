@@ -99,7 +99,7 @@ source is available and verified from inside the Homepage container.
 | N100 rich host health | Per-host Beszel ID produced widget API errors in testing | Verify the `domum-core-media` Beszel system ID and credentials | Media host card can show CPU, RAM, disk, and network via Beszel |
 | Traefik certificates and HTTP error rates | Native Homepage Traefik widget exposes routers/services/middleware only | Enable Traefik metrics or a tiny read-only exporter for cert expiry/access-log summaries | Dashboard can report soon-expiring certs and 5xx/404 spikes |
 | Zigbee/Z-Wave device health | Frontends are reachable, but no Homepage native widget or simple verified JSON health endpoint is configured | Use Home Assistant templates, MQTT exporter, or a tiny read-only endpoint | Cards can show offline devices, low batteries, dead nodes, and interview failures |
-| Speedtest trend | Speedtest Tracker is deployed and the card links to it, but the native widget is not configured | Create a read-only Speedtest Tracker API token and configure the native widget against `https://speedtest.ladomum.com/api/` | Network section can show ping, jitter, last run, and trend |
+| Speedtest trend | Speedtest Tracker widget reads the latest result only | Keep `HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY` populated with a token that has only `results:read` | Network section shows latest download, upload, and ping |
 
 ## Background Image
 
