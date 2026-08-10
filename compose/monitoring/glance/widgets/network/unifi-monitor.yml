@@ -1,0 +1,38 @@
+# UniFi Device Monitoring Widget
+
+version: "1"
+type: "network/unifi-monitor"
+title: "UniFi Devices" 
+description: "Monitors client, AP, and switch health status"
+
+config:
+  # UniFi Controller API endpoint  
+  api_endpoint: "/api/unifi/devices"
+  # Read-only credentials required
+  use_readonly_credential: true
+  # Device types to monitor
+  device_types:
+    - clients
+    - aps
+    - switches
+    
+# Refresh interval (5 minutes)
+refresh: 5m
+
+# Privacy classification - Private since this shows network topology  
+privacy: "private"
+
+# Data fields displayed
+fields:
+  - name: total_clients
+    label: "Total Clients"
+    type: "number" 
+  - name: online_aps
+    label: "Online APs" 
+    type: "number"
+  - name: online_switches
+    label: "Online Switches"
+    type: "number"
+  - name: total_devices
+    label: "Total Devices"
+    type: "number"

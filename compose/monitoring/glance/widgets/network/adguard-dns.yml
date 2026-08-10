@@ -1,0 +1,35 @@
+# AdGuard DNS Statistics Widget
+
+version: "1"
+type: "network/adguard-dns"
+title: "AdGuard DNS Stats"  
+description: "Displays DNS statistics and query history"
+
+config:
+  # AdGuard Home API endpoint
+  api_endpoint: "/api/dns/stats" 
+  # Read-only access required
+  use_readonly_credential: true
+  # Time range for stats
+  time_range: "24h"
+  
+# Refresh interval (1 minute)
+refresh: 1m
+
+# Privacy classification - Private since this shows query patterns  
+privacy: "private"
+
+# Data fields displayed
+fields:
+  - name: queries_today
+    label: "Queries Today" 
+    type: "number"
+  - name: blocked_queries
+    label: "Blocked Queries"
+    type: "number"
+  - name: avg_response_time
+    label: "Avg Response (ms)"
+    type: "number"
+  - name: dns_servers
+    label: "DNS Servers"  
+    type: "string"

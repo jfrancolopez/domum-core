@@ -1,0 +1,42 @@
+# Speedtest History Widget
+
+version: "1"
+type: "network/speedtest-history"  
+title: "Speedtest History"
+description: "Displays speedtest history with download/upload/ping/jitter metrics"
+
+config:
+  # Speedtest Tracker API endpoint
+  api_endpoint: "/api/speedtest/history"
+  # Number of historical results to show
+  result_count: 10
+  # Metrics to display
+  metrics:
+    - download  
+    - upload
+    - ping
+    - jitter
+    
+# Refresh interval (5 minutes)
+refresh: 5m
+
+# Privacy classification - Public since this is basic performance data  
+privacy: "public"
+
+# Data fields displayed
+fields:
+  - name: timestamp
+    label: "Time"
+    type: "datetime" 
+  - name: download_speed
+    label: "Download (Mbps)"
+    type: "number"
+  - name: upload_speed
+    label: "Upload (Mbps)"  
+    type: "number"
+  - name: ping_time
+    label: "Ping (ms)"
+    type: "number"
+  - name: jitter_time
+    label: "Jitter (ms)"
+    type: "number"

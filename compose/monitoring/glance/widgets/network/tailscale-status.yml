@@ -1,0 +1,33 @@
+# Tailscale Device Status Widget
+
+version: "1"
+type: "network/tailscale-status"
+title: "Tailscale Devices"  
+description: "Monitors device connectivity and status"
+
+config:
+  # Tailscale API endpoint
+  api_endpoint: "/api/tailscale/devices" 
+  # Read-only credentials required
+  use_readonly_credential: true
+  
+# Refresh interval (5 minutes)
+refresh: 5m
+
+# Privacy classification - Private since this shows network topology  
+privacy: "private"
+
+# Data fields displayed
+fields:
+  - name: online_devices
+    label: "Online Devices"
+    type: "number" 
+  - name: total_devices
+    label: "Total Devices"
+    type: "number"
+  - name: updates_available
+    label: "Updates Available"  
+    type: "number"
+  - name: last_checkin
+    label: "Last Check-in"
+    type: "datetime"

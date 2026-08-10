@@ -1,0 +1,36 @@
+# WAN State Monitoring Widget
+
+version: "1"
+type: "network/wan-status"
+title: "WAN Connection Status"  
+description: "Monitors gateway connection state and network quality"
+
+config:
+  # Gateway API endpoint (example - will need actual implementation)
+  api_endpoint: "/api/gateway/status"
+  # Check interval for WAN status
+  check_interval: 60
+  
+# Refresh interval (1 minute)
+refresh: 1m
+
+# Privacy classification - Public since this is basic connection info  
+privacy: "public"
+
+# Data fields displayed
+fields:
+  - name: connection_status
+    label: "Status"
+    type: "string" 
+  - name: uptime
+    label: "Uptime" 
+    type: "duration"
+  - name: isp_name
+    label: "ISP"
+    type: "string"
+  - name: wan_rx
+    label: "WAN RX"
+    type: "bytes"  
+  - name: wan_tx
+    label: "WAN TX"
+    type: "bytes"

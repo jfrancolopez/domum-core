@@ -1,0 +1,39 @@
+# Network Alerts and Latency Monitoring Widget
+
+version: "1"
+type: "network/alerts-latency"  
+title: "Network Alerts & Latency"
+description: "Shows network alerts and latency monitoring"
+
+config:
+  # Probe endpoints for latency testing
+  probe_endpoints:
+    - "https://google.com"
+    - "https://github.com" 
+    - "https://cloudflare.com"
+  # Alert thresholds
+  alert_thresholds:
+    ping_high: 100   # ms  
+    jitter_high: 20   # ms
+    packet_loss_high: 5 # percentage
+    
+# Refresh interval (1 minute)
+refresh: 1m
+
+# Privacy classification - Public since this is basic status info
+privacy: "public"
+
+# Data fields displayed
+fields:
+  - name: current_ping
+    label: "Current Ping (ms)"
+    type: "number"
+  - name: current_jitter 
+    label: "Current Jitter (ms)"
+    type: "number"  
+  - name: packet_loss
+    label: "Packet Loss (%)"
+    type: "number"
+  - name: alert_status
+    label: "Alert Status"
+    type: "string"
