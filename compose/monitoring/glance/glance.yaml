@@ -1,6 +1,3 @@
-server:
-  proxied: true
-
 branding:
   app-name: Domum Core
   logo-text: DC
@@ -24,122 +21,11 @@ theme:
       positive-color: 61 66 44
       negative-color: 6 96 59
 
-pages:
-  - name: Domum
-    width: wide
-    columns:
-      - size: small
-        widgets:
-          - type: search
-            autofocus: true
-            search-engine: duckduckgo
-            new-tab: true
-          - type: bookmarks
-            groups:
-              - title: Portal
-                links:
-                  - title: Homepage
-                    url: https://home.${DOMUM_DOMAIN}
-                  - title: Beszel
-                    url: https://beszel.${DOMUM_DOMAIN}
-                  - title: Home Assistant
-                    url: https://ha.${DOMUM_DOMAIN}
-                  - title: Actual Budget
-                    url: https://budget.${DOMUM_DOMAIN}
-                  - title: Traefik
-                    url: https://traefik.${DOMUM_DOMAIN}
-                  - title: Dozzle
-                    url: https://logs.${DOMUM_DOMAIN}
-          - type: monitor
-            title: Critical services
-            style: compact
-            cache: 1m
-            sites:
-              - title: Homepage
-                url: https://home.${DOMUM_DOMAIN}
-                check-url: http://homepage:3000
-                icon: si:homepage
-              - title: Home Assistant
-                url: https://ha.${DOMUM_DOMAIN}
-                check-url: http://homeassistant:8123
-                icon: si:homeassistant
-              - title: Beszel
-                url: https://beszel.${DOMUM_DOMAIN}
-                check-url: http://beszel:8090
-                icon: si:beszel
-              - title: Zigbee2MQTT
-                url: https://z2m.${DOMUM_DOMAIN}
-                check-url: http://zigbee2mqtt:8080
-                icon: si:zigbee
-              - title: Node-RED
-                url: https://nodered.${DOMUM_DOMAIN}
-                check-url: http://nodered:1880
-                icon: si:nodered
-      - size: full
-        widgets:
-          - type: rss
-            title: Infrastructure and AI
-            style: detailed-list
-            limit: 12
-            collapse-after: 6
-            feeds:
-              - url: https://www.home-assistant.io/atom.xml
-                title: Home Assistant
-              - url: https://kubernetes.io/feed.xml
-                title: Kubernetes
-              - url: https://www.docker.com/blog/feed/
-                title: Docker
-              - url: https://feeds.arstechnica.com/arstechnica/technology-lab
-                title: Ars Technica AI
-  - name: Technology
-    width: wide
-    columns:
-      - size: full
-        widgets:
-          - type: videos
-            title: Homelab video updates
-            style: horizontal-cards
-            limit: 6
-            collapse-after: 3
-            include-shorts: false
-            channels:
-              - UCXuqSBlHAE6Xw-yeJA0Tunw # Linus Tech Tips
-              - UCR-DXc1voovS8nhAvccRZhg # Jeff Geerling
-          - type: releases
-            title: Installed software releases
-            cache: 6h
-            limit: 8
-            collapse-after: 5
-            show-source-icon: true
-            repositories:
-              - home-assistant/core
-              - traefik/traefik
-              - gethomepage/homepage
-              - glanceapp/glance
-              - henrygd/beszel
-          - type: rss
-            title: Self-hosting and Security
-            style: detailed-list
-            limit: 15
-            collapse-after: 8
-            feeds:
-              - url: https://selfh.st/rss/
-                title: selfh.st
-              - url: https://www.cncf.io/feed/
-                title: CNCF
-              - url: https://www.bleepingcomputer.com/feed/
-                title: BleepingComputer
-      - size: small
-        widgets:
-          - type: bookmarks
-            groups:
-              - title: Watch and Read
-                links:
-                  - title: Linus Tech Tips
-                    url: https://www.youtube.com/@LinusTechTips
-                  - title: The Primeagen
-                    url: https://www.youtube.com/@ThePrimeTimeagen
-                  - title: Joe Rogan
-                    url: https://www.youtube.com/@joerogan
-                  - title: Hacker News
-                    url: https://news.ycombinator.com/
+includes:
+  - pages/home.yml
+  - pages/hosting.yml
+  - pages/network.yml
+  - pages/media.yml
+  - pages/games.yml
+  - pages/news.yml
+  - pages/social.yml

@@ -1,0 +1,52 @@
+- name: Technology
+  width: wide
+  columns:
+    - size: full
+      widgets:
+        - type: videos
+          title: Homelab video updates
+          style: horizontal-cards
+          limit: 6
+          collapse-after: 3
+          include-shorts: false
+          channels:
+            - UCXuqSBlHAE6Xw-yeJA0Tunw # Linus Tech Tips
+            - UCR-DXc1voovS8nhAvccRZhg # Jeff Geerling
+        - type: releases
+          title: Installed software releases
+          cache: 6h
+          limit: 8
+          collapse-after: 5
+          show-source-icon: true
+          repositories:
+            - home-assistant/core
+            - traefik/traefik
+            - gethomepage/homepage
+            - glanceapp/glance
+            - henrygd/beszel
+        - type: rss
+          title: Self-hosting and Security
+          style: detailed-list
+          limit: 15
+          collapse-after: 8
+          feeds:
+            - url: https://selfh.st/rss/
+              title: selfh.st
+            - url: https://www.cncf.io/feed/
+              title: CNCF
+            - url: https://www.bleepingcomputer.com/feed/
+              title: BleepingComputer
+    - size: small
+      widgets:
+        - type: bookmarks
+          groups:
+            - title: Watch and Read
+              links:
+                - title: Linus Tech Tips
+                  url: https://www.youtube.com/@LinusTechTips
+                - title: The Primeagen
+                  url: https://www.youtube.com/@ThePrimeTimeagen
+                - title: Joe Rogan
+                  url: https://www.youtube.com/@joerogan
+                - title: Hacker News
+                  url: https://news.ycombinator.com/
