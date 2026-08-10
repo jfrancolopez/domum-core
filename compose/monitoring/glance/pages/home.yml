@@ -1,66 +1,8 @@
-- name: Dom
+---
+- name: Home
   width: wide
   columns:
-    - size: small
-      widgets:
-        - type: search
-          autofocus: true
-          search-engine: duckduckgo
-          new-tab: true
-        - type: bookmarks
-          groups:
-            - title: Portal
-              links:
-                - title: Homepage
-                  url: https://home.${DOMUM_DOMAIN}
-                - title: Beszel
-                  url: https://beszel.${DOMUM_DOMAIN}
-                - title: Home Assistant
-                  url: https://ha.${DOMUM_DOMAIN}
-                - title: Actual Budget
-                  url: https://budget.${DOMUM_DOMAIN}
-                - title: Traefik
-                  url: https://traefik.${DOMUM_DOMAIN}
-                - title: Dozzle
-                  url: https://logs.${DOMUM_DOMAIN}
-        - type: monitor
-          title: Critical services
-          style: compact
-          cache: 1m
-          sites:
-            - title: Homepage
-              url: https://home.${DOMUM_DOMAIN}
-              check-url: http://homepage:3000
-              icon: si:homepage
-            - title: Home Assistant
-              url: https://ha.${DOMUM_DOMAIN}
-              check-url: http://homeassistant:8123
-              icon: si:homeassistant
-            - title: Beszel
-              url: https://beszel.${DOMUM_DOMAIN}
-              check-url: http://beszel:8090
-              icon: si:beszel
-            - title: Zigbee2MQTT
-              url: https://z2m.${DOMUM_DOMAIN}
-              check-url: http://zigbee2mqtt:8080
-              icon: si:zigbee
-            - title: Node-RED
-              url: https://nodered.${DOMUM_DOMAIN}
-              check-url: http://nodered:1880
-              icon: si:nodered
     - size: full
       widgets:
-        - type: rss
-          title: Infrastructure and AI
-          style: detailed-list
-          limit: 12
-          collapse-after: 6
-          feeds:
-            - url: https://www.home-assistant.io/atom.xml
-              title: Home Assistant
-            - url: https://kubernetes.io/feed.xml
-              title: Kubernetes
-            - url: https://www.docker.com/blog/feed/
-              title: Docker
-            - url: https://feeds.arstechnica.com/arstechnica/technology-lab
-              title: Ars Technica AI
+        - type: text
+          content: "This is the Home page"
