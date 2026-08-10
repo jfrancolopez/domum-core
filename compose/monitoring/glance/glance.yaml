@@ -1,3 +1,4 @@
+---
 branding:
   app-name: Domum Core
   logo-text: DC
@@ -8,24 +9,6 @@ theme:
   positive-color: 135 94 66
   negative-color: 0 100 67
   contrast-multiplier: 1.2
-  presets:
-    catppuccin-macchiato:
-      background-color: 232 23 18
-      primary-color: 220 83 75
-      positive-color: 105 48 72
-      negative-color: 351 74 73
-      contrast-multiplier: 1.2
-    gruvbox-dark:
-      background-color: 0 0 16
-      primary-color: 43 59 81
-      positive-color: 61 66 44
-      negative-color: 6 96 59
 
 includes:
   - pages/home.yml
-  - pages/hosting.yml
-  - pages/network.yml
-  - pages/media.yml
-  - pages/games.yml
-  - pages/news.yml
-  - pages/social.yml
