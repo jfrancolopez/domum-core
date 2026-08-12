@@ -47,6 +47,14 @@ it exists and should be mode `0600`, owner `root:root`. It currently prepares
 credential and two-system metadata for task 54; it does not render Beszel metrics
 until the source review is complete.
 
+Do not create separate `glance_beszel_username` or `glance_beszel_password`
+files. If those files were created from an earlier draft, remove them after the
+combined env file is populated:
+
+```bash
+sudo rm -f /etc/domum-core/secrets/glance_beszel_username /etc/domum-core/secrets/glance_beszel_password
+```
+
 Glance has no Docker socket or host filesystem mounts. Do not present its
 container-local values as Raspberry Pi metrics; use Beszel for those values.
 

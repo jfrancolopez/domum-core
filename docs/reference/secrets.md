@@ -29,6 +29,9 @@ Future Glance dashboard integrations may add more read-only API keys or private
 feed URLs. Add names here only when a later widget task approves a specific
 credential and source.
 
+`glance-beszel.env` is the only supported Glance Beszel credential location;
+separate username/password files are intentionally not used.
+
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.
 

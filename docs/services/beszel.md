@@ -83,6 +83,9 @@ Use `config/glance-beszel.env.example` as the format. The system ID values must
 come from the live Beszel API/UI and should identify only the two approved active
 systems.
 
+There should be only one Glance Beszel credential source: the combined env file.
+Separate username/password files are not read by Compose or Glance.
+
 ## Quick Checks
 
 If the page does not load:
