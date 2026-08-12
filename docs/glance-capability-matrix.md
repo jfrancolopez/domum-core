@@ -15,14 +15,14 @@ Private rows remain blocked while `dash` is externally reachable.
 | Upcoming calendar events | Home | Provider ICS/CalDAV | Reviewed custom API | Read-only feed/account | 15m | Private-personal | Low | Needs credential | Blocked by task 49 and provider audit |
 | Search | Home | DuckDuckGo/approved provider | Native `search` | None | On demand | Public-safe | Negligible | Ready | Implemented with selected bangs |
 | Daily bookmarks | Home | Static tracked links | Native `bookmarks` | None | No request | Public-safe | Negligible | Ready | Implemented; not a full Homepage mirror |
-| Critical service availability | Home/Hosting | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Ready | Implemented on Home after private access boundary |
+| Critical service availability | Home/Hosting | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Ready | Implemented on Home and core Hosting after private access boundary; status only, no host metrics |
 | Technology briefing | Home/News | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Implemented on Home; limit 12 |
 | Host summary | Hosting | Beszel | Reviewed custom API | Unknown | 5m | Private-operational | Low | Needs clarification | Verify read API, auth, fields, and host coverage |
 | Local server stats | Hosting | Glance Agent | Native `server-stats` | New agent | 5m | Private-operational | Medium | Not recommended | New agent conflicts with program boundary |
 | Docker containers | Hosting | Docker API | Native `docker-containers` | Docker socket | 5m | Private-operational | High | Not recommended | Raw socket is prohibited |
 | Backup age/status | Hosting | Existing backup state | Custom API | Unknown | 15m | Private-operational | Low | Needs clarification | No safe exposed source audited |
 | Healthchecks summary | Hosting | Healthchecks | Custom API | Read-only key | 5m | Private-operational | Low | Needs credential | Never expose ping UUIDs |
-| Project releases | Hosting/News | GitHub public API | Native `releases` | None/optional token | 6h | Public-safe | Low | Ready | Release is not update approval |
+| Project releases | Hosting/News | GitHub public API | Native `releases` | None/optional token | 6h | Public-safe | Low | Ready | Implemented on core Hosting; release is not update approval |
 | Certificate/domain expiry | Hosting | Unselected source | Custom API | Unknown | 24h | Private-operational | Low | Needs clarification | Do not expose domains beyond approved aliases |
 | Latest Speedtest result | Network | Speedtest Tracker API | Reviewed custom API | `results:read` token | 5m | Private-personal | Low | Needs credential | Render only selected fields; [API](https://docs.speedtest-tracker.dev/api/responses/results) |
 | Speedtest history | Network | Speedtest Tracker API | Reviewed custom API | `results:read` token | 15m | Private-personal | Medium | Needs credential | Use real bounded history only |

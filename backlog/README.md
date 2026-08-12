@@ -133,7 +133,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | 1 | 50 | [Pin, validate, and plumb secrets](task-50-glance-runtime-foundation.md) | ✅ code done 2026-08-12; gitleaks unavailable locally | medium | low-med |
 | 1 | 51 | [Build the modular visual foundation](task-51-glance-foundation.md) | ✅ foundation done 2026-08-12; visual prototype selection deferred to polish | medium | low |
 | 2 | 52 | [Build the Home page](task-52-glance-home-page.md) | ✅ first native pass done 2026-08-12; private calendar deferred | medium | low |
-| 3 | 53 | [Build core Hosting](task-53-glance-hosting-core.md) | blocked by 52 | medium | low-med |
+| 3 | 53 | [Build core Hosting](task-53-glance-hosting-core.md) | ✅ core native pass done 2026-08-12; Beszel/backup/Healthchecks detail deferred | medium | low-med |
 | 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | blocked by 53 | medium | medium |
 | 3 | 55 | [Build core Network](task-55-glance-network-core.md) | blocked by 54 | medium | medium |
 | 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | blocked by 55 | medium | medium |

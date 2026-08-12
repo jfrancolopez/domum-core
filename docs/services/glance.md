@@ -95,6 +95,11 @@ privacy, and failure behavior review.
 - Home: native search, month calendar, three clocks, Durham weather, compact
   critical-service monitor, releases, public infrastructure/AI feeds, and
   selected bookmarks.
+- Hosting: native service monitors for core infrastructure and automation
+  dependencies, specialist investigation links, and public releases for installed
+  hosting components. It intentionally does not show host metrics, backup state,
+  Healthchecks details, certificates, or container lists until those sources are
+  separately approved.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
 

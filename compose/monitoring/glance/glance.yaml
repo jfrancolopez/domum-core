@@ -26,4 +26,5 @@ theme:
 
 pages:
   - $include: pages/home.yml
+  - $include: pages/hosting.yml
   - $include: pages/technology.yml
