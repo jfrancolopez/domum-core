@@ -17,7 +17,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Daily bookmarks | Home | Static tracked links | Native `bookmarks` | None | No request | Public-safe | Negligible | Ready | Implemented; not a full Homepage mirror |
 | Critical service availability | Home/Hosting | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Ready | Implemented on Home and core Hosting after private access boundary; status only, no host metrics |
 | Technology briefing | Home/News | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Implemented on Home; limit 12 |
-| Host summary | Hosting | Beszel | Reviewed custom API | Unknown | 5m | Private-operational | Low | Needs clarification | Verify read API, auth, fields, and host coverage |
+| Host summary | Hosting | Beszel | Reviewed custom API | Unknown | 5m | Private-operational | Low | Needs clarification | Operator selected Beszel as first external Hosting family; task 70 must verify read API, credential scope, fields, failures, and host coverage before task 54 |
 | Local server stats | Hosting | Glance Agent | Native `server-stats` | New agent | 5m | Private-operational | Medium | Not recommended | New agent conflicts with program boundary |
 | Docker containers | Hosting | Docker API | Native `docker-containers` | Docker socket | 5m | Private-operational | High | Not recommended | Raw socket is prohibited |
 | Backup age/status | Hosting | Existing backup state | Custom API | Unknown | 15m | Private-operational | Low | Needs clarification | No safe exposed source audited |

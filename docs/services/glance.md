@@ -107,6 +107,11 @@ Private Google Calendar events, WAN details, device names, media activity, and
 Steam data are intentionally absent until their individual widget tasks approve
 credentials and failure behavior.
 
+Beszel-managed external hosts are the selected first external Hosting family, but
+they are not rendered yet. Task 70 must verify Beszel's read API, credential
+scope, host aliases, allowed fields, and failure behavior before task 54 adds any
+Glance widget for those hosts.
+
 ## Quick Checks
 
 If the page does not load:
