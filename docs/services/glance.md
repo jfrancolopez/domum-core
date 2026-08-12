@@ -141,6 +141,9 @@ are valid, but Glance `v0.8.5` still cannot render them natively: `custom-api`
 cannot chain a login response token into a second collection request, and Beszel's
 universal token did not authorize the systems collection API.
 
+The normal PocketBase auth token can query the systems collection but expires
+after 7 days, so it is not accepted as a static Glance credential.
+
 ## Quick Checks
 
 If the page does not load:

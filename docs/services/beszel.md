@@ -94,6 +94,9 @@ Beszel universal token did not authorize the systems collection query. Do not ad
 a Beszel Glance widget until a safe long-lived read token, upstream API path, or
 approved local adapter is chosen.
 
+A normal PocketBase auth token was also tested and can read the two approved
+systems, but it expires after 7 days. Do not store it as a static Glance secret.
+
 ## Quick Checks
 
 If the page does not load:

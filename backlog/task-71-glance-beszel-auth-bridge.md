@@ -27,6 +27,32 @@ the PocketBase `systems` collection returned zero visible systems.
 - Beszel system IDs are verified locally but private and not committed.
 - No Glance widget renders Beszel host metrics yet.
 
+## Token Evaluation — 2026-08-12
+
+A sanitized Pi test checked the normal PocketBase auth token returned by
+`/api/collections/users/auth-with-password` for the dedicated Glance Beszel user.
+That token can query the `systems` collection and sees the two approved systems,
+but it expires after 604800 seconds, or 7 days. Treating it as a static Glance
+secret would silently break the dashboard weekly unless refreshed out of band.
+
+Rejected as the default implementation: store a normal PocketBase auth token in
+`glance-beszel.env`. Reason: the token is short-lived and Glance cannot refresh
+it before issuing the second request.
+
+Still rejected from task 70: Beszel permanent universal token as a bearer token
+for PocketBase collections. Reason: the token can be generated, but it returned
+zero visible `systems` records when used against the collection API.
+
+Viable candidates now require an explicit operator decision:
+
+- Small local adapter/exporter: logs in to Beszel with the dedicated credential,
+  fetches exactly the two configured systems, strips disallowed fields, and
+  exposes one internal JSON endpoint for Glance. This adds a maintained component
+  but preserves least privilege and keeps Glance simple.
+- Beszel trusted-auth/header or upstream-supported token path: may avoid an
+  adapter, but changes Beszel authentication behavior and must be reviewed for
+  who can assert the trusted identity.
+
 ## Desired Behavior
 
 Glance can read exactly the approved Beszel summaries without committing secrets,
@@ -40,8 +66,9 @@ container names, network interface names, IPs, disk serials, or broad topology.
    exact request shape, response fields, and errors without printing secrets or
    system IDs.
 2. Evaluate option A: a long-lived PocketBase auth token or supported Beszel API
-   token that can read only the selected records. Reject it if token lifetime,
-   revocation, role scope, or recovery is unclear.
+   token that can read only the selected records. Normal PocketBase auth tokens
+   are rejected because the tested lifetime is 7 days; keep looking only if a
+   separately supported long-lived read token exists.
 3. Evaluate option B: a tiny local read-only adapter/exporter that logs in to
    Beszel server-side, fetches the two configured systems, strips disallowed
    fields, and exposes one internal JSON endpoint for Glance. This requires a
