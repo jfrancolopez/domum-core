@@ -108,9 +108,11 @@ Steam data are intentionally absent until their individual widget tasks approve
 credentials and failure behavior.
 
 Beszel-managed external hosts are the selected first external Hosting family, but
-they are not rendered yet. Task 70 must verify Beszel's read API, credential
-scope, host aliases, allowed fields, and failure behavior before task 54 adds any
-Glance widget for those hosts.
+they are not rendered yet. Public source review found authenticated Beszel
+PocketBase collections and a readonly role, but no stable OpenAPI/versioned API
+contract. Task 70 must still verify the live Pi credential model, host aliases,
+system IDs, allowed fields, stale behavior, and failure behavior before task 54
+adds any Glance widget for those hosts.
 
 ## Quick Checks
 

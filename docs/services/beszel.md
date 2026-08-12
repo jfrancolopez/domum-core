@@ -61,6 +61,18 @@ Beszel participates in the normal container update workflow with
 `BESZEL_AUTO_UPDATE` and `BESZEL_UPDATE_DELAY_DAYS`. It defaults to manual
 updates because it is stateful monitoring infrastructure.
 
+## Glance Source Review
+
+Beszel is the selected first external Hosting source for Glance, but Glance does
+not consume Beszel metrics yet. Public upstream review found authenticated
+PocketBase collections for systems and stats plus a readonly role, but no stable
+OpenAPI or separately versioned Beszel API contract. Do not build a Glance widget
+until the Pi review verifies a dedicated readonly credential or token, approved
+host aliases/system IDs, allowed fields, cache/stale behavior, and failure modes.
+
+Do not reuse Homepage's Beszel superuser credentials for Glance unless the
+operator explicitly accepts that risk and no narrower read path exists.
+
 ## Quick Checks
 
 If the page does not load:

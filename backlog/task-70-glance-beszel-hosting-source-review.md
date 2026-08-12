@@ -34,6 +34,34 @@ IDs. Those failures must be resolved before Glance repeats the same integration.
 - The public Beszel README says API access exists, but this session did not find
   a stable versioned API contract suitable for a Glance `custom-api` widget.
 
+## Public Source Review Findings — 2026-08-12
+
+This review used only tracked repository facts and public upstream Beszel source;
+it did not inspect live Beszel data, credentials, system IDs, or `data/`
+directories.
+
+- Beszel is built on PocketBase and the web UI uses the PocketBase JavaScript
+  client.
+- Upstream source defines authenticated PocketBase-style collections including
+  `systems`, `system_stats`, `containers`, `container_stats`, `system_details`,
+  `systemd_services`, `smart_devices`, and `user_settings`.
+- Upstream collection rules allow authenticated users to read systems they are
+  members of. If `SHARE_ALL_SYSTEMS=true`, authenticated users can read all
+  systems. Write rules exclude users whose role is `readonly`.
+- Upstream custom `/api/beszel/*` routes require authentication for `/info`,
+  `/getkey`, `/universal-token`, `/systemd/info`, `/containers/logs`,
+  `/containers/info`, and `/smart/refresh`; admin or non-readonly role is
+  required for some routes.
+- Beszel has a readonly role, but the repo does not yet contain an approved
+  Glance-specific readonly credential, token mechanism, or system-ID inventory.
+- The README says API access exists, but a stable OpenAPI/versioned API contract
+  was not found. A Glance integration would therefore depend on PocketBase
+  collection behavior plus live-version testing, not a separately versioned
+  Beszel API document.
+
+Decision: keep the matrix row at `Needs clarification`. Do not implement task 54
+until Pi-only credential and system coverage checks prove a narrow readonly path.
+
 ## Desired Behavior
 
 Before task 54 implements anything, the repo should know exactly how Glance may
@@ -66,6 +94,9 @@ or topology must not be exposed unless explicitly approved.
    only when the exact source, credential, fields, privacy, and failure behavior
    are documented.
 8. Then return to task 54 and implement exactly that reviewed Beszel family.
+
+Public source-review progress: item 2 is partially complete. Items 1, 3, 4, 5,
+6, and 7 require Pi/operator work and remain open.
 
 ## Affected Files
 
