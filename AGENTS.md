@@ -72,6 +72,7 @@ Key layout:
 bash -n bin/domum-core bin/domum-core-backup install.sh
 shellcheck bin/domum bin/domum-core bin/domum-core-backup install.sh
 yamllint -c .yamllint.yml .
+tests/gitleaks-tracked.sh       # production checkout safe: scans tracked files only
 git diff --cached --name-only   # confirm: no live config, no secrets, no data dirs
 ```
 

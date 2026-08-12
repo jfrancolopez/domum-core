@@ -59,7 +59,7 @@
               icon: si:beszel
             - title: AdGuard
               url: https://dns.${DOMUM_DOMAIN}
-              check-url: http://adguard-home:${ADGUARD_WEB_PORT}
+              check-url: https://dns.${DOMUM_DOMAIN}
               icon: si:adguard
             - title: Speedtest Tracker
               url: https://speedtest.${DOMUM_DOMAIN}

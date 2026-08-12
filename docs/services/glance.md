@@ -95,6 +95,9 @@ privacy, and failure behavior review.
 - Home: native search, month calendar, three clocks, Durham weather, compact
   critical-service monitor, releases, public infrastructure/AI feeds, and
   selected bookmarks.
+- The Home AdGuard monitor checks the Traefik-routed `dns` URL instead of the
+  direct container port, because AdGuard's internal web port can move after first
+  setup while Traefik owns the stable browser route.
 - Hosting: native service monitors for core infrastructure and automation
   dependencies, specialist investigation links, and public releases for installed
   hosting components. It intentionally does not show host metrics, backup state,

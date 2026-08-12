@@ -57,7 +57,7 @@ Before merging any change:
 - [ ] Disaster-recovery impact stated: does rebuild-from-scratch still work?
       Does anything new need to ride in backups or the recovery pack?
 - [ ] Docs updated in the same change (user-facing) or explicitly N/A.
-- [ ] No secrets in git (gitleaks green; new secret files added to the
+- [ ] No secrets in git (`tests/gitleaks-tracked.sh` green; new secret files added to the
       [secrets inventory](secrets.md)).
 - [ ] CI green: `bash -n`, shellcheck, yamllint, compose config, gitleaks.
 - [ ] The maintenance question answered: who/what breaks if this is
