@@ -147,7 +147,8 @@ fresh AI-agent session and requires approval before the next page is started.
 | 6 | 64 | [Validate failures and performance](task-64-glance-performance.md) | blocked by 63 | medium | low-med |
 | 6 | 65 | [Prove recovery and finish runbooks](task-65-glance-recovery-docs.md) | blocked by 64 | medium | low |
 | optional | 66 | [Evaluate expansion and Dynacat](task-66-glance-future-evaluation.md) | blocked by 65 | medium | none |
-| prep | 70 | [Review Beszel as the Glance external Hosting source](task-70-glance-beszel-hosting-source-review.md) | public source review and env plumbing done; Pi system/API test pending | small-med | medium |
+| prep | 70 | [Review Beszel as the Glance external Hosting source](task-70-glance-beszel-hosting-source-review.md) | Pi auth/system test done; blocked on usable Glance read-token/adapter path | small-med | medium |
+| prep | 71 | [Choose a safe Beszel-to-Glance auth bridge](task-71-glance-beszel-auth-bridge.md) | planned; blocks task 54 | small-med | medium |
 
 ## Audit conclusions worth remembering (2026-07-09)
 

@@ -65,6 +65,30 @@ directories.
 Decision: keep the matrix row at `Needs clarification`. Do not implement task 54
 until Pi-only credential and system coverage checks prove a narrow readonly path.
 
+## Pi API Test Findings — 2026-08-12
+
+The operator populated `/etc/domum-core/secrets/glance-beszel.env` with the
+dedicated Beszel credentials and two system IDs. A sanitized root-only test on the
+Pi proved:
+
+- the env file loads and contains non-empty username, password, and two system
+  IDs;
+- password auth against Beszel succeeds from the host using the `domum-proxy`
+  container address;
+- the dedicated Beszel user can see exactly two systems;
+- both configured system IDs match visible systems;
+- a permanent Beszel universal token can be generated, but it returns zero
+  visible `systems` records when used as `Authorization: Bearer <token>` against
+  the PocketBase collection API.
+
+Glance `v0.8.5` `custom-api` subrequests are concurrent and cannot use the token
+returned by a login request as the header for a second request in the same widget.
+Because the universal token does not authorize the collection query, the current
+native Glance options cannot safely render Beszel host metrics from the approved
+username/password alone. Implementing this would require either an approved
+long-lived PocketBase auth token, a narrow local adapter/exporter, or upstream
+Beszel support for a read token that can query selected system records.
+
 ## Desired Behavior
 
 Before task 54 implements anything, the repo should know exactly how Glance may
@@ -98,9 +122,9 @@ or topology must not be exposed unless explicitly approved.
    are documented.
 8. Then return to task 54 and implement exactly that reviewed Beszel family.
 
-Public source-review progress: item 2 is partially complete, and item 4 has
-candidate env-file plumbing. Items 1, 3, 5, 6, and 7 require Pi/operator work and
-remain open.
+Review progress: items 1, 2, 3, 4, and 5 are partially complete. Item 6 found a
+blocking auth-token shape for native Glance. Item 7 remains blocked; do not move
+the matrix row to `Ready` until one approved read-token or adapter path exists.
 
 ## Affected Files
 

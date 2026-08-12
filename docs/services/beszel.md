@@ -86,6 +86,14 @@ systems.
 There should be only one Glance Beszel credential source: the combined env file.
 Separate username/password files are not read by Compose or Glance.
 
+The current blocker is not the system IDs or password. A Pi test proved the
+dedicated user can see the two configured systems through password auth. Glance
+`v0.8.5` cannot use that password auth directly because its `custom-api`
+subrequests cannot pass a login response token into a second request, and a
+Beszel universal token did not authorize the systems collection query. Do not add
+a Beszel Glance widget until a safe long-lived read token, upstream API path, or
+approved local adapter is chosen.
+
 ## Quick Checks
 
 If the page does not load:

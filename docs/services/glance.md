@@ -136,6 +136,11 @@ contract. Task 70 must still verify the live Pi credential model, host aliases,
 system IDs, allowed fields, stale behavior, and failure behavior before task 54
 adds any Glance widget for those hosts.
 
+A Pi test later proved the configured Beszel username/password and two system IDs
+are valid, but Glance `v0.8.5` still cannot render them natively: `custom-api`
+cannot chain a login response token into a second collection request, and Beszel's
+universal token did not authorize the systems collection API.
+
 ## Quick Checks
 
 If the page does not load:
