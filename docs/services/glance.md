@@ -36,6 +36,17 @@ Keep secrets out of this file. If a future widget needs a token, store the token
 under `/etc/domum-core/secrets` and pass it through a file-backed environment
 variable instead of committing it.
 
+The optional Beszel integration env file is:
+
+```text
+/etc/domum-core/secrets/glance-beszel.env
+```
+
+Use `config/glance-beszel.env.example` as the format. The file is loaded only if
+it exists and should be mode `0600`, owner `root:root`. It currently prepares
+credential and two-system metadata for task 54; it does not render Beszel metrics
+until the source review is complete.
+
 Glance has no Docker socket or host filesystem mounts. Do not present its
 container-local values as Raspberry Pi metrics; use Beszel for those values.
 

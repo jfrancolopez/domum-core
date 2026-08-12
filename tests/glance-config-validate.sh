@@ -7,6 +7,12 @@ IMAGE="${GLANCE_IMAGE:-glanceapp/glance:v0.8.5}"
 docker run --rm \
   -e DOMUM_DOMAIN="${DOMUM_DOMAIN:-example.com}" \
   -e ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}" \
+  -e GLANCE_BESZEL_USERNAME="${GLANCE_BESZEL_USERNAME:-ci@example.invalid}" \
+  -e GLANCE_BESZEL_PASSWORD="${GLANCE_BESZEL_PASSWORD:-ci-dummy}" \
+  -e GLANCE_BESZEL_SYSTEM_1_LABEL="${GLANCE_BESZEL_SYSTEM_1_LABEL:-domum-core}" \
+  -e GLANCE_BESZEL_SYSTEM_1_ID="${GLANCE_BESZEL_SYSTEM_1_ID:-domum-core}" \
+  -e GLANCE_BESZEL_SYSTEM_2_LABEL="${GLANCE_BESZEL_SYSTEM_2_LABEL:-media}" \
+  -e GLANCE_BESZEL_SYSTEM_2_ID="${GLANCE_BESZEL_SYSTEM_2_ID:-domum-core-media}" \
   -v "$ROOT/compose/monitoring/glance:/app/config:ro" \
   "$IMAGE" \
   --config /app/config/glance.yaml \

@@ -12,6 +12,9 @@ services:
       - TZ=America/New_York
       - DOMUM_DOMAIN=${DOMUM_DOMAIN}
       - ADGUARD_WEB_PORT=${ADGUARD_WEB_PORT:-3000}
+    env_file:
+      - path: /etc/domum-core/secrets/glance-beszel.env
+        required: false
     volumes:
       - /opt/domum-core/compose/monitoring/glance:/app/config:ro
     labels:

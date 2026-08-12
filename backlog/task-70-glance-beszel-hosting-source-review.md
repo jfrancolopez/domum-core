@@ -53,7 +53,10 @@ directories.
   `/containers/info`, and `/smart/refresh`; admin or non-readonly role is
   required for some routes.
 - Beszel has a readonly role, but the repo does not yet contain an approved
-  Glance-specific readonly credential, token mechanism, or system-ID inventory.
+  Glance-specific system-ID inventory.
+- The operator created a dedicated Glance Beszel username/password. The values
+  belong only in `/etc/domum-core/secrets/glance-beszel.env`, using
+  `config/glance-beszel.env.example` as the format.
 - The README says API access exists, but a stable OpenAPI/versioned API contract
   was not found. A Glance integration would therefore depend on PocketBase
   collection behavior plus live-version testing, not a separately versioned
@@ -95,8 +98,9 @@ or topology must not be exposed unless explicitly approved.
    are documented.
 8. Then return to task 54 and implement exactly that reviewed Beszel family.
 
-Public source-review progress: item 2 is partially complete. Items 1, 3, 4, 5,
-6, and 7 require Pi/operator work and remain open.
+Public source-review progress: item 2 is partially complete, and item 4 has
+candidate env-file plumbing. Items 1, 3, 5, 6, and 7 require Pi/operator work and
+remain open.
 
 ## Affected Files
 

@@ -73,6 +73,16 @@ host aliases/system IDs, allowed fields, cache/stale behavior, and failure modes
 Do not reuse Homepage's Beszel superuser credentials for Glance unless the
 operator explicitly accepts that risk and no narrower read path exists.
 
+If a dedicated Glance Beszel user exists, store it only on the Pi in:
+
+```text
+/etc/domum-core/secrets/glance-beszel.env
+```
+
+Use `config/glance-beszel.env.example` as the format. The system ID values must
+come from the live Beszel API/UI and should identify only the two approved active
+systems.
+
 ## Quick Checks
 
 If the page does not load:
