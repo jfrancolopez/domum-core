@@ -17,6 +17,10 @@ DOMUM_LAN_IP="10.0.10.2"
 DOMUM_TS_IP=""
 TAILSCALE_ACCEPT_DNS=0
 TAILSCALE_SSH=0
+# Enable only when task 49 attaches the Glance access middleware. Keep the real
+# CIDR in local config: it is private network topology and must never enter Git.
+GLANCE_PRIVATE_ACCESS=0
+# DOMUM_GLANCE_LAN_CIDR="192.0.2.0/24"
 
 # ============================================================
 # Core
@@ -123,6 +127,7 @@ ACTUAL_HEALTH_URL=""
 TRAEFIK_IMAGE="traefik:v3"
 HOMEASSISTANT_IMAGE="ghcr.io/home-assistant/home-assistant:stable"
 MARIADB_IMAGE="mariadb:12.2"
+GLANCE_IMAGE="glanceapp/glance:v0.8.5"
 
 # ============================================================
 # Per-app container update policy
@@ -166,7 +171,7 @@ OBSIDIAN_SYNC_AUTO_UPDATE=1
 OBSIDIAN_SYNC_UPDATE_DELAY_DAYS=7
 IT_TOOLS_AUTO_UPDATE=1
 IT_TOOLS_UPDATE_DELAY_DAYS=7
-GLANCE_AUTO_UPDATE=1
+GLANCE_AUTO_UPDATE=0
 GLANCE_UPDATE_DELAY_DAYS=7
 DOZZLE_AUTO_UPDATE=0
 DOZZLE_UPDATE_DELAY_DAYS=7

@@ -1,6 +1,6 @@
 services:
   glance:
-    image: glanceapp/glance:latest
+    image: ${GLANCE_IMAGE:-glanceapp/glance:v0.8.5}
     container_name: glance
     restart: unless-stopped
     command:
@@ -11,16 +11,18 @@ services:
     environment:
       - TZ=America/New_York
       - DOMUM_DOMAIN=${DOMUM_DOMAIN}
+      - ADGUARD_WEB_PORT=${ADGUARD_WEB_PORT:-3000}
     volumes:
       - /opt/domum-core/compose/monitoring/glance:/app/config:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=domum-proxy
-      - traefik.http.routers.glance.rule=Host(`glance.${DOMUM_DOMAIN}`)
+      - traefik.http.routers.glance.rule=Host(`dash.${DOMUM_DOMAIN}`)
       - traefik.http.routers.glance.entrypoints=websecure
       - traefik.http.routers.glance.tls=true
       - traefik.http.routers.glance.tls.certresolver=cf
-      - traefik.http.routers.glance.middlewares=glanceEmbedHeaders@file
+      - traefik.http.middlewares.glance-private.ipallowlist.sourcerange=${DOMUM_GLANCE_LAN_CIDR},100.64.0.0/10
+      - traefik.http.routers.glance.middlewares=glance-private@docker,glanceEmbedHeaders@file
       - traefik.http.services.glance.loadbalancer.server.port=8080
     profiles:
       - core

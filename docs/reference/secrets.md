@@ -24,6 +24,10 @@ drift is fixed.
 | `recovery-age.pub` | **public** AGE key — encrypts the recovery pack |
 | `recovery_pack_smtp_username` / `_password` | optional recovery-pack email |
 
+Future Glance dashboard integrations may add read-only API keys or private feed
+URLs, but task 50 adds no Glance secret files. Add names here only when a later
+widget task approves a specific credential and source.
+
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.
 

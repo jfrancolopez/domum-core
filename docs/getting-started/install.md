@@ -147,10 +147,10 @@ git -C /opt/domum-core status --short
 ```
 
 `domum-core init` converges the mechanical host state: Docker if missing, the
-standard backup/recovery utility packages, bounded Docker json-file logs, state
-directories, secrets directory, config examples, and optional host Tailscale. If
-it creates `/etc/docker/daemon.json` on a running host, it asks before restarting
-Docker because that restarts containers.
+standard backup/recovery utility packages, bounded Docker json-file logs, Docker
+`userland-proxy=false`, state directories, secrets directory, config examples,
+and optional host Tailscale. If it creates `/etc/docker/daemon.json` on a running
+host, it asks before restarting Docker because that restarts containers.
 
 `init` prints the remaining operator checklist instead of applying it for you:
 timezone/hostname, SSH hardening, firewall/fail2ban, and maintenance timer

@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-  Home[home.ladomum.com\nHomepage] --> Glance[glance.ladomum.com\nDaily overview]
+  Home[home.ladomum.com\nHomepage] --> Glance[dash.ladomum.com\nPrivate daily dashboard]
   Home --> Beszel[beszel.ladomum.com\nMonitoring history]
   Home --> Traefik[traefik.ladomum.com\nProtected administration]
   Traefik --> Home
@@ -13,7 +13,8 @@ flowchart LR
 ## Roles
 
 - Homepage is the normal entry point and complete HTTPS service directory.
-- Glance provides quick links and limited technology feeds.
+- Glance provides deeper daily context, selected historical summaries, and
+  curated personal information. It is private-only before private data is added.
 - Beszel owns detailed Pi, disk, network, and Docker history.
 - Traefik routes HTTPS and keeps its dashboard behind basic authentication.
 - Healthchecks monitors scheduled job heartbeats, not host resource metrics.
@@ -23,8 +24,9 @@ flowchart LR
 Add the service to the `service_catalog()` first, then its Compose fragment and
 Traefik labels. Add one Homepage card only after its HTTPS route works. Use an
 internal `siteMonitor` URL only when Homepage can reach it without credentials.
-Add a Glance link only when it supports the daily overview; do not duplicate the
-Homepage directory.
+Add a Glance widget only when it provides deeper context than Homepage; do not
+duplicate the Homepage directory. The Glance page map, privacy policy, and
+source budgets live in [Glance dashboard architecture](glance-dashboard-architecture.md).
 
 ## Healthchecks
 

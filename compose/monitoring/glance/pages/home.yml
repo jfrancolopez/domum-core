@@ -1,8 +1,118 @@
----
 - name: Home
+  slug: home
   width: wide
   columns:
+    - size: small
+      widgets:
+        - type: search
+          autofocus: true
+          search-engine: duckduckgo
+          new-tab: true
+          bangs:
+            - title: YouTube
+              shortcut: "!yt"
+              url: https://www.youtube.com/results?search_query={QUERY}
+            - title: GitHub
+              shortcut: "!gh"
+              url: https://github.com/search?q={QUERY}
+            - title: Steam
+              shortcut: "!steam"
+              url: https://store.steampowered.com/search/?term={QUERY}
+        - type: calendar
+          first-day-of-week: sunday
+        - type: clock
+          hour-format: 12h
+          timezones:
+            - timezone: America/New_York
+              label: Durham
+            - timezone: America/Matamoros
+              label: Nuevo Laredo
+            - timezone: America/Los_Angeles
+              label: San Jose
+        - type: weather
+          title: Durham weather
+          location: Durham, North Carolina, United States
+          units: imperial
+
     - size: full
       widgets:
-        - type: text
-          content: "This is the Home page"
+        - type: monitor
+          title: Critical services
+          style: compact
+          cache: 1m
+          sites:
+            - title: Homepage
+              url: https://home.${DOMUM_DOMAIN}
+              check-url: http://homepage:3000
+              icon: si:homepage
+            - title: Glance
+              url: https://dash.${DOMUM_DOMAIN}
+              check-url: http://glance:8080
+              icon: si:glance
+            - title: Home Assistant
+              url: https://ha.${DOMUM_DOMAIN}
+              check-url: http://homeassistant:8123
+              icon: si:homeassistant
+            - title: Beszel
+              url: https://beszel.${DOMUM_DOMAIN}
+              check-url: http://beszel:8090
+              icon: si:beszel
+            - title: AdGuard
+              url: https://dns.${DOMUM_DOMAIN}
+              check-url: http://adguard-home:${ADGUARD_WEB_PORT}
+              icon: si:adguard
+            - title: Speedtest Tracker
+              url: https://speedtest.${DOMUM_DOMAIN}
+              check-url: http://speedtest-tracker:80
+              icon: si:speedtest
+        - type: releases
+          title: Installed software releases
+          cache: 6h
+          limit: 8
+          collapse-after: 5
+          show-source-icon: true
+          repositories:
+            - home-assistant/core
+            - traefik/traefik
+            - glanceapp/glance
+            - henrygd/beszel
+            - gethomepage/homepage
+        - type: rss
+          title: Infrastructure and AI
+          style: detailed-list
+          limit: 12
+          collapse-after: 6
+          feeds:
+            - url: https://www.home-assistant.io/atom.xml
+              title: Home Assistant
+            - url: https://selfh.st/rss/
+              title: selfh.st
+            - url: https://www.docker.com/blog/feed/
+              title: Docker
+            - url: https://feeds.arstechnica.com/arstechnica/technology-lab
+              title: Ars Technica AI
+
+    - size: small
+      widgets:
+        - type: bookmarks
+          groups:
+            - title: Domum
+              links:
+                - title: Homepage
+                  url: https://home.${DOMUM_DOMAIN}
+                - title: Home Assistant
+                  url: https://ha.${DOMUM_DOMAIN}
+                - title: Beszel
+                  url: https://beszel.${DOMUM_DOMAIN}
+                - title: Speedtest
+                  url: https://speedtest.${DOMUM_DOMAIN}
+            - title: Infrastructure
+              links:
+                - title: Traefik
+                  url: https://traefik.${DOMUM_DOMAIN}
+                - title: Tailscale
+                  url: https://login.tailscale.com/admin/machines
+                - title: Cloudflare
+                  url: https://dash.cloudflare.com
+                - title: GitHub
+                  url: https://github.com/jfrancolopez/domum-core

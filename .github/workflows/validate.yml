@@ -57,7 +57,10 @@ jobs:
       DOMUM_DOMAIN: example.com
       DOMUM_EMAIL: ci@example.com
       DOMUM_LAN_IP: 127.0.0.1
+      DOMUM_GLANCE_LAN_CIDR: 192.0.2.0/24
       DOMUM_TS_IP: 127.0.0.1
+      GLANCE_IMAGE: glanceapp/glance:v0.8.5
+      ADGUARD_WEB_PORT: 3000
       CF_DNS_API_TOKEN: ci-dummy
       DOMUM_MARIADB_ENV_FILE: ${{ github.workspace }}/.ci/mariadb.env
       DOMUM_SPEEDTEST_ENV_FILE: ${{ github.workspace }}/.ci/speedtest-tracker.env
@@ -76,3 +79,10 @@ jobs:
           done < <(find compose -mindepth 2 -name '*.yml' ! -path 'compose/proxy/traefik/*' -print0 | sort -z)
           echo "Validating: ${files[*]}"
           docker compose "${files[@]}" --profile core config -q
+
+  glance-validate:
+    name: glance-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: tests/glance-config-validate.sh

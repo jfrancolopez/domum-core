@@ -58,7 +58,8 @@ docker_daemon_json_expected() {
   "log-opts": {
     "max-size": "10m",
     "max-file": "3"
-  }
+  },
+  "userland-proxy": false
 }
 JSON
 }
@@ -152,6 +153,8 @@ load_cfg() {
   # local control so LAN HTTPS and ACME renewal do not depend on Tailscale.
   TAILSCALE_ACCEPT_DNS="${TAILSCALE_ACCEPT_DNS:-0}"
   TAILSCALE_SSH="${TAILSCALE_SSH:-0}"
+  GLANCE_PRIVATE_ACCESS="${GLANCE_PRIVATE_ACCESS:-0}"
+  DOMUM_GLANCE_LAN_CIDR="${DOMUM_GLANCE_LAN_CIDR:-}"
   ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-$(adguard_detect_web_port)}"
   MQTT_USER="${MQTT_USER:-domum}"
   MQTT_PASSWORD_FILE="${MQTT_PASSWORD_FILE:-$SECRETS_DIR/mqtt_password}"
@@ -263,6 +266,30 @@ validate_obsidian_credentials() {
   fi
 
   return "$issues"
+}
+
+valid_ipv4_cidr() {
+  local cidr="$1" address prefix octet
+  [[ "$cidr" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$ ]] || return 1
+  address="${cidr%/*}"
+  prefix="${cidr#*/}"
+  (( 10#$prefix <= 32 )) || return 1
+  local IFS=.
+  for octet in $address; do
+    (( 10#$octet <= 255 )) || return 1
+  done
+}
+
+validate_glance_private_access() {
+  [[ "${GLANCE_PRIVATE_ACCESS:-0}" =~ ^[01]$ ]] || {
+    echo "[!] GLANCE_PRIVATE_ACCESS must be 0 or 1"
+    return 1
+  }
+  [[ "${GLANCE_PRIVATE_ACCESS:-0}" == "1" ]] || return 0
+  if ! valid_ipv4_cidr "${DOMUM_GLANCE_LAN_CIDR:-}"; then
+    echo "[!] GLANCE_PRIVATE_ACCESS=1 requires a valid DOMUM_GLANCE_LAN_CIDR IPv4 CIDR"
+    return 1
+  fi
 }
 
 validate_mqtt_auth() {
@@ -851,6 +878,7 @@ export_env_for_compose() {
   export DOMUM_DOMAIN="${DOMUM_DOMAIN:-ladomum.com}"
   export DOMUM_EMAIL="${DOMUM_EMAIL:-admin@ladomum.com}"
   export DOMUM_LAN_IP="${DOMUM_LAN_IP:-}"
+  export DOMUM_GLANCE_LAN_CIDR="${DOMUM_GLANCE_LAN_CIDR:-}"
   export DOMUM_TS_IP="${DOMUM_TS_IP:-}"
   export ADGUARD_WEB_PORT="${ADGUARD_WEB_PORT:-3000}"
   export MQTT_USER="${MQTT_USER:-domum}"
@@ -936,6 +964,7 @@ apply() {
   local candidate_snapshot=""
   validate_obsidian_credentials || die "Fix Obsidian Sync credentials before apply."
   validate_mqtt_auth || die "Run 'domum-core mqtt init-auth' before apply."
+  validate_glance_private_access || die "Fix Glance private-access configuration before apply."
   install_tailscale_host
   ensure_networks
   export_env_for_compose
@@ -4445,6 +4474,7 @@ configure_validate() {
     [[ -f "$RECOVERY_PACK_SMTP_PASSWORD_FILE" ]] || { echo "[!] recovery email on but password file missing: $RECOVERY_PACK_SMTP_PASSWORD_FILE"; issues=1; }
   fi
   validate_obsidian_credentials || issues=1
+  validate_glance_private_access || issues=1
   validate_mqtt_auth || issues=1
   local -a backup_targets=()
   read -r -a backup_targets <<< "${BACKUP_TARGETS:-}"
