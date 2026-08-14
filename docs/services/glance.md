@@ -166,6 +166,73 @@ Go binary built from `compose/monitoring/glance-beszel-adapter/`; no Go toolchai
 is required on the Pi outside Docker build. It exposes `/summary` for Glance and
 `/healthz` for direct internal checks.
 
+### Beszel Adapter Pi Validation
+
+Run these only on the production Pi after pulling the adapter commit. Do not
+print `glance-beszel.env`, tokens, raw system IDs, raw JSON payloads, internal
+addresses, container names, or disk identifiers.
+
+1. Confirm the existing secret file exists and is root-only without showing
+   values:
+
+   ```bash
+   sudo test -s /etc/domum-core/secrets/glance-beszel.env
+   sudo stat -c '%U:%G %a %n' /etc/domum-core/secrets/glance-beszel.env
+   ```
+
+2. Enable only after Glance and Beszel are enabled:
+
+   ```text
+   ENABLE_GLANCE=1
+   ENABLE_BESZEL=1
+   ENABLE_GLANCE_BESZEL_ADAPTER=1
+   ```
+
+3. Validate config and deploy through the normal production path:
+
+   ```bash
+   sudo domum-core configure --validate
+   sudo domum-core apply
+   ```
+
+4. Confirm the adapter is running without printing sensitive payloads:
+
+   ```bash
+   sudo docker inspect --format '{{.State.Health.Status}}' glance-beszel-adapter
+   sudo docker run --rm --network domum-proxy curlimages/curl:latest \
+     -fsS http://glance-beszel-adapter:8080/healthz
+   ```
+
+5. Check `/summary` shape from the same Docker network path. Save output to a
+   root-only temp file, inspect keys/counts only, then delete it:
+
+   ```bash
+   tmp="$(sudo mktemp)"
+   sudo docker run --rm --network domum-proxy curlimages/curl:latest \
+     -fsS http://glance-beszel-adapter:8080/summary | sudo tee "$tmp" >/dev/null
+   sudo python3 - <<'PY' "$tmp"
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+print("status", data.get("status"))
+print("cache", data.get("cache"))
+print("systems", len(data.get("systems", [])))
+for item in data.get("systems", []):
+    print("system", item.get("label"), item.get("status"), "stale", item.get("stale"))
+PY
+   sudo rm -f "$tmp"
+   ```
+
+6. Validate failure behavior during a maintenance window by testing invalid
+   credentials, a missing configured system ID, Beszel unavailable, malformed or
+   empty upstream behavior where practical, and stale cache behavior. Use a
+   temporary env file or temporary service override; restore the real
+   `/etc/domum-core/secrets/glance-beszel.env` before leaving the host.
+
+7. If success and failure behavior match the task 72 contract, update the
+   capability matrix in Git to move Host summary to `Ready`. Only then start task
+   54 to render the Hosting widget.
+
 ## Quick Checks
 
 If the page does not load:
