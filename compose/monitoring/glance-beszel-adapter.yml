@@ -1,0 +1,32 @@
+services:
+  glance-beszel-adapter:
+    build:
+      context: ./glance-beszel-adapter
+    image: domum/glance-beszel-adapter:local
+    container_name: glance-beszel-adapter
+    restart: unless-stopped
+    networks:
+      - domum-proxy
+    depends_on:
+      - beszel
+    environment:
+      - GLANCE_BESZEL_BASE_URL=http://beszel:8090
+      - GLANCE_BESZEL_ADAPTER_LISTEN=:8080
+      - GLANCE_BESZEL_CACHE_TTL=5m
+      - GLANCE_BESZEL_STALE_TTL=30m
+      - GLANCE_BESZEL_HTTP_TIMEOUT=10s
+    env_file:
+      - path: /etc/domum-core/secrets/glance-beszel.env
+        required: false
+    healthcheck:
+      test: ["CMD", "/glance-beszel-adapter", "--healthcheck"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    profiles:
+      - core
+
+networks:
+  domum-proxy:
+    external: true

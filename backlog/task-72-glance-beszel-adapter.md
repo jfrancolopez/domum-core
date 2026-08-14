@@ -92,16 +92,15 @@ Compared options:
 | Option | Pros | Cons | Decision |
 |---|---|---|---|
 | Pinned `python:3.x-alpine` plus stdlib-only script | No build pipeline, good JSON/HTTP support, straightforward cache/failure tests, no pip packages | New runtime image and maintained script | Recommended if operator approves one new image |
-| Repo-built static Go adapter | Small runtime image, typed HTTP/JSON handling, easy single binary | Adds Go toolchain/Dockerfile/build path not used elsewhere in this repo | Defer unless Python image is rejected |
+| Repo-built static Go adapter | Small runtime image, typed HTTP/JSON handling, easy single binary | Adds Go toolchain/Dockerfile/build path not used elsewhere in this repo | Selected by operator after research |
 | Shell with `curl`/`jq` and BusyBox/httpd | Looks small and familiar | Brittle JSON/auth handling, needs a custom image or package install, harder safe caching and tests | Reject for this auth bridge |
 | Reuse an existing app image | Avoids a visibly new image name | Couples adapter health/security to an unrelated service image and may rely on tools not guaranteed by that image | Reject |
 | Beszel trusted-auth/header path | Avoids adapter service | Changes Beszel authentication boundary and was not proven safer for this deployment | Deferred by task 71 |
 
-Recommendation: use a pinned Python Alpine image with a repo-local stdlib-only
-script, no external packages, no Traefik route, read-only config/secrets, internal
-network only, and explicit maintenance documentation. If the operator rejects the
-new image, the next best option is a static Go adapter with a documented build
-pipeline; do not fall back to shell JSON parsing for this credential bridge.
+The operator selected the static Go adapter after reviewing these alternatives.
+The accepted maintenance cost is a Docker build pipeline using a pinned Go builder
+image and a scratch runtime. Do not fall back to shell JSON parsing for this
+credential bridge.
 
 ## Affected Files
 
@@ -174,10 +173,9 @@ source family.
 - Selected: local adapter/exporter. Reason: it can refresh Beszel auth
   server-side, strip fields before Glance sees them, and avoid broad Beszel auth
   changes.
-- Runtime recommendation: pinned Python Alpine image with stdlib-only script.
-  Reason: it is the smallest reliable path in this repo without introducing a
-  build pipeline or brittle shell JSON parsing. Requires explicit operator
-  approval before implementation.
+- Runtime selected: repo-built static Go adapter with scratch runtime. Reason: it
+  keeps the runtime image minimal and handles HTTP/JSON/caching more safely than
+  shell, at the accepted cost of a Docker build pipeline.
 - Rejected: static normal PocketBase auth token. Reason: it expires after 7 days.
 - Rejected: Beszel universal token as a PocketBase collection bearer token.
   Reason: Pi testing returned zero visible systems.

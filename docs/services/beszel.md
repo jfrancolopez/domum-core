@@ -98,14 +98,17 @@ A normal PocketBase auth token was also tested and can read the two approved
 systems, but it expires after 7 days. Do not store it as a static Glance secret.
 
 Decision, 2026-08-14: use an approved local adapter/exporter rather than a static
-short-lived token or broad trusted-auth change. The adapter must log in with the
-dedicated Glance Beszel user, request only the two configured systems, discard
+short-lived token or broad trusted-auth change. The adapter logs in with the
+dedicated Glance Beszel user, requests only the two configured systems, discards
 container names, interface names, addresses, disk identifiers, notes, and raw
-system IDs, and serve only status, timestamp, and capacity summary fields to
-Glance on an internal Docker network endpoint. This selection does not make the
-matrix row `Ready`; the row stays blocked until the adapter is implemented and
-tested against success, invalid credential, missing system ID, empty list,
-Beszel-down, slow, malformed, stale, and unauthorized cases.
+system IDs, and serves only status, timestamp, and capacity summary fields to
+Glance on an internal Docker network endpoint. The implementation uses a
+repo-local static Go binary so the runtime image contains only the adapter.
+
+This code path still does not make the matrix row `Ready`; the row stays blocked
+until Pi tests cover success, invalid credential, missing system ID, empty list,
+Beszel-down, slow, malformed, stale, and unauthorized cases from a
+Glance-equivalent network path.
 
 ## Quick Checks
 

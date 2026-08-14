@@ -145,11 +145,26 @@ The normal PocketBase auth token can query the systems collection but expires
 after 7 days, so it is not accepted as a static Glance credential.
 
 The approved bridge direction is a small local read-only adapter, tracked as the
-next implementation task. The adapter will use the existing
-`glance-beszel.env` credential server-side, fetch only the two approved systems,
-strip fields that reveal topology or identifiers, and expose one internal JSON
-endpoint for a later Glance `custom-api` widget. Do not add Beszel host widgets
-until that adapter is implemented, failure-tested, and documented.
+next implementation task. The adapter uses the existing `glance-beszel.env`
+credential server-side, fetches only the two approved systems, strips fields that
+reveal topology or identifiers, and exposes one internal JSON endpoint for a
+later Glance `custom-api` widget. Do not add Beszel host widgets until that
+adapter is Pi-validated, failure-tested, and documented as `Ready` in the
+capability matrix.
+
+The adapter service is disabled by default through:
+
+```text
+ENABLE_GLANCE_BESZEL_ADAPTER=0
+```
+
+Enable it only with both `ENABLE_GLANCE=1` and `ENABLE_BESZEL=1`;
+`domum-core configure --validate` and `apply` reject the adapter without those
+dependencies. It has no Traefik router and is intended only for the Docker
+network path between Glance and Beszel. Its implementation is a repo-local static
+Go binary built from `compose/monitoring/glance-beszel-adapter/`; no Go toolchain
+is required on the Pi outside Docker build. It exposes `/summary` for Glance and
+`/healthz` for direct internal checks.
 
 ## Quick Checks
 

@@ -816,6 +816,7 @@ esphome|ENABLE_ESP_HOME|automation|home-automation-core|BACKUP_ESPHOME|compose/a
 musicassistant|ENABLE_MA|automation|optional-media|BACKUP_MUSICASSISTANT|compose/automation/music-assistant.yml|-
 uptime-kuma|ENABLE_UPTIME_KUMA|monitoring|infrastructure|-|compose/monitoring/uptime-kuma.yml|-
 glance|ENABLE_GLANCE|monitoring|dashboard|-|compose/monitoring/glance.yml|-
+glance-beszel-adapter|ENABLE_GLANCE_BESZEL_ADAPTER|monitoring|dashboard-support|-|compose/monitoring/glance-beszel-adapter.yml|-
 dozzle|ENABLE_DOZZLE|monitoring|operator-tool|-|compose/monitoring/dozzle.yml|-
 ntfy|ENABLE_NTFY|monitoring|notification-service|BACKUP_NTFY|compose/monitoring/ntfy.yml|-
 homepage|ENABLE_HOMEPAGE|monitoring|dashboard|-|compose/monitoring/homepage.yml|-
@@ -965,6 +966,7 @@ apply() {
   validate_obsidian_credentials || die "Fix Obsidian Sync credentials before apply."
   validate_mqtt_auth || die "Run 'domum-core mqtt init-auth' before apply."
   validate_glance_private_access || die "Fix Glance private-access configuration before apply."
+  validate_glance_beszel_adapter || die "Fix Glance Beszel adapter configuration before apply."
   install_tailscale_host
   ensure_networks
   export_env_for_compose
@@ -4475,6 +4477,7 @@ configure_validate() {
   fi
   validate_obsidian_credentials || issues=1
   validate_glance_private_access || issues=1
+  validate_glance_beszel_adapter || issues=1
   validate_mqtt_auth || issues=1
   local -a backup_targets=()
   read -r -a backup_targets <<< "${BACKUP_TARGETS:-}"
