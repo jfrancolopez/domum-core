@@ -30,10 +30,14 @@ the login token server-side and return only approved summary fields to Glance.
 ## Current Behavior
 
 - Glance renders no Beszel host metrics.
+- A disabled-by-default `glance-beszel-adapter` service exists in the service
+  catalog behind `ENABLE_GLANCE_BESZEL_ADAPTER=0`.
+- The adapter is a repo-built static Go binary with a scratch runtime and no
+  Traefik route. It exposes only `/healthz` and internal `/summary`.
 - `glance-beszel.env` can contain the dedicated username/password plus two system
   labels and IDs, but those IDs are private and untracked.
-- The matrix row remains `Needs clarification` because no adapter endpoint exists
-  and failure behavior has not been tested.
+- The matrix row remains `Needs clarification` because the endpoint has not been
+  validated on the production Pi against live Beszel success and failure cases.
 
 ## Desired Behavior
 
@@ -127,9 +131,10 @@ Docker socket exposure policy, or live secret values.
 
 - Run the repository checks from `AGENTS.md` and the Glance validator.
 - Render Compose exactly as CI does for the changed services.
-- Run adapter unit or smoke tests for: success, invalid credential, missing env,
-  missing system ID, empty system list, Beszel unavailable, slow response,
-  malformed response, stale cache, and unauthorized response.
+- Run `tests/glance-beszel-adapter-test.sh` for unit coverage of success,
+  invalid credential, missing env, missing system ID, Beszel unavailable,
+  malformed response, stale cache, unauthorized response, sanitized output, and
+  handler status behavior. CI runs this script.
 - On the Pi, test from a Glance-equivalent container network location without
   printing credentials, raw IDs, tokens, or raw payloads.
 - Cross-check displayed candidate values against the Beszel UI at the same
