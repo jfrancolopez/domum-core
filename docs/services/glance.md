@@ -144,6 +144,13 @@ universal token did not authorize the systems collection API.
 The normal PocketBase auth token can query the systems collection but expires
 after 7 days, so it is not accepted as a static Glance credential.
 
+The approved bridge direction is a small local read-only adapter, tracked as the
+next implementation task. The adapter will use the existing
+`glance-beszel.env` credential server-side, fetch only the two approved systems,
+strip fields that reveal topology or identifiers, and expose one internal JSON
+endpoint for a later Glance `custom-api` widget. Do not add Beszel host widgets
+until that adapter is implemented, failure-tested, and documented.
+
 ## Quick Checks
 
 If the page does not load:

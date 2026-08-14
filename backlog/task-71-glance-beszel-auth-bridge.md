@@ -43,15 +43,19 @@ Still rejected from task 70: Beszel permanent universal token as a bearer token
 for PocketBase collections. Reason: the token can be generated, but it returned
 zero visible `systems` records when used against the collection API.
 
-Viable candidates now require an explicit operator decision:
+The operator selected the local adapter/exporter path on 2026-08-14:
 
 - Small local adapter/exporter: logs in to Beszel with the dedicated credential,
   fetches exactly the two configured systems, strips disallowed fields, and
-  exposes one internal JSON endpoint for Glance. This adds a maintained component
-  but preserves least privilege and keeps Glance simple.
-- Beszel trusted-auth/header or upstream-supported token path: may avoid an
-  adapter, but changes Beszel authentication behavior and must be reviewed for
-  who can assert the trusted identity.
+  exposes one internal JSON endpoint for Glance. This adds a maintained
+  component, but it avoids weekly token expiry, avoids widening Beszel trusted
+  authentication, preserves least privilege, and keeps Glance's widget simple.
+
+Rejected for this phase:
+
+- Beszel trusted-auth/header or upstream-supported token path: deferred because
+  it changes who can assert an identity to Beszel and no long-lived narrow read
+  token was proven for the running version.
 
 ## Desired Behavior
 
@@ -62,25 +66,21 @@ container names, network interface names, IPs, disk serials, or broad topology.
 
 ## Implementation Plan
 
-1. Re-test Beszel collection access with the documented dedicated user and record
-   exact request shape, response fields, and errors without printing secrets or
-   system IDs.
-2. Evaluate option A: a long-lived PocketBase auth token or supported Beszel API
-   token that can read only the selected records. Normal PocketBase auth tokens
-   are rejected because the tested lifetime is 7 days; keep looking only if a
-   separately supported long-lived read token exists.
-3. Evaluate option B: a tiny local read-only adapter/exporter that logs in to
-   Beszel server-side, fetches the two configured systems, strips disallowed
-   fields, and exposes one internal JSON endpoint for Glance. This requires a
-   separate operator decision because it adds a maintained service/process.
-4. Reject options that require raw Docker socket access in Glance, host root
-   mounts, Homepage credential reuse, superuser credentials, or committed tokens.
-5. Document the selected credential names, modes, recovery-pack impact, request
-   count/cache, timeout, stale threshold, and failure behavior.
-6. Update `docs/glance-capability-matrix.md`. Move Beszel host summary to
-   `Ready` only after one path is proven with unavailable/unauthorized/empty and
-   stale/failure tests.
-7. Return to task 54 to render the actual Hosting widget.
+1. Record the operator-selected adapter/exporter path without adding the adapter
+   in this task.
+2. Keep the existing `/etc/domum-core/secrets/glance-beszel.env` as the only
+   credential source; do not create token files or reuse Homepage credentials.
+3. Reject options that require raw Docker socket access in Glance, host root
+   mounts, Homepage credential reuse, superuser credentials, committed tokens,
+   weekly static token refresh, or broad Beszel trusted-auth changes.
+4. Document recovery impact: the adapter will be Git-recreated; only the existing
+   env file remains secret/recovery-pack state.
+5. Update `docs/glance-capability-matrix.md`. Keep Beszel host summary at `Needs
+   clarification` until the adapter is implemented and proven with
+   unavailable/unauthorized/empty, malformed, slow, stale, and missing-system
+   tests.
+6. Add the next implementation task for the adapter. Return to task 54 only after
+   that task moves the Beszel row to `Ready`.
 
 ## Affected Files
 
