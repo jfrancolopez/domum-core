@@ -75,6 +75,34 @@ notes, logs, or broad topology.
 10. Do not start task 54 in the same commit. Rendering the Hosting widget remains
     the next gated task after this adapter is accepted.
 
+## Runtime Alternatives Research - 2026-08-14
+
+Repository findings:
+
+- There is no existing Dockerfile or repo-local custom service pattern to extend.
+- Existing Compose images are purpose-built applications, not generic adapter
+  runtimes. Reusing Node-RED, Glance, Beszel, Healthchecks, Homepage, or another
+  app image would couple this adapter to an unrelated service lifecycle.
+- The service catalog is the single source of truth; a real adapter should either
+  be its own disabled-by-default catalog service or be explicitly justified as a
+  child of Glance/Beszel in the same compose fragment.
+
+Compared options:
+
+| Option | Pros | Cons | Decision |
+|---|---|---|---|
+| Pinned `python:3.x-alpine` plus stdlib-only script | No build pipeline, good JSON/HTTP support, straightforward cache/failure tests, no pip packages | New runtime image and maintained script | Recommended if operator approves one new image |
+| Repo-built static Go adapter | Small runtime image, typed HTTP/JSON handling, easy single binary | Adds Go toolchain/Dockerfile/build path not used elsewhere in this repo | Defer unless Python image is rejected |
+| Shell with `curl`/`jq` and BusyBox/httpd | Looks small and familiar | Brittle JSON/auth handling, needs a custom image or package install, harder safe caching and tests | Reject for this auth bridge |
+| Reuse an existing app image | Avoids a visibly new image name | Couples adapter health/security to an unrelated service image and may rely on tools not guaranteed by that image | Reject |
+| Beszel trusted-auth/header path | Avoids adapter service | Changes Beszel authentication boundary and was not proven safer for this deployment | Deferred by task 71 |
+
+Recommendation: use a pinned Python Alpine image with a repo-local stdlib-only
+script, no external packages, no Traefik route, read-only config/secrets, internal
+network only, and explicit maintenance documentation. If the operator rejects the
+new image, the next best option is a static Go adapter with a documented build
+pipeline; do not fall back to shell JSON parsing for this credential bridge.
+
 ## Affected Files
 
 - `bin/domum-core` if the service catalog needs a new service entry
@@ -146,10 +174,16 @@ source family.
 - Selected: local adapter/exporter. Reason: it can refresh Beszel auth
   server-side, strip fields before Glance sees them, and avoid broad Beszel auth
   changes.
+- Runtime recommendation: pinned Python Alpine image with stdlib-only script.
+  Reason: it is the smallest reliable path in this repo without introducing a
+  build pipeline or brittle shell JSON parsing. Requires explicit operator
+  approval before implementation.
 - Rejected: static normal PocketBase auth token. Reason: it expires after 7 days.
 - Rejected: Beszel universal token as a PocketBase collection bearer token.
   Reason: Pi testing returned zero visible systems.
 - Rejected: raw Docker socket or host root mounts in Glance. Reason: prohibited by
   the dashboard program and unnecessarily broad.
+- Rejected: shell `curl`/`jq` adapter. Reason: token refresh, sanitization,
+  caching, and malformed-response handling are too easy to get wrong in shell.
 - Deferred: Beszel trusted-auth/header path. Reason: it changes the auth boundary
   and was not proven safer than the adapter for the running deployment.
