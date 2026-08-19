@@ -26,35 +26,49 @@
 
     - size: full
       widgets:
-        - type: monitor
-          title: Core infrastructure
-          style: compact
-          cache: 1m
-          sites:
-            - title: Glance
-              url: https://dash.${DOMUM_DOMAIN}
-              check-url: http://glance:8080
-              icon: si:glance
-            - title: Homepage
-              url: https://home.${DOMUM_DOMAIN}
-              check-url: http://homepage:3000
-              icon: si:homepage
-            - title: Home Assistant
-              url: https://ha.${DOMUM_DOMAIN}
-              check-url: http://homeassistant:8123
-              icon: si:homeassistant
-            - title: Beszel
-              url: https://beszel.${DOMUM_DOMAIN}
-              check-url: http://beszel:8090
-              icon: si:beszel
-            - title: Healthchecks
-              url: https://checks.${DOMUM_DOMAIN}
-              check-url: http://healthchecks:8000
-              icon: si:healthchecks
-            - title: Speedtest Tracker
-              url: https://speedtest.${DOMUM_DOMAIN}
-              check-url: http://speedtest-tracker:80
-              icon: si:speedtest
+         - type: monitor
+           title: Core infrastructure
+           style: compact
+           cache: 1m
+           sites:
+             - title: Glance
+               url: https://dash.${DOMUM_DOMAIN}
+               check-url: http://glance:8080
+               icon: si:glance
+             - title: Homepage
+               url: https://home.${DOMUM_DOMAIN}
+               check-url: http://homepage:3000
+               icon: si:homepage
+             - title: Home Assistant
+               url: https://ha.${DOMUM_DOMAIN}
+               check-url: http://homeassistant:8123
+               icon: si:homeassistant
+             - title: Beszel
+               url: https://beszel.${DOMUM_DOMAIN}
+               check-url: http://beszel:8090
+               icon: si:beszel
+             - title: Glance Beszel Summary
+               type: custom-api
+               url: http://glance-beszel-adapter:8080/summary
+               icon: si:beszel
+               template: |
+                 {{ range .systems }}
+                 <div style="display: flex; align-items: center; gap: 8px; padding: 2px 0;">
+                   <span style="font-weight: bold;">{{ .label }}</span>
+                   <span style="color: {{ if eq .status "online" }}#4ade80{{ else if eq .status "degraded" }}#fbbf24{{ else }}#ef4444{{ end }};">{{ .status }}</span>
+                   {{ if .metrics.cpu_percent }}
+                     <span style="font-size: 0.8em; color: #94a3b8;">CPU: {{ .metrics.cpu_percent }}%</span>
+                   {{ end }}
+                 </div>
+                 {{ end }}
+             - title: Healthchecks
+               url: https://checks.${DOMUM_DOMAIN}
+               check-url: http://healthchecks:8000
+               icon: si:healthchecks
+             - title: Speedtest Tracker
+               url: https://speedtest.${DOMUM_DOMAIN}
+               check-url: http://speedtest-tracker:80
+               icon: si:speedtest
 
         - type: monitor
           title: Automation dependencies
