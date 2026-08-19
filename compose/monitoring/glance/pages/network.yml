@@ -8,8 +8,6 @@
   method: GET
   headers:
     Authorization: Bearer ${HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY}
-  # Note: This requires the env var to be available to the Glance container via a docker env file
-  # or passed through the compose file.
   template: |
     <div>
       <div class="flex flex-row items-center gap-2">
@@ -40,3 +38,22 @@
     upload: upload_mbps
     ping: ping_ms
     jitter: jitter_ms
+
+## Connectivity
+
+### Local Latency
+- type: ping
+  host: 10.0.10.1
+  interval: 5m
+  template: |
+    <div class="flex flex-row items-center gap-2">
+      <span class="text-lg font-bold">Gateway</span>
+    </div>
+    <div class="mt-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-gray-500">Latency</span>
+        <span class="font-mono">{{ value }} ms</span>
+      </div>
+    </div>
+  mapping:
+    value: latency_ms
