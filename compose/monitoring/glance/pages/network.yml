@@ -1,0 +1,42 @@
+# Network
+
+## WAN Performance
+
+### Speedtest Tracker
+- type: custom-api
+  url: http://speedtest-tracker/api/v1/results/latest
+  method: GET
+  headers:
+    Authorization: Bearer ${HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY}
+  # Note: This requires the env var to be available to the Glance container via a docker env file
+  # or passed through the compose file.
+  template: |
+    <div>
+      <div class="flex flex-row items-center gap-2">
+        <span class="text-lg font-bold">Speedtest</span>
+        <a href="https://speedtest.ladomum.com" target="_blank" class="text-xs opacity-50 hover:opacity-100">↗</a>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+        <div>
+          <div class="text-gray-500">Download</div>
+          <div class="font-mono">{{ download }} Mbps</div>
+        </div>
+        <div>
+          <div class="text-gray-500">Upload</div>
+          <div class="font-mono">{{ upload }} Mbps</div>
+        </div>
+        <div>
+          <div class="text-gray-500">Ping</div>
+          <div class="font-mono">{{ ping }} ms</div>
+        </div>
+        <div>
+          <div class="text-gray-500">Jitter</div>
+          <div class="font-mono">{{ jitter }} ms</div>
+        </div>
+      </div>
+    </div>
+  mapping:
+    download: download_mbps
+    upload: upload_mbps
+    ping: ping_ms
+    jitter: jitter_ms
