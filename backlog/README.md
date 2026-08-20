@@ -134,8 +134,8 @@ fresh AI-agent session and requires approval before the next page is started.
 | 1 | 51 | [Build the modular visual foundation](task-51-glance-foundation.md) | ✅ foundation done 2026-08-12; visual prototype selection deferred to polish | medium | low |
 | 2 | 52 | [Build the Home page](task-52-glance-home-page.md) | ✅ first native pass done 2026-08-12; private calendar deferred | medium | low |
 | 3 | 53 | [Build core Hosting](task-53-glance-hosting-core.md) | ✅ core native pass done 2026-08-12; Beszel/backup/Healthchecks detail deferred | medium | low-med |
-| 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | blocked by Beszel source review (task 70 selected by operator) | medium | medium |
-| 3 | 55 | [Build core Network](task-55-glance-network-core.md) | blocked by 54 | medium | medium |
+| 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | ✅ done | medium | medium |
+| 3 | 55 | [Build core Network](task-55-glance-network-core.md) | ✅ code done; Pi data/failure validation and screenshots pending | medium | medium |
 | 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | blocked by 55 | medium | medium |
 | 4 | 57 | [Build core Media](task-57-glance-media-core.md) | blocked by 56 | medium | medium |
 | 4 | 58 | [Add one Media integration family](task-58-glance-media-expansion.md) | blocked by 57 | medium | medium |

@@ -23,7 +23,7 @@ theme:
       primary-color: 43 59 81
       positive-color: 61 66 44
       negative-color: 6 96 59
-  
+
 pages:
   - $include: pages/home.yml
   - $include: pages/hosting.yml

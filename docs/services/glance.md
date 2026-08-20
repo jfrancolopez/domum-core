@@ -36,6 +36,17 @@ Keep secrets out of this file. If a future widget needs a token, store the token
 under `/etc/domum-core/secrets` and pass it through a file-backed environment
 variable instead of committing it.
 
+The optional direct-widget env file is:
+
+```text
+/etc/domum-core/secrets/glance.env
+```
+
+Use `config/glance.env.example` as the format. The Network page reads
+`GLANCE_SPEEDTEST_TRACKER_TOKEN` from this file; use a Speedtest Tracker token
+with only `results:read` scope. Do not reuse or mount Homepage's env file for
+Glance.
+
 The optional Beszel integration env file is:
 
 ```text
@@ -122,10 +133,14 @@ privacy, and failure behavior review.
   hosting components. It intentionally does not show host metrics, backup state,
   Healthchecks details, certificates, or container lists until those sources are
   separately approved.
+- Network: Speedtest Tracker's latest result through a Glance-owned read-only
+  token, plus compact reachability checks for approved network-adjacent services.
+  It intentionally omits WAN IP, gateway topology, raw DNS activity, UniFi data,
+  Tailscale device names, and internal addresses.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
 
-Private Google Calendar events, WAN details, device names, media activity, and
+Private Google Calendar events, WAN identity details, device names, media activity, and
 Steam data are intentionally absent until their individual widget tasks approve
 credentials and failure behavior.
 
