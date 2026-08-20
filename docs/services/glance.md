@@ -47,6 +47,12 @@ Use `config/glance.env.example` as the format. The Network page reads
 with only `results:read` scope. Do not reuse or mount Homepage's env file for
 Glance.
 
+The same file may contain `GLANCE_ADGUARD_USERNAME` and
+`GLANCE_ADGUARD_PASSWORD` for the Network page's native `dns-stats` widget. Use a
+Glance-specific AdGuard web account if practical; otherwise this is an
+operator-approved AdGuard credential for aggregate stats only. The widget hides
+top domains and does not render raw DNS queries, clients, or domain lists.
+
 The optional Beszel integration env file is:
 
 ```text
@@ -134,9 +140,10 @@ privacy, and failure behavior review.
   Healthchecks details, certificates, or container lists until those sources are
   separately approved.
 - Network: Speedtest Tracker's latest result through a Glance-owned read-only
-  token, plus compact reachability checks for approved network-adjacent services.
-  It intentionally omits WAN IP, gateway topology, raw DNS activity, UniFi data,
-  Tailscale device names, and internal addresses.
+  token, aggregate AdGuard DNS stats with top domains hidden, plus compact
+  reachability checks for approved network-adjacent services. It intentionally
+  omits WAN IP, gateway topology, raw DNS activity, UniFi data, Tailscale device
+  names, and internal addresses.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
 

@@ -136,7 +136,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | 3 | 53 | [Build core Hosting](task-53-glance-hosting-core.md) | ✅ core native pass done 2026-08-12; Beszel/backup/Healthchecks detail deferred | medium | low-med |
 | 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | ✅ done | medium | medium |
 | 3 | 55 | [Build core Network](task-55-glance-network-core.md) | ✅ code done; Pi data/failure validation and screenshots pending | medium | medium |
-| 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | blocked by 55 | medium | medium |
+| 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | ✅ AdGuard secondary code done; Pi credential/data/failure validation pending; UniFi primary blocked in task 73 | medium | medium |
 | 4 | 57 | [Build core Media](task-57-glance-media-core.md) | blocked by 56 | medium | medium |
 | 4 | 58 | [Add one Media integration family](task-58-glance-media-expansion.md) | blocked by 57 | medium | medium |
 | 5 | 59 | [Build the Games page](task-59-glance-games-page.md) | blocked by 58 | medium | low-med |

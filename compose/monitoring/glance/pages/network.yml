@@ -69,3 +69,12 @@
               url: https://dash.${DOMUM_DOMAIN}
               check-url: http://glance:8080
               icon: si:traefikproxy
+
+        - type: dns-stats
+          title: DNS filtering
+          service: adguard
+          cache: 5m
+          url: https://dns.${DOMUM_DOMAIN}/
+          username: ${GLANCE_ADGUARD_USERNAME}
+          password: ${GLANCE_ADGUARD_PASSWORD}
+          hide-top-domains: true

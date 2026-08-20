@@ -32,7 +32,8 @@ credential and source.
 
 `glance.env` is the shared optional env file for direct Glance widget tokens. The
 Network page uses `GLANCE_SPEEDTEST_TRACKER_TOKEN`, which must be a Speedtest
-Tracker token scoped to `results:read` only.
+Tracker token scoped to `results:read` only, and `GLANCE_ADGUARD_USERNAME` /
+`GLANCE_ADGUARD_PASSWORD` for aggregate AdGuard DNS stats.
 
 `glance-beszel.env` is the only supported Glance Beszel credential location. It
 is read by the optional internal adapter service; separate username/password
