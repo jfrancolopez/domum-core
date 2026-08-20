@@ -209,6 +209,9 @@ privacy, and failure behavior review.
   and direct community links. It uses no social-account credentials.
 - Media: public videos, film/TV RSS, books/culture RSS, and direct discovery or
   streaming links. It uses no watch-history or personal library integrations.
+- Games: public gaming videos, gaming/PC/indie RSS feeds, and store/community
+  links. It uses no Steam profile, wishlist, friends, play-history, or Twitch API
+  credentials.
 
 Private Google Calendar events, WAN identity details, device names, media activity, and
 Steam data are intentionally absent until their individual widget tasks approve

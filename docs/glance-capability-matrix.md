@@ -43,7 +43,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Steam wishlist discounts | Games | Steam API/store | Reviewed custom API | API key and ID | 1h | Private-personal | Low | Needs credential | Verify documented endpoint and privacy |
 | Steam allowlisted friends | Games | Steam Web API | Reviewed custom API | API key, ID, allowlist | 15m | Private-personal | Medium | Needs credential | Never render full friends list |
 | Twitch games/creators | Games/Social | Twitch Helix | Reviewed custom API | Client credentials | 1h | Public-safe | Medium | Needs clarification | Only selected creators/categories |
-| Gaming/community RSS | Games | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Communities need operator selection |
+| Gaming/community RSS | Games | Public RSS and YouTube feeds | Native `rss`/`videos` | None | 30m-1h | Public-safe | Medium | Implemented | Public gaming headlines, PC/indie feeds, and design/analysis videos; no account data |
 | Curated news | News | Public RSS | Native `rss` | None | 20m-1h | Public-safe | Low | Implemented | World, markets, technology/AI, science, and security feeds |
 | Hacker News/Lobsters | Social | Public RSS bridges | Native `rss` | None | 20m | Public-safe | Low | Implemented | HN frontpage/best and Lobsters feeds |
 | Reddit communities | Social | Reddit RSS | Native `rss` | None | 45m | Public-safe | Low | Implemented | Selected public community feeds; no Reddit account or OAuth |

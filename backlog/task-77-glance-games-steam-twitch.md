@@ -13,7 +13,8 @@ signals from private account/profile signals and implement them in that order.
 
 ## Current Behavior
 
-- Games contains only the old critical-service monitor placeholder.
+- Games has a public-only discovery pass with gaming videos, public RSS feeds,
+  and direct store/community links.
 - `config/glance.env.example` reserves Steam and Twitch variables, but no widget
   consumes them yet.
 
@@ -26,7 +27,8 @@ friends lists and raw profile data must not render.
 
 ## Implementation Plan
 
-1. Implement public, no-credential gaming RSS/news first if useful.
+1. Public, no-credential gaming RSS/news first pass is done. Keep it as the
+   fallback mode for users without account integrations.
 2. Review Steam Store endpoints for specials/top sellers without an API key.
 3. Generate a Steam Web API key and record only in
    `/etc/domum-core/secrets/glance.env` if private profile widgets are approved.

@@ -1,30 +1,100 @@
 - name: Games
+  slug: games
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero">
+          <div>
+            <div class="domum-kicker">Play queue</div>
+            <h1>Games Desk</h1>
+            <p>Public gaming news, design videos, and store links while Steam/Twitch account integrations stay opt-in.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>No Steam login</span>
+            <span>No Twitch token</span>
+            <span>Public sources</span>
+          </div>
+        </section>
   columns:
     - size: full
       widgets:
-        - type: monitor
-          title: Critical services
-          style: compact
-          cache: 1m
-          sites:
-            - title: Homepage
-              url: https://home.${DOMUM_DOMAIN}
-              check-url: http://homepage:3000
-              icon: si:homepage
-            - title: Home Assistant
-              url: https://ha.${DOMUM_DOMAIN}
-              check-url: http://homeassistant:8123
-              icon: si:homeassistant
-            - title: Beszel
-              url: https://beszel.${DOMUM_DOMAIN}
-              check-url: http://beszel:8090
-              icon: si:beszel
-            - title: Zigbee2MQTT
-              url: https://z2m.${DOMUM_DOMAIN}
-              check-url: http://zigbee2mqtt:8080
-              icon: si:zigbee
-            - title: Node-RED
-              url: https://nodered.${DOMUM_DOMAIN}
-              check-url: http://nodered:1880
-              icon: si:nodered
+        - type: videos
+          title: Game design and analysis
+          style: horizontal-cards
+          cache: 1h
+          limit: 10
+          collapse-after: 5
+          include-shorts: false
+          channels:
+            - UCqJ-Xo29CKyLTjn6z2XwYAw # Game Maker's Toolkit
+            - UC0fDG3byEcMtbOqPMymDNbw # Noclip
+            - UC9PBzalIcEQCsiIkq36PyUA # Digital Foundry
+            - UCNvzD7Z-g64bPXxGzaQaa4g # gameranx
+
+        - type: split-column
+          widgets:
+            - type: rss
+              title: Gaming headlines
+              style: detailed-list
+              cache: 30m
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://feeds.ign.com/ign/games-all
+                  title: IGN Games
+                - url: https://www.polygon.com/rss/index.xml
+                  title: Polygon
+                - url: https://www.eurogamer.net/feed
+                  title: Eurogamer
+
+            - type: rss
+              title: PC and indie watch
+              style: detailed-list
+              cache: 45m
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://www.rockpapershotgun.com/feed
+                  title: Rock Paper Shotgun
+                - url: https://www.pcgamer.com/rss/
+                  title: PC Gamer
+                - url: https://itch.io/games/newest.xml
+                  title: itch.io Newest
+
+    - size: small
+      widgets:
+        - type: html
+          source: |
+            <div class="domum-side-panel">
+              <div class="domum-kicker">Account boundary</div>
+              <h2>Public mode</h2>
+              <p>Steam profile, wishlist, friends, and Twitch API data stay disabled until credentials and allowed fields are approved.</p>
+              <div class="domum-status-list">
+                <span>No friends list</span>
+                <span>No wishlist</span>
+                <span>No play history</span>
+              </div>
+            </div>
+
+        - type: bookmarks
+          title: Open directly
+          groups:
+            - title: Stores
+              links:
+                - title: Steam
+                  url: https://store.steampowered.com/
+                - title: Steam Specials
+                  url: https://store.steampowered.com/specials/
+                - title: Epic Games Store
+                  url: https://store.epicgames.com/
+                - title: GOG
+                  url: https://www.gog.com/
+                - title: itch.io
+                  url: https://itch.io/
+            - title: Watch
+              links:
+                - title: Twitch Games
+                  url: https://www.twitch.tv/directory
+                - title: YouTube Gaming
+                  url: https://www.youtube.com/gaming
