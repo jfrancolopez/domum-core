@@ -1,6 +1,21 @@
 - name: Hosting
   slug: hosting
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero">
+          <div>
+            <div class="domum-kicker">Home infrastructure</div>
+            <h1>Hosting Control</h1>
+            <p>What needs attention, what is healthy, and where to drill into specialist tools.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>Core services</span>
+            <span>Automation dependencies</span>
+            <span>Fleet summary</span>
+          </div>
+        </section>
   columns:
     - size: small
       widgets:
@@ -26,6 +41,23 @@
 
     - size: full
       widgets:
+        - type: html
+          source: |
+            <div class="domum-attention-strip">
+              <div class="domum-attention-card">
+                <strong>Watch</strong>
+                <span>Any red or stale widget below needs action.</span>
+              </div>
+              <div class="domum-attention-card">
+                <strong>Recover</strong>
+                <span>Beszel, Healthchecks, and Traefik are the drill-down tools.</span>
+              </div>
+              <div class="domum-attention-card">
+                <strong>Update</strong>
+                <span>Release cards are signals, not auto-approval.</span>
+              </div>
+            </div>
+
         - type: monitor
           title: Core infrastructure
           style: compact
@@ -57,19 +89,23 @@
               icon: si:speedtest
 
         - type: custom-api
-          title: Beszel host summary
+          title: Beszel fleet
           cache: 5m
           url: http://glance-beszel-adapter:8080/summary
           template: |
-            {{ range .systems }}
-            <div style="display: flex; align-items: center; gap: 8px; padding: 2px 0;">
-              <span style="font-weight: bold;">{{ .label }}</span>
-              <span style="color: {{ if eq .status "online" }}#4ade80{{ else if eq .status "degraded" }}#fbbf24{{ else }}#ef4444{{ end }};">{{ .status }}</span>
-              {{ if .metrics.cpu_percent }}
-                <span style="font-size: 0.8em; color: #94a3b8;">CPU: {{ .metrics.cpu_percent }}%</span>
-              {{ end }}
-            </div>
+            <div class="domum-fleet-grid">
+            {{ range .JSON.Array "systems" }}
+              <div class="domum-host-card">
+                <div class="domum-host-topline">
+                  <div class="domum-host-name">{{ .String "label" }}</div>
+                  <div class="domum-host-status domum-host-status-{{ .String "status" }}">{{ .String "status" }}</div>
+                </div>
+                <div class="domum-host-meta">
+                  {{ if .Bool "stale" }}Stale data; check Beszel.{{ else }}Fresh summary from Beszel.{{ end }}
+                </div>
+              </div>
             {{ end }}
+            </div>
 
         - type: monitor
           title: Automation dependencies

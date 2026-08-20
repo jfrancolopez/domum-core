@@ -1,19 +1,20 @@
 :root {
   --domum-panel: rgba(18, 23, 38, 0.78);
   --domum-panel-strong: rgba(13, 18, 32, 0.94);
-  --domum-line: rgba(120, 246, 209, 0.22);
-  --domum-cyan: #78f6d1;
-  --domum-blue: #42bff5;
-  --domum-violet: #a879ff;
+  --domum-line: rgba(94, 201, 255, 0.2);
+  --domum-cyan: #8ce8ff;
+  --domum-blue: #5ec9ff;
+  --domum-violet: #8f9bff;
+  --domum-amber: #ffd166;
   --domum-text: #edf7ff;
   --domum-muted: #91a0b8;
 }
 
 body {
   background:
-    radial-gradient(circle at 12% 12%, rgba(120, 246, 209, 0.15), transparent 28rem),
-    radial-gradient(circle at 82% 5%, rgba(168, 121, 255, 0.16), transparent 30rem),
-    linear-gradient(135deg, #0c0f18 0%, #121521 48%, #171124 100%) !important;
+    radial-gradient(circle at 12% 10%, rgba(94, 201, 255, 0.12), transparent 28rem),
+    radial-gradient(circle at 86% 6%, rgba(255, 209, 102, 0.08), transparent 32rem),
+    linear-gradient(135deg, #090d14 0%, #111827 54%, #0d1220 100%) !important;
 }
 
 .content-bounds {
@@ -21,8 +22,8 @@ body {
 }
 
 .widget {
-  border: 1px solid rgba(120, 246, 209, 0.13);
-  background: linear-gradient(180deg, rgba(21, 28, 46, 0.82), rgba(12, 15, 24, 0.76));
+  border: 1px solid rgba(94, 201, 255, 0.13);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.88), rgba(9, 13, 20, 0.82));
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(18px);
 }
@@ -48,7 +49,7 @@ body {
   border: 1px solid var(--domum-line);
   border-radius: 28px;
   background:
-    linear-gradient(120deg, rgba(120, 246, 209, 0.16), rgba(66, 191, 245, 0.08) 42%, rgba(168, 121, 255, 0.15)),
+    linear-gradient(120deg, rgba(94, 201, 255, 0.14), rgba(20, 31, 50, 0.68) 46%, rgba(255, 209, 102, 0.08)),
     var(--domum-panel-strong);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
 }
@@ -60,7 +61,7 @@ body {
   width: 520px;
   height: 520px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(120, 246, 209, 0.22), transparent 65%);
+  background: radial-gradient(circle, rgba(94, 201, 255, 0.18), transparent 65%);
 }
 
 .domum-kicker {
@@ -121,6 +122,64 @@ body {
   font-size: 1.35rem;
 }
 
+.domum-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.domum-host-card {
+  padding: 16px;
+  border: 1px solid rgba(94, 201, 255, 0.16);
+  border-radius: 20px;
+  background: linear-gradient(150deg, rgba(94, 201, 255, 0.10), rgba(9, 13, 20, 0.74));
+}
+
+.domum-host-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.domum-host-name {
+  color: var(--domum-text);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.domum-host-status {
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.domum-host-status-up {
+  background: rgba(39, 232, 143, 0.14);
+  color: #69f0ae;
+}
+
+.domum-host-status-down,
+.domum-host-status-error {
+  background: rgba(255, 89, 110, 0.14);
+  color: #ff8fa3;
+}
+
+.domum-host-status-unknown {
+  background: rgba(255, 209, 102, 0.13);
+  color: var(--domum-amber);
+}
+
+.domum-host-meta {
+  margin-top: 12px;
+  color: var(--domum-muted);
+  font-size: 0.82rem;
+}
+
 .domum-status-list {
   justify-content: flex-start;
   margin-top: 14px;
@@ -133,8 +192,32 @@ body {
   border: 1px solid rgba(120, 246, 209, 0.24);
   border-radius: 30px;
   background:
-    linear-gradient(135deg, rgba(120, 246, 209, 0.18), rgba(66, 191, 245, 0.08) 46%, rgba(168, 121, 255, 0.16)),
+    linear-gradient(135deg, rgba(94, 201, 255, 0.16), rgba(20, 31, 50, 0.48) 46%, rgba(255, 209, 102, 0.08)),
     #101624;
+}
+
+.domum-attention-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.domum-attention-card {
+  padding: 14px;
+  border: 1px solid rgba(94, 201, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(9, 13, 20, 0.58);
+}
+
+.domum-attention-card strong {
+  display: block;
+  color: var(--domum-text);
+  font-size: 1.35rem;
+}
+
+.domum-attention-card span {
+  color: var(--domum-muted);
+  font-size: 0.8rem;
 }
 
 .domum-wan-card::before {
@@ -232,6 +315,11 @@ body {
 
   .domum-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .domum-fleet-grid,
+  .domum-attention-strip {
+    grid-template-columns: 1fr;
   }
 }
 

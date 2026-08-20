@@ -1,7 +1,7 @@
 services:
   glance-beszel-adapter:
     build:
-      context: ./glance-beszel-adapter
+      context: ./monitoring/glance-beszel-adapter
     image: domum/glance-beszel-adapter:local
     container_name: glance-beszel-adapter
     restart: unless-stopped
