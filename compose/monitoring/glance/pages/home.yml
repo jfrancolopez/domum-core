@@ -1,6 +1,21 @@
 - name: Home
   slug: home
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero domum-home-hero">
+          <div>
+            <div class="domum-kicker">Daily command center</div>
+            <h1>Good to know</h1>
+            <p>The family dashboard for home status, weather, core services, and the links used most often.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>Home first</span>
+            <span>Private by default</span>
+            <span>Drill-down ready</span>
+          </div>
+        </section>
   columns:
     - size: small
       widgets:
@@ -36,8 +51,25 @@
 
     - size: full
       widgets:
+        - type: html
+          source: |
+            <div class="domum-attention-strip domum-home-strip">
+              <a class="domum-attention-card" href="https://ha.${DOMUM_DOMAIN}" target="_blank" rel="noreferrer">
+                <strong>Home</strong>
+                <span>Open Home Assistant for lights, automations, and presence details.</span>
+              </a>
+              <a class="domum-attention-card" href="https://dash.${DOMUM_DOMAIN}/network" target="_self">
+                <strong>Network</strong>
+                <span>Check WAN speed, DNS filtering, and edge reachability.</span>
+              </a>
+              <a class="domum-attention-card" href="https://dash.${DOMUM_DOMAIN}/hosting" target="_self">
+                <strong>Hosting</strong>
+                <span>See infrastructure health, backups, monitors, and fleet status.</span>
+              </a>
+            </div>
+
         - type: monitor
-          title: Critical services
+          title: Home heartbeat
           style: compact
           cache: 1m
           sites:
@@ -66,7 +98,7 @@
               check-url: http://speedtest-tracker:80
               icon: si:speedtest
         - type: releases
-          title: Installed software releases
+          title: Software watchlist
           cache: 6h
           limit: 8
           collapse-after: 5
@@ -78,7 +110,7 @@
             - henrygd/beszel
             - gethomepage/homepage
         - type: rss
-          title: Infrastructure and AI
+          title: Home and technology signals
           style: detailed-list
           limit: 12
           collapse-after: 6
