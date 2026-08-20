@@ -292,6 +292,29 @@ validate_glance_private_access() {
   fi
 }
 
+validate_glance_beszel_adapter() {
+  local issues=0 secret_file="$SECRETS_DIR/glance-beszel.env" mode owner
+  [[ "${ENABLE_GLANCE_BESZEL_ADAPTER:-0}" =~ ^[01]$ ]] || {
+    echo "[!] ENABLE_GLANCE_BESZEL_ADAPTER must be 0 or 1"
+    return 1
+  }
+  [[ "${ENABLE_GLANCE_BESZEL_ADAPTER:-0}" == "1" ]] || return 0
+
+  [[ "${ENABLE_GLANCE:-0}" == "1" ]] || { echo "[!] ENABLE_GLANCE_BESZEL_ADAPTER=1 requires ENABLE_GLANCE=1"; issues=1; }
+  [[ "${ENABLE_BESZEL:-0}" == "1" ]] || { echo "[!] ENABLE_GLANCE_BESZEL_ADAPTER=1 requires ENABLE_BESZEL=1"; issues=1; }
+  if [[ ! -s "$secret_file" ]]; then
+    echo "[!] ENABLE_GLANCE_BESZEL_ADAPTER=1 but $secret_file is missing or empty"
+    issues=1
+  else
+    owner="$(stat -c '%U:%G' "$secret_file" 2>/dev/null || true)"
+    mode="$(stat -c '%a' "$secret_file" 2>/dev/null || true)"
+    [[ "$owner" == "root:root" ]] || { echo "[!] $secret_file must be owned by root:root"; issues=1; }
+    [[ "$mode" == "600" ]] || { echo "[!] $secret_file must be mode 0600"; issues=1; }
+  fi
+
+  return "$issues"
+}
+
 validate_mqtt_auth() {
   local issues=0
   local z2m_config="$DOMUM_DIR/compose/automation/zigbee2mqtt/configuration.yaml"
