@@ -15,7 +15,8 @@ Speedtest Tracker is disabled by default. It requires a local `APP_KEY` first:
 sudo install -d -m 0750 -o 1000 -g 1000 \
   /opt/domum-core/compose/monitoring/speedtest-tracker/data
 APP_KEY="base64:$(openssl rand -base64 32 2>/dev/null)"
-sudo sh -c "umask 077; cat > /opt/domum-core/config/speedtest-tracker.env <<EOF
+sudo install -d -m 0700 /etc/domum-core/secrets
+sudo sh -c "umask 077; cat > /etc/domum-core/secrets/speedtest-tracker.env <<EOF
 APP_KEY=$APP_KEY
 APP_NAME=Domum Speedtest
 DB_CONNECTION=sqlite
@@ -24,17 +25,18 @@ SPEEDTEST_SCHEDULE=
 SPEEDTEST_SERVERS=
 PRUNE_RESULTS_OLDER_THAN=0
 EOF"
-sudo chmod 0600 /opt/domum-core/config/speedtest-tracker.env
+sudo chmod 0600 /etc/domum-core/secrets/speedtest-tracker.env
 sudo domum-core configure
 sudo domum-core apply
 ```
 
 The `APP_KEY` is generated once and must stay stable — regenerating it makes
 stored encrypted values unreadable. It lives only in
-`/opt/domum-core/config/speedtest-tracker.env`, which git ignores.
+`/etc/domum-core/secrets/speedtest-tracker.env`, which is bundled into the
+encrypted recovery pack.
 
 The compose fragment loads the env file via
-`env_file: ${DOMUM_SPEEDTEST_ENV_FILE:-/opt/domum-core/config/speedtest-tracker.env}`,
+`env_file: ${DOMUM_SPEEDTEST_ENV_FILE:-/etc/domum-core/secrets/speedtest-tracker.env}`,
 so `apply` fails loudly if the file is missing — never start without `APP_KEY`.
 CI validates the fragment against `config/speedtest-tracker.env.example` (the
 compose-validate workflow copies it to `.ci/speedtest-tracker.env` and sets
@@ -100,11 +102,11 @@ while tarring the directory so the SQLite file is consistent.
 | UID/GID | `PUID=1000` / `PGID=1000` (operator `jfranco`) |
 
 Environment variables are split between the compose fragment and
-`config/speedtest-tracker.env`:
+`/etc/domum-core/secrets/speedtest-tracker.env`:
 
 - Compose fragment (non-secret, interpolated at deploy time): `PUID`, `PGID`,
   `TZ`, and `APP_URL=https://speedtest.${DOMUM_DOMAIN}`.
-- `config/speedtest-tracker.env` (secret and app config, loaded via
+- `/etc/domum-core/secrets/speedtest-tracker.env` (secret and app config, loaded via
   `DOMUM_SPEEDTEST_ENV_FILE`): `APP_KEY`, `APP_NAME`, `DB_CONNECTION`,
   `DISPLAY_TIMEZONE`, `SPEEDTEST_SCHEDULE`, `SPEEDTEST_SERVERS`,
   `PRUNE_RESULTS_OLDER_THAN`.
@@ -112,12 +114,12 @@ Environment variables are split between the compose fragment and
 Only variable names and safe examples are committed in
 `config/speedtest-tracker.env.example`. `APP_KEY` never appears in compose, git,
 or logs. The separate Homepage widget API token lives in
-`config/homepage.env` as `HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY`.
+`/etc/domum-core/secrets/homepage.env` as `HOMEPAGE_VAR_SPEEDTEST_TRACKER_KEY`.
 
 ## Schedule
 
 Scheduled tests are controlled by `SPEEDTEST_SCHEDULE` in
-`config/speedtest-tracker.env`, in cron format. It is intentionally left empty
+`/etc/domum-core/secrets/speedtest-tracker.env`, in cron format. It is intentionally left empty
 until a manual test is validated. The intended conservative schedule:
 
 ```text
@@ -170,7 +172,7 @@ automatic pruning.
 Set the schedule to empty and restart the container:
 
 ```bash
-sudo sh -c 'sed -i "s/^SPEEDTEST_SCHEDULE=.*/SPEEDTEST_SCHEDULE=/" /opt/domum-core/config/speedtest-tracker.env'
+sudo sh -c 'sed -i "s/^SPEEDTEST_SCHEDULE=.*/SPEEDTEST_SCHEDULE=/" /etc/domum-core/secrets/speedtest-tracker.env'
 docker restart speedtest-tracker
 ```
 
@@ -197,11 +199,12 @@ sudo install -d -m 0750 -o 1000 -g 1000 \
   /opt/domum-core/compose/monitoring/speedtest-tracker/data
 ```
 
-2. Restore `compose/monitoring/speedtest-tracker/data` from the restic
-   snapshot / recovery pack into that directory.
-3. Regenerate `config/speedtest-tracker.env` with the **original** `APP_KEY`
-   (from Vaultwarden) — a different key makes the stored encrypted values
-   unreadable.
+2. Restore `compose/monitoring/speedtest-tracker/data` from the restic snapshot
+   into that directory.
+3. Restore `/etc/domum-core/secrets/speedtest-tracker.env` from the encrypted
+   recovery pack. If no recovery pack is available, regenerate it with the
+   **original** `APP_KEY` from Vaultwarden; a different key makes stored
+   encrypted values unreadable.
 4. Start the service:
 
 ```bash
@@ -216,7 +219,7 @@ sudo docker logs speedtest-tracker
 
 If the container stays unhealthy:
 
-- Confirm `config/speedtest-tracker.env` exists with a valid `APP_KEY`
+- Confirm `/etc/domum-core/secrets/speedtest-tracker.env` exists with a valid `APP_KEY`
   (`curl -fsS http://127.0.0.1/api/healthcheck` inside the container).
 - Confirm the data directory is owned by UID 1000 so the app can write the
   SQLite file.
@@ -278,7 +281,7 @@ Homepage. Create a token with only the `results:read` ability and set it in the
 ignored live file:
 
 ```text
-config/homepage.env
+/etc/domum-core/secrets/homepage.env
 ```
 
 ```env

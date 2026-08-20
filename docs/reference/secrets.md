@@ -23,8 +23,15 @@ drift is fixed.
 | `hetzner_storagebox_known_hosts` | pinned host key for the Storage Box |
 | `recovery-age.pub` | **public** AGE key — encrypts the recovery pack |
 | `recovery_pack_smtp_username` / `_password` | optional recovery-pack email |
+| `homepage.env` | optional Homepage widget credentials and private widget settings |
+| `speedtest-tracker.env` | Speedtest Tracker `APP_KEY`, app settings, and schedule |
 | `glance.env` | optional Glance read-only widget credentials such as `GLANCE_SPEEDTEST_TRACKER_TOKEN` |
 | `glance-beszel.env` | optional Glance Beszel adapter readonly username/password and approved system labels/IDs |
+
+`homepage.env` and `speedtest-tracker.env` used to live under
+`/opt/domum-core/config`; their supported live location is now
+`/etc/domum-core/secrets`. Keep the tracked `config/*.env.example` files as
+templates only.
 
 Future Glance dashboard integrations may add more read-only API keys or private
 feed URLs. Add names here only when a later widget task approves a specific
@@ -42,11 +49,11 @@ key path.
 is read by the optional internal adapter service; separate username/password
 files are intentionally not used.
 
-Recovery packs copy small files under `/etc/domum-core/secrets`, so `glance.env`
-and `glance-beszel.env` are included automatically when present. Recovery packs
-also copy small live `config/*.env` files such as `homepage.env` and
-`speedtest-tracker.env`; those files are gitignored but needed for a complete
-fresh-host rebuild.
+Recovery packs copy small files under `/etc/domum-core/secrets`, so
+`homepage.env`, `speedtest-tracker.env`, `glance.env`, and `glance-beszel.env`
+are included automatically when present. Recovery packs also copy small live
+`config/*.env` files for compatibility with older local layouts; those files are
+gitignored but may be needed for a complete fresh-host rebuild until migrated.
 
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.

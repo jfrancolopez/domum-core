@@ -33,25 +33,25 @@ compose/monitoring/homepage/
 ```
 
 The config uses `.yaml` files so CI does not treat them as Docker Compose
-fragments. Keep secrets out of these files. If a future widget needs an API key,
-store it under `/etc/domum-core/secrets` and pass it with a `HOMEPAGE_FILE_*`
-environment variable.
+fragments. Keep secrets out of these files. If a widget needs an API key, store
+it in `/etc/domum-core/secrets/homepage.env`.
 
-Homepage also loads an optional local env file:
+Homepage also loads an optional root-only env file:
 
 ```text
-config/homepage.env
+/etc/domum-core/secrets/homepage.env
 ```
 
 Create it from the tracked example when you are ready to enable credentialed
 widgets:
 
 ```bash
-cp config/homepage.env.example config/homepage.env
-chmod 600 config/homepage.env
+sudo install -d -m 0700 /etc/domum-core/secrets
+sudo install -m 0600 config/homepage.env.example /etc/domum-core/secrets/homepage.env
 ```
 
-`config/*.env` is ignored by git. Do not commit the live file.
+The tracked example stays under `config/`; the live file belongs under
+`/etc/domum-core/secrets` and is bundled into the encrypted recovery pack.
 
 The dashboard commits only environment-variable references. Never place OAuth
 tokens, API keys, usernames, or passwords in `services.yaml`, `widgets.yaml`, or
@@ -92,9 +92,9 @@ source is available and verified from inside the Homepage container.
 
 | Signal | Why it is not live yet | Requirement | Expected result |
 |---|---|---|---|
-| Healthchecks job totals and backup status | `HOMEPAGE_VAR_HEALTHCHECKS_KEY` is not present | Create a Healthchecks read-only API key and set it in `config/homepage.env` | Healthchecks card shows `up` and `down`; backup checks can become the source for overdue/failed backups |
+| Healthchecks job totals and backup status | `HOMEPAGE_VAR_HEALTHCHECKS_KEY` is not present | Create a Healthchecks read-only API key and set it in `/etc/domum-core/secrets/homepage.env` | Healthchecks card shows `up` and `down`; backup checks can become the source for overdue/failed backups |
 | Home Assistant automation/device health | Home Assistant API requires a long-lived token and `HOMEPAGE_VAR_HOMEASSISTANT_KEY` is not present | Create a read-only HA long-lived access token and choose up to four Homepage custom template metrics | Home Assistant card can show unavailable devices, lights/switches on, or template-based warnings |
-| UniFi internet/client health | UniFi URL/account/API key variables are not present | Add a local read-only UniFi account or API key to `config/homepage.env` | UniFi card can show WAN/LAN/client/AP counts through the native widget |
+| UniFi internet/client health | UniFi URL/account/API key variables are not present | Add a local read-only UniFi account or API key to `/etc/domum-core/secrets/homepage.env` | UniFi card can show WAN/LAN/client/AP counts through the native widget |
 | Unraid rich host health | Direct Unraid URL/key are not present; per-host Beszel IDs produced widget API errors in testing | Add `HOMEPAGE_VAR_UNRAID_URL` and `HOMEPAGE_VAR_UNRAID_KEY`, or verify the Beszel system IDs | Unraid card can show CPU, memory, array usage, and notifications |
 | N100 rich host health | Per-host Beszel ID produced widget API errors in testing | Verify the `domum-core-media` Beszel system ID and credentials | Media host card can show CPU, RAM, disk, and network via Beszel |
 | Traefik certificates and HTTP error rates | Native Homepage Traefik widget exposes routers/services/middleware only | Enable Traefik metrics or a tiny read-only exporter for cert expiry/access-log summaries | Dashboard can report soon-expiring certs and 5xx/404 spikes |
@@ -181,7 +181,7 @@ cards remain clean links until those per-host Beszel widget IDs are verified.
 Homepage supports Google Calendar through an iCal URL, not OAuth username and
 password login. The dashboard uses the private iCal URL in
 `HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL` when it is present in
-`config/homepage.env`.
+`/etc/domum-core/secrets/homepage.env`.
 
 1. Open Google Calendar in the browser.
 2. Go to `Settings`.
@@ -189,7 +189,7 @@ password login. The dashboard uses the private iCal URL in
 4. Open `Integrate calendar`.
 5. Copy `Secret address in iCal format`. Use the secret address, not the public
    address, unless you intentionally made the calendar public.
-6. On the Pi, create or edit `config/homepage.env` and add:
+6. On the Pi, create or edit `/etc/domum-core/secrets/homepage.env` and add:
 
 ```bash
 HOMEPAGE_VAR_GOOGLE_CALENDAR_ICAL_URL="https://calendar.google.com/calendar/ical/.../basic.ics"
@@ -329,7 +329,8 @@ widget:
 ```
 
 Plex, Jellyfin, and Immich are shown as setup-required until their real service
-URLs and tokens are present in `config/homepage.env`. Do not commit token values.
+URLs and tokens are present in `/etc/domum-core/secrets/homepage.env`. Do not
+commit token values.
 
 Plex:
 
@@ -386,11 +387,10 @@ restore gets those back through the normal repo bootstrap and `sudo domum-core
 apply` flow.
 
 The only Homepage-specific values that are not tracked are live API credentials
-and private URLs in `config/homepage.env`. Keep that file mode `600`. If you want
-credentialed widgets to come back after bare-metal restore, keep a copy of those
-values in the same password manager entry or recovery notes used for other Domum
-secrets. Recreate `config/homepage.env` from `config/homepage.env.example` after
-restore, then restart Homepage.
+and private URLs in `/etc/domum-core/secrets/homepage.env`. Keep that file mode
+`600`. It is included in the encrypted recovery pack when present. Recreate it
+from `config/homepage.env.example` only if you do not have a current recovery
+pack, then restart Homepage.
 
 ## Security Model
 

@@ -12,7 +12,7 @@ services:
       - TZ=America/New_York
       - APP_URL=https://speedtest.${DOMUM_DOMAIN}
     env_file:
-      - ${DOMUM_SPEEDTEST_ENV_FILE:-/opt/domum-core/config/speedtest-tracker.env}
+      - ${DOMUM_SPEEDTEST_ENV_FILE:-/etc/domum-core/secrets/speedtest-tracker.env}
     volumes:
       - /opt/domum-core/compose/monitoring/speedtest-tracker/data:/config
     labels:
