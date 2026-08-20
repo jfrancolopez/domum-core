@@ -1,19 +1,89 @@
 - name: Technology
+  slug: technology
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero">
+          <div>
+            <div class="domum-kicker">Build radar</div>
+            <h1>Technology Lab</h1>
+            <p>Self-hosting, infrastructure, security, AI, and developer signals for improving the stack deliberately.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>Homelab</span>
+            <span>Security</span>
+            <span>AI + dev</span>
+          </div>
+        </section>
   columns:
     - size: full
       widgets:
         - type: videos
-          title: Homelab video updates
+          title: Engineering videos
           style: horizontal-cards
-          limit: 6
-          collapse-after: 3
+          cache: 1h
+          limit: 10
+          collapse-after: 5
           include-shorts: false
           channels:
             - UCXuqSBlHAE6Xw-yeJA0Tunw # Linus Tech Tips
             - UCR-DXc1voovS8nhAvccRZhg # Jeff Geerling
+            - UCsBjURrPoezykLs9EqgamOA # Fireship
+            - UCld68syR8Wi-GY_n4CaoJGA # ThePrimeTimeagen
+
+        - type: split-column
+          widgets:
+            - type: hacker-news
+              title: Hacker News
+              limit: 12
+              collapse-after: 6
+              sort-by: top
+
+            - type: lobsters
+              title: Lobsters
+              limit: 12
+              collapse-after: 6
+              tags:
+                - linux
+                - security
+                - go
+                - ai
+
+        - type: split-column
+          widgets:
+            - type: rss
+              title: Self-hosting and infrastructure
+              style: detailed-list
+              cache: 45m
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://selfh.st/rss/
+                  title: selfh.st
+                - url: https://www.cncf.io/feed/
+                  title: CNCF
+                - url: https://www.docker.com/blog/feed/
+                  title: Docker
+
+            - type: rss
+              title: Security and AI
+              style: detailed-list
+              cache: 45m
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://www.bleepingcomputer.com/feed/
+                  title: BleepingComputer
+                - url: https://krebsonsecurity.com/feed/
+                  title: Krebs
+                - url: https://simonwillison.net/atom/everything/
+                  title: Simon Willison
+
+    - size: small
+      widgets:
         - type: releases
-          title: Installed software releases
+          title: Stack releases
           cache: 6h
           limit: 8
           collapse-after: 5
@@ -24,29 +94,19 @@
             - gethomepage/homepage
             - glanceapp/glance
             - henrygd/beszel
-        - type: rss
-          title: Self-hosting and Security
-          style: detailed-list
-          limit: 15
-          collapse-after: 8
-          feeds:
-            - url: https://selfh.st/rss/
-              title: selfh.st
-            - url: https://www.cncf.io/feed/
-              title: CNCF
-            - url: https://www.bleepingcomputer.com/feed/
-              title: BleepingComputer
-    - size: small
-      widgets:
+
         - type: bookmarks
+          title: Open directly
           groups:
-            - title: Watch and Read
+            - title: Watch and read
               links:
-                - title: Linus Tech Tips
-                  url: https://www.youtube.com/@LinusTechTips
-                - title: The Primeagen
-                  url: https://www.youtube.com/@ThePrimeTimeagen
-                - title: Joe Rogan
-                  url: https://www.youtube.com/@joerogan
                 - title: Hacker News
                   url: https://news.ycombinator.com/
+                - title: Lobsters
+                  url: https://lobste.rs/
+                - title: selfh.st
+                  url: https://selfh.st/
+                - title: Jeff Geerling
+                  url: https://www.youtube.com/@JeffGeerling
+                - title: The Primeagen
+                  url: https://www.youtube.com/@ThePrimeTimeagen

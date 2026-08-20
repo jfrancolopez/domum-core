@@ -17,7 +17,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Search | Home | DuckDuckGo/approved provider | Native `search` | None | On demand | Public-safe | Negligible | Ready | Implemented with selected bangs |
 | Daily bookmarks | Home | Static tracked links | Native `bookmarks` | None | No request | Public-safe | Negligible | Ready | Implemented; not a full Homepage mirror |
 | Critical service availability | Home/Hosting | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Ready | Implemented on Home and core Hosting after private access boundary; status only, no host metrics |
-| Technology briefing | Home/News | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Implemented on Home; limit 12 |
+| Technology briefing | Home/Technology/News | Public RSS, HN, Lobsters, YouTube, GitHub releases | Native widgets | None | 45m-6h | Public-safe | Low | Implemented | Home summary plus Technology Lab page for self-hosting, security, AI, developer/community signals, and stack releases |
 | Host summary | Hosting | Beszel PocketBase collections via local adapter | Custom API | Dedicated readonly user exists in `glance-beszel.env`; adapter implemented | 5m | Private-operational | Low | Implemented | Beszel summary widget added to Hosting page. |
 | Local server stats | Hosting | Glance Agent | Native `server-stats` | New agent | 5m | Private-operational | Medium | Not recommended | New agent conflicts with program boundary |
 | Docker containers | Hosting | Docker API | Native `docker-containers` | Docker socket | 5m | Private-operational | High | Not recommended | Raw socket is prohibited |
