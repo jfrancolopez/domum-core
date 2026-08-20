@@ -34,22 +34,22 @@
               <div class="cards-grid gap-10" style="--columns-per-row: 4;">
                 <div class="card padding-block-10 padding-inline-12">
                   <div class="size-sm color-subdue">Download</div>
-                  <div class="size-h3 color-highlight">{{ .data.download }} Mbps</div>
+                  <div class="size-h3 color-highlight">{{ .JSON.Int "data.download" }} Mbps</div>
                 </div>
                 <div class="card padding-block-10 padding-inline-12">
                   <div class="size-sm color-subdue">Upload</div>
-                  <div class="size-h3 color-highlight">{{ .data.upload }} Mbps</div>
+                  <div class="size-h3 color-highlight">{{ .JSON.Int "data.upload" }} Mbps</div>
                 </div>
                 <div class="card padding-block-10 padding-inline-12">
                   <div class="size-sm color-subdue">Ping</div>
-                  <div class="size-h3">{{ .data.ping }} ms</div>
+                  <div class="size-h3">{{ .JSON.Float "data.ping" | printf "%.1f" }} ms</div>
                 </div>
                 <div class="card padding-block-10 padding-inline-12">
                   <div class="size-sm color-subdue">Jitter</div>
-                  <div class="size-h3">{{ .data.jitter }} ms</div>
+                  <div class="size-h3">{{ .JSON.Float "data.data.ping.jitter" | printf "%.1f" }} ms</div>
                 </div>
               </div>
-              <div class="size-sm color-subdue">Packet loss: {{ .data.packetLoss }}%; measured {{ .data.createdAt }}</div>
+              <div class="size-sm color-subdue">Packet loss: {{ .JSON.Int "data.data.packetLoss" }}%; measured {{ .JSON.String "data.created_at" }}</div>
             </div>
 
         - type: monitor
