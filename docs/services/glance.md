@@ -45,10 +45,22 @@ The optional direct-widget env file is:
 /etc/domum-core/secrets/glance.env
 ```
 
-Use `config/glance.env.example` as the format. The Network page reads
-`GLANCE_SPEEDTEST_TRACKER_TOKEN` from this file; use a Speedtest Tracker token
-with only `results:read` scope. Do not reuse or mount Homepage's env file for
-Glance.
+Use `config/glance.env.example` as the format. It intentionally includes both
+currently consumed variables and reserved variables for approved future widgets.
+Unused variables are harmless, but they are not permission to implement a widget
+without capability-matrix and backlog approval.
+
+Create it on the Pi with root-only permissions:
+
+```bash
+sudo install -o root -g root -m 0600 config/glance.env.example /etc/domum-core/secrets/glance.env
+sudo editor /etc/domum-core/secrets/glance.env
+```
+
+The Network page reads `GLANCE_SPEEDTEST_TRACKER_TOKEN` from this file. Create a
+Speedtest Tracker API token from the Speedtest Tracker web UI with the narrowest
+available read-only/results scope; it should only need `results:read`. Do not
+reuse or mount Homepage's env file for Glance.
 
 The same file may contain `GLANCE_ADGUARD_USERNAME` and
 `GLANCE_ADGUARD_PASSWORD` for the Network page's native `dns-stats` widget. Use a
@@ -71,6 +83,32 @@ monitoring. Leave `GLANCE_UNIFI_API_PATH` blank until the live controller's safe
 aggregate endpoint is verified. The future widget must not call endpoints that
 return clients, topology, SSIDs, MAC addresses, IP addresses, or raw device
 details.
+
+The same example file also reserves variables for popular but not-yet-consumed
+sources:
+
+| Variables | Intended source | How to get them | Status |
+|---|---|---|---|
+| `GLANCE_HEALTHCHECKS_URL`, `GLANCE_HEALTHCHECKS_API_KEY` | Healthchecks project summary | Healthchecks Project Settings API key; never ping UUIDs | future Hosting task |
+| `GLANCE_CALENDAR_ICS_URL` | Private/shared calendar events | read-only secret iCal/ICS URL from the calendar provider | future Home task |
+| `GLANCE_TAUTULLI_URL`, `GLANCE_TAUTULLI_API_KEY` | Plex/Tautulli now-playing/history | Tautulli Settings -> Web Interface/API | future Media task |
+| `GLANCE_PLEX_URL`, `GLANCE_PLEX_TOKEN` | Direct Plex fallback | Plex token only if Tautulli is rejected | future Media task |
+| `GLANCE_STEAM_API_KEY`, `GLANCE_STEAM_ID64`, `GLANCE_STEAM_COUNTRY` | Steam profile/sales | Steam Web API key from `steamcommunity.com/dev/apikey`; numeric SteamID64 | future Games task |
+| `GLANCE_TWITCH_CLIENT_ID`, `GLANCE_TWITCH_CLIENT_SECRET` | Twitch creators/categories | Twitch developer app client credentials | future Games/Social task |
+| `GLANCE_SPOTIFY_CLIENT_ID`, `GLANCE_SPOTIFY_CLIENT_SECRET`, `GLANCE_SPOTIFY_REFRESH_TOKEN` | Spotify listening insights | Spotify developer app plus approved OAuth scopes | future Music/Learning task |
+| `GLANCE_YOUTUBE_CLIENT_ID`, `GLANCE_YOUTUBE_CLIENT_SECRET`, `GLANCE_YOUTUBE_REFRESH_TOKEN`, `GLANCE_YOUTUBE_API_KEY` | YouTube subscriptions/watch insights | Google Cloud OAuth client and YouTube Data API v3 after scope approval | future Music/Learning task |
+| `GLANCE_GITHUB_TOKEN` | GitHub rate-limit relief | fine-grained public metadata read-only token | optional only |
+
+Leave these blank until the matching task is implemented. Do not add personal
+OAuth tokens, write-capable API keys, admin accounts, watch history, friend lists,
+or raw profile data to Glance.
+
+Spotify and personalized YouTube are especially sensitive because they reveal
+taste, routine, attention, and sometimes family presence. Any recommendation
+widget must be read-only, explain why it recommends an item, and keep generated
+recommendations local to Glance. It must not write playlists, subscribe to
+channels, like videos, post comments, or call an external LLM with raw history
+unless a later task explicitly approves that data flow.
 
 The optional Beszel integration env file is:
 
@@ -147,9 +185,9 @@ privacy, and failure behavior review.
 
 ## Current Pages
 
-- Home: native search, month calendar, three clocks, Durham weather, compact
-  critical-service monitor, releases, public infrastructure/AI feeds, and
-  selected bookmarks.
+- Home: daily command-center hero, action tiles for Home/Network/Hosting, native
+  search, month calendar, three clocks, Durham weather, compact service heartbeat,
+  releases, public infrastructure/AI feeds, and selected bookmarks.
 - The Home AdGuard monitor checks the Traefik-routed `dns` URL instead of the
   direct container port, because AdGuard's internal web port can move after first
   setup while Traefik owns the stable browser route.
@@ -165,6 +203,12 @@ privacy, and failure behavior review.
   raw DNS activity, UniFi data, Tailscale device names, and internal addresses.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
+- News: curated RSS sections for top stories, markets, technology/AI, science,
+  and security.
+- Social: public creator videos, Hacker News/Lobsters, selected Reddit RSS feeds,
+  and direct community links. It uses no social-account credentials.
+- Media: public videos, film/TV RSS, books/culture RSS, and direct discovery or
+  streaming links. It uses no watch-history or personal library integrations.
 
 Private Google Calendar events, WAN identity details, device names, media activity, and
 Steam data are intentionally absent until their individual widget tasks approve

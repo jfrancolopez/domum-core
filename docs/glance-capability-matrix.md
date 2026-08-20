@@ -37,19 +37,22 @@ Private rows remain blocked while `dash` is externally reachable.
 | Tautulli activity/history | Media | Tautulli API | Reviewed custom API | API key | 5m/15m | Private-personal | Medium | Needs service | Avoid URL-embedded keys; [API](https://github.com/Tautulli/Tautulli/wiki/Tautulli-API-Reference) |
 | Sonarr/Radarr releases/queues | Media | Installed app APIs | Reviewed custom API | API keys | 15m | Private-personal | Low | Needs service | Verify installed versions and OpenAPI docs |
 | Immich statistics | Media | Immich API | Reviewed custom API | API key | 24h | Private-personal | Low | Needs service | Verify installation and key scope |
-| Trending media/posters | Media | Unselected media source | Custom API | Unknown | 6h | Public-safe | Medium | Needs clarification | Require source/license/image review |
+| Public media discovery | Media | Public RSS and YouTube feeds | Native `rss`/`videos` | None | 45m-1h | Public-safe | Medium | Implemented | Film/TV, books/culture, and selected public video channels; no watch history or personal library data |
 | Steam specials/top sellers | Games | Steam Store endpoint | Reviewed custom API | None | 1h | Public-safe | Medium | Needs clarification | Upstream example exists; Valve API status uncertain |
 | Steam profile/recently played | Games | Steam Web API | Reviewed custom API | API key and ID | 1h/15m | Private-personal | Medium | Needs credential | Verify public profile visibility and API fields |
 | Steam wishlist discounts | Games | Steam API/store | Reviewed custom API | API key and ID | 1h | Private-personal | Low | Needs credential | Verify documented endpoint and privacy |
 | Steam allowlisted friends | Games | Steam Web API | Reviewed custom API | API key, ID, allowlist | 15m | Private-personal | Medium | Needs credential | Never render full friends list |
 | Twitch games/creators | Games/Social | Twitch Helix | Reviewed custom API | Client credentials | 1h | Public-safe | Medium | Needs clarification | Only selected creators/categories |
 | Gaming/community RSS | Games | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Communities need operator selection |
-| Curated news | News | Public RSS | Native `rss` | None | 6h | Public-safe | Low | Ready | Infrastructure, security, self-hosting, Linux, AI |
-| Hacker News/Lobsters | News | Public services | Native widgets | None | 1h | Public-safe | Low | Ready | Limit lists |
-| Reddit communities | Social/News | Reddit | Native `reddit` | Optional app credentials | 1h | Public-safe | Low | Needs clarification | Select communities; auth may be needed for rate limits |
-| YouTube creators | Social | YouTube | Native `videos` | None | 1h | Public-safe | Medium | Needs clarification | Select creators and thumbnail limit |
+| Curated news | News | Public RSS | Native `rss` | None | 20m-1h | Public-safe | Low | Implemented | World, markets, technology/AI, science, and security feeds |
+| Hacker News/Lobsters | Social | Public RSS bridges | Native `rss` | None | 20m | Public-safe | Low | Implemented | HN frontpage/best and Lobsters feeds |
+| Reddit communities | Social | Reddit RSS | Native `rss` | None | 45m | Public-safe | Low | Implemented | Selected public community feeds; no Reddit account or OAuth |
+| YouTube creators | Social/Media/Technology | YouTube public feeds | Native `videos` | None | 1h | Public-safe | Medium | Implemented | Selected creators, shorts excluded, bounded card count |
 | GitHub repositories/releases | Social/News | GitHub | Native `repository`/`releases` | Optional fine-grained token | 6h | Public-safe | Low | Ready | Token only if rate limits require it |
 | Karakeep/FreshRSS activity | Social | Existing app APIs | Reviewed custom API | Unknown | 1h | Private-personal | Low | Needs service | API/auth/version not audited |
+| Spotify listening insights | Music/Social/Home | Spotify Web API | Reviewed custom API or local adapter | OAuth client and refresh token | 15m-1h | Private-personal | Medium | Proposed | Read-only scopes only; no playlist writes; local explainable recommendations first |
+| YouTube personalized follows/watch insights | Music/Social | YouTube Data API or approved export/source | Reviewed custom API or local adapter | API key and/or OAuth refresh token | 15m-1h | Private-personal | Medium | Proposed | Prefer subscriptions/channel metadata before watch history; no account writes |
+| Local recommendations | Music/Social/Home | Derived from approved Spotify/YouTube summaries | Local adapter preferred | Same source credentials | 1h | Private-personal | Medium | Proposed | Explainable local scoring; no raw history to external LLM by default |
 
 ## Provenance and Constraints
 
