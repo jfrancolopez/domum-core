@@ -30,7 +30,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Gateway/WAN uptime and RX/TX | Network | Gateway API | Custom API | Read-only account | 5m | Private-operational | Low | Needs service | Gateway/API not audited |
 | Local service latency | Network | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Implemented | Compact reachability only; no internal addresses or one-off latency colors |
 | AdGuard aggregate DNS stats | Network | AdGuard Home | Native `dns-stats` | Existing admin credentials | 5m | Private-personal | Low | Needs credential | Do not show query/top-domain data by default |
-| UniFi counts/health | Network | UniFi API | Reviewed custom API | Read-only account | 5m | Private-operational | Medium | Needs service | Controller/API not audited |
+| UniFi counts/health | Network | UniFi API | Reviewed custom API or local adapter | Dedicated Glance read-only account/API key, not Homepage credentials | 5m | Private-operational | Medium | Needs service | Operator selected as primary deep Network source; blocked on task 73 live API/credential review |
 | Tailscale device summary | Network | Tailscale API | Reviewed custom API | Least-privilege token | 5m | Private-personal | Low | Not recommended | Current API-token scope is too broad |
 | NetAlertX device status | Network | NetAlertX API | Reviewed custom API | Unknown | 5m | Private-personal | Low | Needs service | Presence/API not audited |
 | Plex now playing | Media | Plex | Reviewed custom API | Read token | 5m | Private-personal | Medium | Needs clarification | Plex-first; verify API and image proxying |

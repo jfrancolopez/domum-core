@@ -150,6 +150,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | prep | 70 | [Review Beszel as the Glance external Hosting source](task-70-glance-beszel-hosting-source-review.md) | Pi auth/system test done; blocked on usable Glance read-token/adapter path | small-med | medium |
 | prep | 71 | [Choose a safe Beszel-to-Glance auth bridge](task-71-glance-beszel-auth-bridge.md) | local adapter path selected 2026-08-14; task 72 implements it | small-med | medium |
 | prep | 72 | [Implement the local Beszel summary adapter for Glance](task-72-glance-beszel-adapter.md) | code done; Pi success/failure validation still blocks task 54 | medium | medium |
+| prep | 73 | [Review and implement UniFi as the primary deep Network source](task-73-glance-unifi-network-source.md) | selected by operator; blocked on live UniFi API/credential review | small-med | medium |
 
 ## Audit conclusions worth remembering (2026-07-09)
 
