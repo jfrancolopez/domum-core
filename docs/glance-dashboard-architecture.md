@@ -130,7 +130,9 @@ approved because their least-privilege model is not yet verified.
 | Reddit/GitHub/Twitch credentials | Minimal public/read-only scope | Operator | Optional; use only for rate-limit or selected-content need |
 
 No existing AdGuard, Tailscale, UniFi, or source-service credential may be
-reused until the operator approves the exact least-privilege approach.
+reused until the operator approves the exact least-privilege approach. For UniFi,
+the approved direction is a dedicated direct API key with read-only monitoring
+scope, pending live endpoint/schema verification before any widget renders it.
 
 ## Cache and Resource Budget
 

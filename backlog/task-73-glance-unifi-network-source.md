@@ -13,7 +13,9 @@ Task 56 allows exactly one deep Network source family at a time. The operator
 selected both UniFi and AdGuard, with UniFi first. The current repository has
 Homepage-oriented UniFi notes, but Glance `v0.8.5` has no native UniFi widget.
 The existing capability matrix still marks UniFi as `Needs service` because the
-controller/API is not audited for Glance.
+controller/API is not audited for Glance. On 2026-08-20, the operator approved
+direct UniFi API-key access for Glance, provided the key is read-only and used
+only for monitoring.
 
 ## Why This Exists
 
@@ -42,8 +44,8 @@ future matrix update explicitly approves each field.
 
 1. On the Pi, identify the live UniFi controller URL, version, and supported API
    authentication mode without printing credentials or private topology.
-2. Create a dedicated Glance read-only UniFi credential or API key. Do not reuse
-   Homepage credentials or an admin account.
+2. Create a dedicated Glance read-only UniFi API key. Do not reuse Homepage
+   credentials or an admin account. The key must not have write/admin privileges.
 3. Verify whether Glance `custom-api` can call one documented endpoint directly
    with a stable API key/header. If cookie/CSRF login chaining is required,
    reject direct Glance config and propose a small local adapter as a new task.
@@ -92,7 +94,9 @@ explicitly chooses to revoke it.
 
 - Task 55 Pi validation and approval.
 - Operator-approved UniFi as the primary deep Network source.
-- A verified least-privilege UniFi credential/API mechanism.
+- Operator-approved direct UniFi API key access, read-only and monitoring-only.
+- A verified least-privilege UniFi API endpoint and schema for the live
+  controller/version.
 - If direct Glance `custom-api` is not enough, a separate adapter task must be
   approved before implementation.
 
@@ -115,6 +119,8 @@ source and should be implemented separately only after this blocker is recorded.
 ## Decisions and Rejected Alternatives
 
 - Decision: UniFi is the primary deep Network source, selected by the operator.
+- Decision: direct UniFi API-key access is approved for Glance if the key is
+  read-only and used only for monitoring.
 - Decision: AdGuard is secondary and stays in a separate commit/task path.
 - Rejected: Reuse Homepage UniFi variables, because Homepage env is not mounted
   into Glance and credential scope/ownership differ.
