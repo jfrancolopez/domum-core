@@ -72,17 +72,23 @@ The same file also reserves UniFi variables for task 73:
 
 ```text
 GLANCE_UNIFI_URL=
+GLANCE_UNIFI_API_URL=
 GLANCE_UNIFI_API_KEY=
 GLANCE_UNIFI_API_HEADER=X-API-Key
 GLANCE_UNIFI_API_PATH=
 ```
 
 Use `GLANCE_UNIFI_URL` for the UCG Fiber gateway/controller URL reachable from
-Glance, and `GLANCE_UNIFI_API_KEY` for a dedicated read-only key used only for
-monitoring. Leave `GLANCE_UNIFI_API_PATH` blank until the live controller's safe
-aggregate endpoint is verified. The future widget must not call endpoints that
-return clients, topology, SSIDs, MAC addresses, IP addresses, or raw device
-details.
+Glance, including `https://`, and `GLANCE_UNIFI_API_KEY` for a dedicated
+read-only key used only for monitoring. `GLANCE_UNIFI_API_URL` is the full
+selected site's aggregate health endpoint, also including `https://`. It is
+usually `GLANCE_UNIFI_URL` plus a path shaped like
+`/proxy/network/api/s/<site-internal-reference>/stat/health`; keep the concrete
+site reference only in the root-only env file. The Network page renders only
+subsystem status and aggregate counts from that response. The widget allows the
+controller's local TLS certificate because the UCG certificate is not issued for
+the LAN address Glance uses. It must not call endpoints that return clients,
+topology, SSIDs, MAC addresses, IP addresses, or raw device details.
 
 The same example file also reserves variables for popular but not-yet-consumed
 sources:
@@ -199,9 +205,10 @@ privacy, and failure behavior review.
   separately approved.
 - Network: branded command-page treatment with Speedtest Tracker's latest result
   rendered as human-readable WAN pulse metrics, aggregate AdGuard DNS stats with
-  top domains hidden, plus compact reachability checks for approved
-  network-adjacent services. It intentionally omits WAN IP, gateway topology,
-  raw DNS activity, UniFi data, Tailscale device names, and internal addresses.
+  top domains hidden, aggregate UniFi subsystem health/counts, plus compact
+  reachability checks for approved network-adjacent services. It intentionally
+  omits WAN IP, gateway topology, raw DNS activity, UniFi client/device details,
+  Tailscale device names, and internal addresses.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
 - News: curated RSS sections for top stories, markets, technology/AI, science,

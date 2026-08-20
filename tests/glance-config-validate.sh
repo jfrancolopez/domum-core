@@ -10,6 +10,10 @@ docker run --rm \
   -e GLANCE_SPEEDTEST_TRACKER_TOKEN="${GLANCE_SPEEDTEST_TRACKER_TOKEN:-ci-dummy}" \
   -e GLANCE_ADGUARD_USERNAME="${GLANCE_ADGUARD_USERNAME:-ci-adguard}" \
   -e GLANCE_ADGUARD_PASSWORD="${GLANCE_ADGUARD_PASSWORD:-ci-dummy}" \
+  -e GLANCE_UNIFI_URL="${GLANCE_UNIFI_URL:-https://unifi.example.invalid}" \
+  -e GLANCE_UNIFI_API_URL="${GLANCE_UNIFI_API_URL:-https://unifi.example.invalid/proxy/network/api/s/default/stat/health}" \
+  -e GLANCE_UNIFI_API_KEY="${GLANCE_UNIFI_API_KEY:-ci-dummy}" \
+  -e GLANCE_UNIFI_API_PATH="${GLANCE_UNIFI_API_PATH:-/proxy/network/api/s/default/stat/health}" \
   -e GLANCE_BESZEL_USERNAME="${GLANCE_BESZEL_USERNAME:-ci@example.invalid}" \
   -e GLANCE_BESZEL_PASSWORD="${GLANCE_BESZEL_PASSWORD:-ci-dummy}" \
   -e GLANCE_BESZEL_SYSTEM_1_LABEL="${GLANCE_BESZEL_SYSTEM_1_LABEL:-domum-core}" \

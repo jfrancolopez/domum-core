@@ -67,6 +67,30 @@
 
         - type: split-column
           widgets:
+            - type: custom-api
+              title: UniFi health
+              cache: 5m
+              url: ${GLANCE_UNIFI_API_URL}
+              allow-insecure: true
+              headers:
+                X-API-Key: ${GLANCE_UNIFI_API_KEY}
+              template: |
+                <div class="domum-unifi-grid">
+                {{ range .JSON.Array "data" }}
+                  <div class="domum-unifi-card domum-unifi-card-{{ .String "status" }}">
+                    <div class="domum-unifi-topline">
+                      <strong>{{ .String "subsystem" }}</strong>
+                      <span>{{ .String "status" }}</span>
+                    </div>
+                    <div class="domum-unifi-counts">
+                      <span>Users <b>{{ .Int "num_user" }}</b></span>
+                      <span>APs <b>{{ .Int "num_ap" }}</b></span>
+                      <span>Down <b>{{ .Int "num_disconnected" }}</b></span>
+                    </div>
+                  </div>
+                {{ end }}
+                </div>
+
             - type: monitor
               title: Edge reachability
               style: compact

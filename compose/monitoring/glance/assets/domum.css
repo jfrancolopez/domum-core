@@ -274,6 +274,72 @@ body {
   font-size: 0.95rem;
 }
 
+.domum-unifi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.domum-unifi-card {
+  padding: 12px;
+  border: 1px solid rgba(94, 201, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(9, 13, 20, 0.58);
+}
+
+.domum-unifi-card-ok {
+  border-color: rgba(105, 240, 174, 0.24);
+}
+
+.domum-unifi-card-warning,
+.domum-unifi-card-degraded {
+  border-color: rgba(255, 209, 102, 0.34);
+}
+
+.domum-unifi-card-error,
+.domum-unifi-card-down {
+  border-color: rgba(255, 143, 163, 0.36);
+}
+
+.domum-unifi-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.domum-unifi-topline strong {
+  color: var(--domum-text);
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.domum-unifi-topline span {
+  color: var(--domum-cyan);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.domum-unifi-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.domum-unifi-counts span {
+  color: var(--domum-muted);
+  font-size: 0.72rem;
+}
+
+.domum-unifi-counts b {
+  display: block;
+  color: var(--domum-text);
+  font-size: 1rem;
+}
+
 .domum-wan-card::before {
   content: "";
   position: absolute;
@@ -372,7 +438,8 @@ body {
   }
 
   .domum-fleet-grid,
-  .domum-attention-strip {
+  .domum-attention-strip,
+  .domum-unifi-grid {
     grid-template-columns: 1fr;
   }
 }

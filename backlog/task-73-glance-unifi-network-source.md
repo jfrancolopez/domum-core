@@ -27,16 +27,18 @@ a direct `custom-api` path or authorizes a small local adapter in a later task.
 ## Current Behavior
 
 - The Network page shows Speedtest Tracker and compact network-adjacent
-  reachability checks.
+  reachability checks, plus an aggregate UniFi health widget.
 - Homepage documentation references UniFi widget variables, but those variables
   are Homepage-only and must not be reused by Glance.
 - `config/glance.env.example` reserves `GLANCE_UNIFI_URL`,
-  `GLANCE_UNIFI_API_KEY`, `GLANCE_UNIFI_API_HEADER`, and
+  `GLANCE_UNIFI_API_URL`, `GLANCE_UNIFI_API_KEY`, `GLANCE_UNIFI_API_HEADER`, and
   `GLANCE_UNIFI_API_PATH` for a dedicated read-only direct API key path. The
   operator reports a UCG Fiber gateway/controller and will populate the real URL
   and API key only in `/etc/domum-core/secrets/glance.env`.
-- `docs/glance-capability-matrix.md` marks `UniFi counts/health` as
-  `Needs service`.
+- `docs/glance-capability-matrix.md` marks `UniFi counts/health` as implemented.
+- The live Pi secret has `GLANCE_UNIFI_API_URL` set to the verified aggregate
+  health endpoint. The concrete site reference remains only in the root-only
+  secret file. `GLANCE_UNIFI_API_PATH` remains as a setup helper.
 
 ## Desired Behavior
 
@@ -47,24 +49,24 @@ future matrix update explicitly approves each field.
 
 ## Implementation Plan
 
-1. On the Pi, populate `GLANCE_UNIFI_URL` with the UCG Fiber
+1. Done: on the Pi, populate `GLANCE_UNIFI_URL` with the UCG Fiber
    gateway/controller URL reachable from Glance, then identify the live
    controller version and supported API authentication mode without printing
    credentials or private topology.
-2. Create a dedicated Glance read-only UniFi API key and place it in
+2. Done: create a dedicated Glance read-only UniFi API key and place it in
    `GLANCE_UNIFI_API_KEY`. Do not reuse Homepage
    credentials or an admin account. The key must not have write/admin privileges.
-3. Verify whether Glance `custom-api` can call one documented endpoint directly
+3. Done: verify whether Glance `custom-api` can call one documented endpoint directly
    using `GLANCE_UNIFI_API_HEADER` and `GLANCE_UNIFI_API_PATH`. If cookie/CSRF
    login chaining is required, reject direct Glance config and propose a small
    local adapter as a new task.
-4. Freeze the approved fields in `docs/glance-capability-matrix.md` before
+4. Done: freeze the approved fields in `docs/glance-capability-matrix.md` before
    rendering anything.
-5. Implement one compact widget on `compose/monitoring/glance/pages/network.yml`
+5. Done: implement one compact widget on `compose/monitoring/glance/pages/network.yml`
    with 5m cache, safe failure behavior, and no raw payload details.
-6. Document credential names/scopes in `docs/reference/secrets.md` and operator
+6. Done: document credential names/scopes in `docs/services/glance.md` and operator
    setup/validation in `docs/services/glance.md`.
-7. Test unauthorized, unavailable, stale, empty, partial, and rate-limited
+7. Remaining: test unauthorized, unavailable, stale, empty, partial, and rate-limited
    responses. Confirm no client/topology identifiers appear in Git, logs, URLs,
    or screenshots.
 
