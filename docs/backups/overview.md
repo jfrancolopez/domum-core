@@ -20,7 +20,7 @@ A Hetzner/restic backup is not just the compose YAML files. The default
 | `/var/lib/domum-core/service-backups/vaultwarden` | Quiesced Vaultwarden SQLite archives |
 | `/var/lib/domum-core/service-backups/volumes` | Docker named-volume exports |
 | `/var/lib/domum-core/service-backups/BACKUP-MANIFEST.json` | Per-run backup manifest |
-| `/var/lib/domum-core/recovery-pack` | AGE-encrypted recovery packs containing config and small secret files |
+| `/var/lib/domum-core/recovery-pack` | AGE-encrypted recovery packs containing host config, small `config/*.env` files, and small secret files |
 
 Because `/opt/domum-core/compose` is a whole directory tree, the offsite backup
 includes the live data directories under it:

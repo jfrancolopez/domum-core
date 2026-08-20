@@ -42,6 +42,12 @@ key path.
 is read by the optional internal adapter service; separate username/password
 files are intentionally not used.
 
+Recovery packs copy small files under `/etc/domum-core/secrets`, so `glance.env`
+and `glance-beszel.env` are included automatically when present. Recovery packs
+also copy small live `config/*.env` files such as `homepage.env` and
+`speedtest-tracker.env`; those files are gitignored but needed for a complete
+fresh-host rebuild.
+
 Repo-tree secrets (bind-mounted, gitignored): HA `secrets.yaml`, Zigbee2MQTT
 `secret.yaml`.
 

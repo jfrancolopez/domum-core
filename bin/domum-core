@@ -2164,6 +2164,7 @@ identity and configuration. Service *data* is restored separately from restic
 
 - config/domum.conf            — host config (sanitized of cleartext secrets)
 - config/domum-backup.conf     — backup target metadata
+- config/*.env                 — local service env files such as Homepage/Speedtest
 - secrets/                     — copies of $SECRETS_DIR/* (sensitive!)
 - meta/git-revision.txt        — repo commit the server was running
 - meta/rendered-compose.yml    — fully rendered compose manifest
@@ -2345,7 +2346,8 @@ EOF
 
   if (( DRY_RUN == 1 )); then
     echo "[dry-run] Would stage: config/domum.conf, config/domum-backup.conf,"
-    echo "          secrets/* (small files), rendered compose, git revision,"
+    echo "          config/*.env (small files), secrets/* (small files),"
+    echo "          rendered compose, git revision,"
     echo "          service inventory + image digests, RESTORE.md, MANIFEST.txt"
     echo "[dry-run] Would encrypt with age -> $RECOVERY_PACK_DEST/recovery-pack-<ts>.tar.age"
     [[ "$no_email" == "0" && "${RECOVERY_PACK_EMAIL_ENABLED:-0}" == "1" ]] && echo "[dry-run] Would email the .age file."
@@ -2369,6 +2371,13 @@ EOF
   mkdir -p "$stage_dir/config" "$stage_dir/secrets" "$stage_dir/meta"
   [[ -f "$CFG_FILE" ]] && install -m 0600 "$CFG_FILE" "$stage_dir/config/domum.conf"
   [[ -f "$BACKUP_CFG_FILE" ]] && install -m 0600 "$BACKUP_CFG_FILE" "$stage_dir/config/domum-backup.conf"
+
+  # Local service env files are ignored by git but can be required for rebuilds
+  # (Homepage widgets, Speedtest Tracker APP_KEY, etc.). Copy only small live env
+  # files, never tracked examples.
+  find "$DOMUM_DIR/config" -maxdepth 1 -type f -name '*.env' -size -64k 2>/dev/null | while IFS= read -r file; do
+    install -m 0600 "$file" "$stage_dir/config/$(basename "$file")"
+  done
 
   # Copy only small secret files (avoid bundling large keyrings/blobs).
   find "$SECRETS_DIR" -maxdepth 2 -type f -size -64k 2>/dev/null | while IFS= read -r file; do

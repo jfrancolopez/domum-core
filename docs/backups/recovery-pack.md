@@ -3,6 +3,17 @@
 The recovery pack stores host identity and rebuild metadata in an AGE-encrypted
 archive. It is not a replacement for restic service/data backups.
 
+It includes:
+
+- `config/domum.conf` and `config/domum-backup.conf`
+- small live `config/*.env` files, such as `homepage.env` and
+  `speedtest-tracker.env`
+- small files under `/etc/domum-core/secrets`, including `glance.env`,
+  `glance-beszel.env`, `karakeep.env`, restic password files, and service keys
+- rebuild metadata under `meta/`
+
+It does not include service data directories; restore those from restic.
+
 The Pi stores only the AGE public key at
 `/etc/domum-core/secrets/recovery-age.pub`. The AGE private key must be stored
 offline or in secure notes. If the private key is lost, existing `.tar.age`
