@@ -96,7 +96,8 @@ sources:
 | Variables | Intended source | How to get them | Status |
 |---|---|---|---|
 | `GLANCE_HEALTHCHECKS_URL`, `GLANCE_HEALTHCHECKS_API_KEY` | Healthchecks project summary | Healthchecks Project Settings API key; never ping UUIDs | future Hosting task |
-| `GLANCE_CALENDAR_ICS_URL` | Private/shared calendar events | read-only secret iCal/ICS URL from the calendar provider | future Home task |
+| `GLANCE_CALENDAR_ICS_URL`, `GLANCE_CALENDAR_LOOKAHEAD_DAYS`, `GLANCE_CALENDAR_MAX_EVENTS` | Private/shared calendar events | read-only secret iCal/ICS URL from the calendar provider | future Home adapter task |
+| `GLANCE_HOMEASSISTANT_URL`, `GLANCE_HOMEASSISTANT_TOKEN`, `GLANCE_PRESENCE_PERSON_*_NAME`, `GLANCE_PRESENCE_PERSON_*_ENTITY` | Named Home presence | Home Assistant long-lived token plus explicit `person.*` entity allowlist | future Home adapter task |
 | `GLANCE_TAUTULLI_URL`, `GLANCE_TAUTULLI_API_KEY` | Plex/Tautulli now-playing/history | Tautulli Settings -> Web Interface/API | future Media task |
 | `GLANCE_PLEX_URL`, `GLANCE_PLEX_TOKEN` | Direct Plex fallback | Plex token only if Tautulli is rejected | future Media task |
 | `GLANCE_STEAM_API_KEY`, `GLANCE_STEAM_ID64`, `GLANCE_STEAM_COUNTRY` | Steam profile/sales | Steam Web API key from `steamcommunity.com/dev/apikey`; numeric SteamID64 | future Games task |
@@ -115,6 +116,35 @@ widget must be read-only, explain why it recommends an item, and keep generated
 recommendations local to Glance. It must not write playlists, subscribe to
 channels, like videos, post comments, or call an external LLM with raw history
 unless a later task explicitly approves that data flow.
+
+### Future Home Calendar/Presence Adapter
+
+Private Home events and presence should not be parsed directly in Glance YAML.
+The selected design is a small internal adapter, disabled until implemented, that
+reads only `/etc/domum-core/secrets/glance.env` and returns sanitized JSON to a
+future Home `custom-api` widget.
+
+Calendar setup rules:
+
+- Use `GLANCE_CALENDAR_ICS_URL` for a read-only iCal/ICS URL, ideally from a
+  dedicated shared/family calendar rather than a broad personal calendar.
+- Keep `GLANCE_CALENDAR_LOOKAHEAD_DAYS` small, defaulting to `7`.
+- Keep `GLANCE_CALENDAR_MAX_EVENTS` small, defaulting to `6`.
+- Render only approved title/time summaries; avoid locations, attendee lists,
+  notes, meeting links, and full descriptions unless explicitly approved later.
+
+Presence setup rules:
+
+- Use `GLANCE_HOMEASSISTANT_URL=http://homeassistant:8123` from the Docker
+  network unless a future adapter documents a different route.
+- Create a Glance-specific Home Assistant long-lived token from the Home
+  Assistant user profile and store it only as `GLANCE_HOMEASSISTANT_TOKEN`.
+- Allowlist each person explicitly with `GLANCE_PRESENCE_PERSON_N_NAME` and
+  `GLANCE_PRESENCE_PERSON_N_ENTITY`.
+- Use only curated `person.*` entities. Do not infer people from UniFi clients,
+  device trackers, MAC addresses, IP addresses, SSIDs, or raw device names.
+- Render `home`, `away`, and `unknown/stale` style summaries only until a future
+  task approves richer location zones.
 
 The optional Beszel integration env file is:
 

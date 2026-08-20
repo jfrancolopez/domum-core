@@ -13,7 +13,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Day, month, year progress | Home | Local time | Local template | None | On page render | Public-safe | Negligible | Needs clarification | Verify safe v0.8.5 template path in task 51 |
 | Month calendar | Home | Local calendar | Native `calendar` | None | Upstream fixed | Public-safe | Negligible | Ready | Implemented; it has no event feed support |
 | Markets pulse | Home | Public market data | Native `markets` | None | Upstream/default | Public-safe | Low | Implemented | SPY, QQQ, BTC, and ETH; informational only, not investment advice |
-| Upcoming calendar events | Home | Provider ICS/CalDAV | Reviewed custom API | Read-only feed/account | 15m | Private-personal | Low | Needs credential | Blocked by task 49 and provider audit |
+| Upcoming calendar events | Home | ICS via future local adapter | Reviewed custom API | Read-only secret ICS URL | 15m | Private-personal | Low | Scaffolded | Selected source is ICS; adapter/widget not implemented yet |
 | Search | Home | DuckDuckGo/approved provider | Native `search` | None | On demand | Public-safe | Negligible | Ready | Implemented with selected bangs |
 | Daily bookmarks | Home | Static tracked links | Native `bookmarks` | None | No request | Public-safe | Negligible | Ready | Implemented; not a full Homepage mirror |
 | Critical service availability | Home/Hosting | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Ready | Implemented on Home and core Hosting after private access boundary; status only, no host metrics |
@@ -34,6 +34,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | UniFi counts/health | Network | UniFi aggregate health endpoint | Reviewed custom API | `GLANCE_UNIFI_API_URL` and dedicated read-only API key, not Homepage credentials | 5m | Private-operational | Medium | Implemented | Renders subsystem status plus aggregate user/AP/down counts; no client/device detail endpoints |
 | Tailscale device summary | Network | Tailscale API | Reviewed custom API | Least-privilege token | 5m | Private-personal | Low | Not recommended | Current API-token scope is too broad |
 | NetAlertX device status | Network | NetAlertX API | Reviewed custom API | Unknown | 5m | Private-personal | Low | Needs service | Presence/API not audited |
+| Named Home presence | Home | Home Assistant `person.*` states via future local adapter | Reviewed custom API | Glance-specific Home Assistant token and explicit entity allowlist | 1m-5m | Private-personal | Low | Scaffolded | Use display names from env allowlist only; no raw device trackers or network identities |
 | Plex now playing | Media | Plex | Reviewed custom API | Read token | 5m | Private-personal | Medium | Needs clarification | Plex-first; verify API and image proxying |
 | Tautulli activity/history | Media | Tautulli API | Reviewed custom API | API key | 5m/15m | Private-personal | Medium | Needs service | Avoid URL-embedded keys; [API](https://github.com/Tautulli/Tautulli/wiki/Tautulli-API-Reference) |
 | Sonarr/Radarr releases/queues | Media | Installed app APIs | Reviewed custom API | API keys | 15m | Private-personal | Low | Needs service | Verify installed versions and OpenAPI docs |

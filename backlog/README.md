@@ -152,7 +152,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | prep | 72 | [Implement the local Beszel summary adapter for Glance](task-72-glance-beszel-adapter.md) | code done; Pi success/failure validation still blocks task 54 | medium | medium |
 | prep | 73 | [Review and implement UniFi as the primary deep Network source](task-73-glance-unifi-network-source.md) | ✅ aggregate health widget done; live secret path set on Pi 2026-08-20 | small-med | medium |
 | next | 74 | [Add Healthchecks and backup status to Glance Hosting](task-74-glance-healthchecks-backup-hosting.md) | proposed; needs read-only Healthchecks key and backup status source review | medium | medium |
-| next | 75 | [Add private calendar and presence intelligence to Glance Home](task-75-glance-home-calendar-presence.md) | proposed; needs calendar/presence source and allowlist decisions | medium | medium |
+| next | 75 | [Add private calendar and presence intelligence to Glance Home](task-75-glance-home-calendar-presence.md) | scaffold selected: ICS calendar + Home Assistant `person.*`; adapter/widget pending live inputs | medium | medium |
 | next | 76 | [Add Plex/Tautulli media intelligence to Glance Media](task-76-glance-media-plex-tautulli.md) | proposed; needs Tautulli/Plex source and field-policy decisions | medium | medium |
 | next | 77 | [Add Steam and Twitch sources to Glance Games](task-77-glance-games-steam-twitch.md) | public discovery pass done; Steam/Twitch credentials and private account fields still pending | medium | medium |
 | next | 78 | [Add Spotify and YouTube learning recommendations to Glance](task-78-glance-spotify-youtube-recommendations.md) | proposed; needs OAuth scope and local-recommendation decisions | med-large | medium |

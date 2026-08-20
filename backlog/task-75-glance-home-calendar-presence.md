@@ -17,8 +17,8 @@ does not yet answer who is home, who may be away, or what is coming up today.
   month view, service heartbeat, releases, RSS, and bookmarks.
 - It has no private calendar event feed.
 - It has no Home Assistant or UniFi presence summary.
-- `config/glance.env.example` reserves `GLANCE_CALENDAR_ICS_URL`, but no widget
-  consumes it yet.
+- `config/glance.env.example` reserves ICS calendar, Home Assistant token, and
+  explicit presence allowlist variables, but no widget consumes them yet.
 
 ## Desired Behavior
 
@@ -29,13 +29,13 @@ SSIDs, or unapproved person/entity names.
 
 ## Implementation Plan
 
-1. Choose the calendar source: secret ICS URL first; CalDAV or Google API only if
-   ICS is insufficient.
-2. Decide whether presence comes from Home Assistant entities, UniFi aggregates,
-   or both. Prefer Home Assistant person entities if already curated by the
-   operator.
-3. Create an allowlist of display names/entities in a root-only env/config file;
-   do not infer names from device inventories.
+1. Done: choose the calendar source. Use a secret read-only ICS URL first; CalDAV
+   or Google API only if ICS is insufficient.
+2. Done: choose the presence source. Use Home Assistant `person.*` entities, not
+   UniFi client/device data.
+3. Done: scaffold allowlist variables in `config/glance.env.example`. The future
+   adapter must use display names/entities from `GLANCE_PRESENCE_PERSON_N_*` and
+   must not infer names from device inventories.
 4. Freeze allowed fields in `docs/glance-capability-matrix.md`.
 5. Implement one or two compact Home widgets with stale/unknown handling.
 6. Document how to rotate calendar URLs and tokens.
@@ -68,6 +68,8 @@ it was exposed in logs, screenshots, or git.
 - Operator-approved names/entities for presence.
 - Private Glance access boundary must remain enforced before rendering personal
   data.
+- Live root-only values for `GLANCE_CALENDAR_ICS_URL`,
+  `GLANCE_HOMEASSISTANT_TOKEN`, and each approved `person.*` entity.
 
 ## Risks
 
@@ -86,6 +88,10 @@ Do this before adding more niche pages because it increases daily usefulness.
 
 - Decision: named presence is allowed only from an operator-approved allowlist.
 - Decision: ICS is preferred over broad Google/CalDAV API access.
+- Decision: Home Assistant `person.*` is the approved presence source for the
+  first implementation.
+- Decision: scaffold only for now; do not implement the adapter/widget until live
+  ICS URL, token, and entity allowlist values are provided in root-only secrets.
 - Rejected: deriving people from UniFi client names because it can expose devices
   and topology.
 - Rejected: showing full event descriptions/locations by default.

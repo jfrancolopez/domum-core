@@ -48,6 +48,14 @@ full `GLANCE_UNIFI_API_URL`. The UniFi URL must be an aggregate health/counts
 endpoint only; do not configure client, device, topology, SSID, MAC, or IP detail
 endpoints for Glance.
 
+Future Home calendar/presence work uses the same `glance.env` file. Store the
+read-only calendar URL as `GLANCE_CALENDAR_ICS_URL`, the Glance-specific Home
+Assistant long-lived token as `GLANCE_HOMEASSISTANT_TOKEN`, and approved display
+names/entities as `GLANCE_PRESENCE_PERSON_N_NAME` /
+`GLANCE_PRESENCE_PERSON_N_ENTITY`. Use only `person.*` entities and explicit
+display names; never derive people from device trackers, MAC addresses, IPs, or
+UniFi client names.
+
 `glance-beszel.env` is the only supported Glance Beszel credential location. It
 is read by the optional internal adapter service; separate username/password
 files are intentionally not used.
