@@ -24,9 +24,12 @@ compose/monitoring/glance/glance.yaml
 compose/monitoring/glance/pages/
 ```
 
-`glance.yaml` owns the global server, branding, theme, and page order. Individual
-pages live under `pages/` and are included with Glance `v0.8.5` `$include`
-syntax. Validate the complete include tree with:
+`glance.yaml` owns the global server, branding, theme, assets path, and page
+order. Individual pages live under `pages/` and are included with Glance `v0.8.5`
+`$include` syntax. Shared visual assets live under
+`compose/monitoring/glance/assets/`; `domum.css` is loaded through Glance's
+`custom-css-file` hook and the Domum-Core SVG mark replaces the old `DC` text
+logo. Validate the complete include tree with:
 
 ```bash
 tests/glance-config-validate.sh
@@ -155,11 +158,11 @@ privacy, and failure behavior review.
   hosting components. It intentionally does not show host metrics, backup state,
   Healthchecks details, certificates, or container lists until those sources are
   separately approved.
-- Network: Speedtest Tracker's latest result through a Glance-owned read-only
-  token, aggregate AdGuard DNS stats with top domains hidden, plus compact
-  reachability checks for approved network-adjacent services. It intentionally
-  omits WAN IP, gateway topology, raw DNS activity, UniFi data, Tailscale device
-  names, and internal addresses.
+- Network: branded command-page treatment with Speedtest Tracker's latest result
+  rendered as human-readable WAN pulse metrics, aggregate AdGuard DNS stats with
+  top domains hidden, plus compact reachability checks for approved
+  network-adjacent services. It intentionally omits WAN IP, gateway topology,
+  raw DNS activity, UniFi data, Tailscale device names, and internal addresses.
 - Technology: public videos, software releases, self-hosting/security feeds, and
   watch/read bookmarks.
 

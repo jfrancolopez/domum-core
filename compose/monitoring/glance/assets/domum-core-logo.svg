@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" role="img" aria-label="Domum-Core">
+  <defs>
+    <linearGradient id="rack" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#78f6d1"/>
+      <stop offset="0.48" stop-color="#42bff5"/>
+      <stop offset="1" stop-color="#a879ff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="#121827" stroke="url(#rack)" stroke-width="2"/>
+  <g filter="url(#glow)">
+    <rect x="17" y="17" width="30" height="8" rx="3" fill="none" stroke="url(#rack)" stroke-width="2"/>
+    <rect x="17" y="28" width="30" height="8" rx="3" fill="none" stroke="url(#rack)" stroke-width="2"/>
+    <rect x="17" y="39" width="30" height="8" rx="3" fill="none" stroke="url(#rack)" stroke-width="2"/>
+    <circle cx="23" cy="21" r="1.8" fill="#78f6d1"/>
+    <circle cx="23" cy="32" r="1.8" fill="#42bff5"/>
+    <circle cx="23" cy="43" r="1.8" fill="#a879ff"/>
+  </g>
+  <text x="78" y="39" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="800" letter-spacing="0.2"><tspan fill="#edf7ff">Domum-</tspan><tspan fill="#78f6d1">Core</tspan></text>
+</svg>

@@ -1,0 +1,256 @@
+:root {
+  --domum-panel: rgba(18, 23, 38, 0.78);
+  --domum-panel-strong: rgba(13, 18, 32, 0.94);
+  --domum-line: rgba(120, 246, 209, 0.22);
+  --domum-cyan: #78f6d1;
+  --domum-blue: #42bff5;
+  --domum-violet: #a879ff;
+  --domum-text: #edf7ff;
+  --domum-muted: #91a0b8;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(120, 246, 209, 0.15), transparent 28rem),
+    radial-gradient(circle at 82% 5%, rgba(168, 121, 255, 0.16), transparent 30rem),
+    linear-gradient(135deg, #0c0f18 0%, #121521 48%, #171124 100%) !important;
+}
+
+.content-bounds {
+  max-width: 1860px;
+}
+
+.widget {
+  border: 1px solid rgba(120, 246, 209, 0.13);
+  background: linear-gradient(180deg, rgba(21, 28, 46, 0.82), rgba(12, 15, 24, 0.76));
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+}
+
+.widget-header h2 {
+  letter-spacing: 0.12em;
+}
+
+.nav-logo img,
+.navbar-logo img,
+.logo img {
+  width: 190px !important;
+  max-height: 48px !important;
+}
+
+.domum-page-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--domum-line);
+  border-radius: 28px;
+  background:
+    linear-gradient(120deg, rgba(120, 246, 209, 0.16), rgba(66, 191, 245, 0.08) 42%, rgba(168, 121, 255, 0.15)),
+    var(--domum-panel-strong);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.domum-page-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -15% -120% auto;
+  width: 520px;
+  height: 520px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(120, 246, 209, 0.22), transparent 65%);
+}
+
+.domum-kicker {
+  color: var(--domum-cyan);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.domum-page-hero h1 {
+  margin: 6px 0 4px;
+  color: var(--domum-text);
+  font-size: clamp(1.8rem, 4.4vw, 4.2rem);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.domum-page-hero p,
+.domum-side-panel p {
+  max-width: 58rem;
+  color: var(--domum-muted);
+  font-size: 0.95rem;
+}
+
+.domum-hero-badges,
+.domum-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  justify-content: flex-end;
+  min-width: 240px;
+}
+
+.domum-hero-badges span,
+.domum-status-list span,
+.domum-pill-link,
+.domum-wan-footer span {
+  border: 1px solid rgba(120, 246, 209, 0.22);
+  border-radius: 999px;
+  background: rgba(8, 13, 24, 0.5);
+  color: var(--domum-text);
+  padding: 7px 11px;
+  font-size: 0.78rem;
+}
+
+.domum-side-panel {
+  padding: 16px;
+  border: 1px solid rgba(168, 121, 255, 0.2);
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(168, 121, 255, 0.12), rgba(66, 191, 245, 0.06)), var(--domum-panel);
+}
+
+.domum-side-panel h2 {
+  margin: 8px 0;
+  color: var(--domum-text);
+  font-size: 1.35rem;
+}
+
+.domum-status-list {
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+
+.domum-wan-card {
+  position: relative;
+  overflow: hidden;
+  padding: 26px;
+  border: 1px solid rgba(120, 246, 209, 0.24);
+  border-radius: 30px;
+  background:
+    linear-gradient(135deg, rgba(120, 246, 209, 0.18), rgba(66, 191, 245, 0.08) 46%, rgba(168, 121, 255, 0.16)),
+    #101624;
+}
+
+.domum-wan-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.domum-wan-topline,
+.domum-wan-footer {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.domum-wan-title {
+  margin-top: 6px;
+  color: var(--domum-text);
+  font-size: clamp(2.2rem, 6vw, 5.1rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.065em;
+}
+
+.domum-wan-subtitle {
+  margin-top: 8px;
+  color: var(--domum-muted);
+}
+
+.domum-pill-link {
+  color: var(--domum-cyan) !important;
+  text-decoration: none;
+}
+
+.domum-metric-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.domum-metric-card {
+  min-height: 132px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(7, 11, 20, 0.58);
+}
+
+.domum-metric-card-primary {
+  background: linear-gradient(160deg, rgba(120, 246, 209, 0.2), rgba(7, 11, 20, 0.6));
+}
+
+.domum-metric-card-secondary {
+  background: linear-gradient(160deg, rgba(66, 191, 245, 0.18), rgba(7, 11, 20, 0.6));
+}
+
+.domum-metric-card span,
+.domum-metric-card small {
+  display: block;
+  color: var(--domum-muted);
+}
+
+.domum-metric-card strong {
+  display: block;
+  margin: 8px 0;
+  color: var(--domum-text);
+  font-size: clamp(1.7rem, 3.4vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.domum-wan-footer {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .domum-page-hero,
+  .domum-wan-topline {
+    flex-direction: column;
+  }
+
+  .domum-hero-badges {
+    justify-content: flex-start;
+  }
+
+  .domum-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .domum-page-hero,
+  .domum-wan-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .domum-page-hero h1 {
+    font-size: 2rem;
+  }
+
+  .domum-page-hero p {
+    font-size: 0.82rem;
+  }
+
+  .domum-metric-grid {
+    grid-template-columns: 1fr;
+  }
+}

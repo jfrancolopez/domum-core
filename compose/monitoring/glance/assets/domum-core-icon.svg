@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Domum-Core">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#78f6d1"/>
+      <stop offset="0.5" stop-color="#42bff5"/>
+      <stop offset="1" stop-color="#a879ff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="34" fill="#121827"/>
+  <rect x="18" y="18" width="92" height="92" rx="26" fill="none" stroke="url(#g)" stroke-width="4"/>
+  <g filter="url(#glow)" stroke="url(#g)" stroke-width="5" fill="none">
+    <rect x="36" y="35" width="56" height="15" rx="5"/>
+    <rect x="36" y="57" width="56" height="15" rx="5"/>
+    <rect x="36" y="79" width="56" height="15" rx="5"/>
+  </g>
+  <g fill="#edf7ff">
+    <circle cx="47" cy="42.5" r="3"/>
+    <circle cx="47" cy="64.5" r="3"/>
+    <circle cx="47" cy="86.5" r="3"/>
+  </g>
+</svg>

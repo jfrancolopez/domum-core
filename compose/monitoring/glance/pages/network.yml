@@ -1,9 +1,114 @@
 - name: Network
   slug: network
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero domum-network-hero">
+          <div>
+            <div class="domum-kicker">Private network operations</div>
+            <h1>Network Command</h1>
+            <p>WAN quality, DNS filtering, and trusted edge reachability in one operator view.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>LAN + Tailscale</span>
+            <span>Read-only sources</span>
+            <span>No client identities</span>
+          </div>
+        </section>
   columns:
+    - size: full
+      widgets:
+        - type: custom-api
+          title: WAN pulse
+          css-class: domum-wan-pulse
+          hide-header: true
+          cache: 5m
+          url: http://speedtest-tracker/api/v1/results/latest
+          headers:
+            Authorization: Bearer ${GLANCE_SPEEDTEST_TRACKER_TOKEN}
+          template: |
+            <div class="domum-wan-card">
+              <div class="domum-wan-topline">
+                <div>
+                  <div class="domum-kicker">Speedtest Tracker</div>
+                  <div class="domum-wan-title">WAN pulse</div>
+                  <div class="domum-wan-subtitle">Latest scheduled test from the private network</div>
+                </div>
+                <a class="domum-pill-link" href="https://speedtest.${DOMUM_DOMAIN}" target="_blank" rel="noreferrer">Open source</a>
+              </div>
+              <div class="domum-metric-grid">
+                <div class="domum-metric-card domum-metric-card-primary">
+                  <span>Download</span>
+                  <strong>{{ .JSON.String "data.download_bits_human" }}</strong>
+                  <small>toward the home</small>
+                </div>
+                <div class="domum-metric-card domum-metric-card-secondary">
+                  <span>Upload</span>
+                  <strong>{{ .JSON.String "data.upload_bits_human" }}</strong>
+                  <small>from the home</small>
+                </div>
+                <div class="domum-metric-card">
+                  <span>Ping</span>
+                  <strong>{{ .JSON.Float "data.ping" | printf "%.1f" }} ms</strong>
+                  <small>round trip</small>
+                </div>
+                <div class="domum-metric-card">
+                  <span>Jitter</span>
+                  <strong>{{ .JSON.Float "data.data.ping.jitter" | printf "%.1f" }} ms</strong>
+                  <small>stability</small>
+                </div>
+              </div>
+              <div class="domum-wan-footer">
+                <span>Packet loss: {{ .JSON.Int "data.data.packetLoss" }}%</span>
+                <span>Measured: {{ .JSON.String "data.created_at" }}</span>
+              </div>
+            </div>
+
+        - type: split-column
+          widgets:
+            - type: monitor
+              title: Edge reachability
+              style: compact
+              cache: 1m
+              sites:
+                - title: Speedtest Tracker
+                  url: https://speedtest.${DOMUM_DOMAIN}
+                  check-url: http://speedtest-tracker/api/healthcheck
+                  icon: si:speedtest
+                - title: AdGuard Home
+                  url: https://dns.${DOMUM_DOMAIN}
+                  check-url: https://dns.${DOMUM_DOMAIN}
+                  icon: si:adguard
+                - title: Traefik edge
+                  url: https://dash.${DOMUM_DOMAIN}
+                  check-url: http://glance:8080
+                  icon: si:traefikproxy
+
+            - type: dns-stats
+              title: DNS filtering
+              service: adguard
+              cache: 5m
+              url: https://dns.${DOMUM_DOMAIN}/
+              username: ${GLANCE_ADGUARD_USERNAME}
+              password: ${GLANCE_ADGUARD_PASSWORD}
+              hide-top-domains: true
+
     - size: small
       widgets:
+        - type: html
+          source: |
+            <div class="domum-side-panel">
+              <div class="domum-kicker">Source policy</div>
+              <h2>Safe by design</h2>
+              <p>Useful signals only: no client names, raw DNS history, SSIDs, MACs, or topology maps.</p>
+              <div class="domum-status-list">
+                <span>Speedtest: latest result</span>
+                <span>AdGuard: aggregate only</span>
+                <span>UniFi: read-only API pending</span>
+              </div>
+            </div>
+
         - type: bookmarks
           title: Investigate
           groups:
@@ -13,68 +118,3 @@
                   url: https://speedtest.${DOMUM_DOMAIN}
                 - title: AdGuard Home
                   url: https://dns.${DOMUM_DOMAIN}
-
-    - size: full
-      widgets:
-        - type: custom-api
-          title: Latest WAN test
-          cache: 5m
-          url: http://speedtest-tracker/api/v1/results/latest
-          headers:
-            Authorization: Bearer ${GLANCE_SPEEDTEST_TRACKER_TOKEN}
-          template: |
-            <div class="flex flex-column gap-10">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="size-h3">Speedtest Tracker</div>
-                  <div class="color-subdue size-sm">Latest scheduled result</div>
-                </div>
-                <a class="size-sm color-primary" href="https://speedtest.${DOMUM_DOMAIN}" target="_blank" rel="noreferrer">Open</a>
-              </div>
-              <div class="cards-grid gap-10" style="--columns-per-row: 4;">
-                <div class="card padding-block-10 padding-inline-12">
-                  <div class="size-sm color-subdue">Download</div>
-                  <div class="size-h3 color-highlight">{{ .JSON.Int "data.download" }} Mbps</div>
-                </div>
-                <div class="card padding-block-10 padding-inline-12">
-                  <div class="size-sm color-subdue">Upload</div>
-                  <div class="size-h3 color-highlight">{{ .JSON.Int "data.upload" }} Mbps</div>
-                </div>
-                <div class="card padding-block-10 padding-inline-12">
-                  <div class="size-sm color-subdue">Ping</div>
-                  <div class="size-h3">{{ .JSON.Float "data.ping" | printf "%.1f" }} ms</div>
-                </div>
-                <div class="card padding-block-10 padding-inline-12">
-                  <div class="size-sm color-subdue">Jitter</div>
-                  <div class="size-h3">{{ .JSON.Float "data.data.ping.jitter" | printf "%.1f" }} ms</div>
-                </div>
-              </div>
-              <div class="size-sm color-subdue">Packet loss: {{ .JSON.Int "data.data.packetLoss" }}%; measured {{ .JSON.String "data.created_at" }}</div>
-            </div>
-
-        - type: monitor
-          title: Network service reachability
-          style: compact
-          cache: 1m
-          sites:
-            - title: Speedtest Tracker
-              url: https://speedtest.${DOMUM_DOMAIN}
-              check-url: http://speedtest-tracker/api/healthcheck
-              icon: si:speedtest
-            - title: AdGuard Home
-              url: https://dns.${DOMUM_DOMAIN}
-              check-url: https://dns.${DOMUM_DOMAIN}
-              icon: si:adguard
-            - title: Traefik edge
-              url: https://dash.${DOMUM_DOMAIN}
-              check-url: http://glance:8080
-              icon: si:traefikproxy
-
-        - type: dns-stats
-          title: DNS filtering
-          service: adguard
-          cache: 5m
-          url: https://dns.${DOMUM_DOMAIN}/
-          username: ${GLANCE_ADGUARD_USERNAME}
-          password: ${GLANCE_ADGUARD_PASSWORD}
-          hide-top-domains: true
