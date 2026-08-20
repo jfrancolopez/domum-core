@@ -85,6 +85,18 @@
               </a>
             </div>
 
+        - type: markets
+          title: Markets pulse
+          markets:
+            - symbol: SPY
+              name: S&P 500
+            - symbol: QQQ
+              name: Nasdaq 100
+            - symbol: BTC-USD
+              name: Bitcoin
+            - symbol: ETH-USD
+              name: Ethereum
+
         - type: monitor
           title: Home heartbeat
           style: compact

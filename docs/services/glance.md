@@ -193,8 +193,8 @@ privacy, and failure behavior review.
 
 - Home: daily command-center hero, action tiles for Home/Network/Hosting, native
   search, month calendar, three clocks, Durham weather, compact service heartbeat,
-  Durham air quality, releases, public infrastructure/AI feeds, and selected
-  bookmarks.
+  Durham air quality, public markets pulse, releases, public infrastructure/AI
+  feeds, and selected bookmarks.
 - The Home AdGuard monitor checks the Traefik-routed `dns` URL instead of the
   direct container port, because AdGuard's internal web port can move after first
   setup while Traefik owns the stable browser route.

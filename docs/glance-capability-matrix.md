@@ -12,6 +12,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Air quality | Home | Open-Meteo Air Quality API | Custom API | None | 30m | Public-safe | Low | Implemented | Durham US AQI plus PM2.5, PM10, and ozone; no account or precise home location |
 | Day, month, year progress | Home | Local time | Local template | None | On page render | Public-safe | Negligible | Needs clarification | Verify safe v0.8.5 template path in task 51 |
 | Month calendar | Home | Local calendar | Native `calendar` | None | Upstream fixed | Public-safe | Negligible | Ready | Implemented; it has no event feed support |
+| Markets pulse | Home | Public market data | Native `markets` | None | Upstream/default | Public-safe | Low | Implemented | SPY, QQQ, BTC, and ETH; informational only, not investment advice |
 | Upcoming calendar events | Home | Provider ICS/CalDAV | Reviewed custom API | Read-only feed/account | 15m | Private-personal | Low | Needs credential | Blocked by task 49 and provider audit |
 | Search | Home | DuckDuckGo/approved provider | Native `search` | None | On demand | Public-safe | Negligible | Ready | Implemented with selected bangs |
 | Daily bookmarks | Home | Static tracked links | Native `bookmarks` | None | No request | Public-safe | Negligible | Ready | Implemented; not a full Homepage mirror |
