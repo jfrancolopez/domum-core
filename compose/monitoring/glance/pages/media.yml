@@ -1,30 +1,100 @@
 - name: Media
+  slug: media
   width: wide
+  head-widgets:
+    - type: html
+      source: |
+        <section class="domum-page-hero">
+          <div>
+            <div class="domum-kicker">Watchlist fuel</div>
+            <h1>Media Room</h1>
+            <p>Film, TV, streaming, books, and culture signals for deciding what is worth watching or reading next.</p>
+          </div>
+          <div class="domum-hero-badges">
+            <span>Movies</span>
+            <span>TV</span>
+            <span>Books</span>
+          </div>
+        </section>
   columns:
     - size: full
       widgets:
-        - type: monitor
-          title: Critical services
-          style: compact
-          cache: 1m
-          sites:
-            - title: Homepage
-              url: https://home.${DOMUM_DOMAIN}
-              check-url: http://homepage:3000
-              icon: si:homepage
-            - title: Home Assistant
-              url: https://ha.${DOMUM_DOMAIN}
-              check-url: http://homeassistant:8123
-              icon: si:homeassistant
-            - title: Beszel
-              url: https://beszel.${DOMUM_DOMAIN}
-              check-url: http://beszel:8090
-              icon: si:beszel
-            - title: Zigbee2MQTT
-              url: https://z2m.${DOMUM_DOMAIN}
-              check-url: http://zigbee2mqtt:8080
-              icon: si:zigbee
-            - title: Node-RED
-              url: https://nodered.${DOMUM_DOMAIN}
-              check-url: http://nodered:1880
-              icon: si:nodered
+        - type: videos
+          title: Watch next
+          style: horizontal-cards
+          cache: 1h
+          limit: 10
+          collapse-after: 5
+          include-shorts: false
+          channels:
+            - UCBa659QWEk1AI4Tg--mrJ2A # Tom Scott
+            - UC6107grRI4m0o2-emgoDnAA # SmarterEveryDay
+            - UCJkMlOu7faDgqh4PfzbpLdg # Kurzgesagt
+            - UCzQUP1qoWDoEbmsQxvdjxgQ # Bloomberg Originals
+
+        - type: split-column
+          widgets:
+            - type: rss
+              title: Film and TV
+              style: detailed-list
+              cache: 45m
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://www.rogerebert.com/feed
+                  title: Roger Ebert
+                - url: https://www.indiewire.com/feed/
+                  title: IndieWire
+                - url: https://www.vulture.com/rss/index.xml
+                  title: Vulture
+
+            - type: rss
+              title: Books and culture
+              style: detailed-list
+              cache: 1h
+              limit: 12
+              collapse-after: 6
+              feeds:
+                - url: https://lithub.com/feed/
+                  title: Literary Hub
+                - url: https://www.npr.org/rss/rss.php?id=1032
+                  title: NPR Books
+                - url: https://www.openculture.com/feed
+                  title: Open Culture
+
+    - size: small
+      widgets:
+        - type: html
+          source: |
+            <div class="domum-side-panel">
+              <div class="domum-kicker">Media policy</div>
+              <h2>Discovery only</h2>
+              <p>No watch history, personal libraries, or streaming-account data. Add local media integrations later only with explicit approval.</p>
+              <div class="domum-status-list">
+                <span>Public feeds</span>
+                <span>No accounts</span>
+                <span>Easy pruning</span>
+              </div>
+            </div>
+
+        - type: bookmarks
+          title: Open directly
+          groups:
+            - title: Streaming
+              links:
+                - title: Netflix
+                  url: https://www.netflix.com/
+                - title: Max
+                  url: https://www.max.com/
+                - title: Disney+
+                  url: https://www.disneyplus.com/
+                - title: Prime Video
+                  url: https://www.primevideo.com/
+            - title: Discovery
+              links:
+                - title: Letterboxd
+                  url: https://letterboxd.com/
+                - title: IMDb
+                  url: https://www.imdb.com/
+                - title: Goodreads
+                  url: https://www.goodreads.com/
