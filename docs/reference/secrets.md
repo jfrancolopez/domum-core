@@ -33,7 +33,10 @@ credential and source.
 `glance.env` is the shared optional env file for direct Glance widget tokens. The
 Network page uses `GLANCE_SPEEDTEST_TRACKER_TOKEN`, which must be a Speedtest
 Tracker token scoped to `results:read` only, and `GLANCE_ADGUARD_USERNAME` /
-`GLANCE_ADGUARD_PASSWORD` for aggregate AdGuard DNS stats.
+`GLANCE_ADGUARD_PASSWORD` for aggregate AdGuard DNS stats. It also reserves
+`GLANCE_UNIFI_URL`, `GLANCE_UNIFI_API_KEY`, `GLANCE_UNIFI_API_HEADER`, and
+`GLANCE_UNIFI_API_PATH` for task 73's dedicated read-only UniFi monitoring API
+key path.
 
 `glance-beszel.env` is the only supported Glance Beszel credential location. It
 is read by the optional internal adapter service; separate username/password

@@ -30,6 +30,11 @@ a direct `custom-api` path or authorizes a small local adapter in a later task.
   reachability checks.
 - Homepage documentation references UniFi widget variables, but those variables
   are Homepage-only and must not be reused by Glance.
+- `config/glance.env.example` reserves `GLANCE_UNIFI_URL`,
+  `GLANCE_UNIFI_API_KEY`, `GLANCE_UNIFI_API_HEADER`, and
+  `GLANCE_UNIFI_API_PATH` for a dedicated read-only direct API key path. The
+  operator reports a UCG Fiber gateway/controller and will populate the real URL
+  and API key only in `/etc/domum-core/secrets/glance.env`.
 - `docs/glance-capability-matrix.md` marks `UniFi counts/health` as
   `Needs service`.
 
@@ -42,13 +47,17 @@ future matrix update explicitly approves each field.
 
 ## Implementation Plan
 
-1. On the Pi, identify the live UniFi controller URL, version, and supported API
-   authentication mode without printing credentials or private topology.
-2. Create a dedicated Glance read-only UniFi API key. Do not reuse Homepage
+1. On the Pi, populate `GLANCE_UNIFI_URL` with the UCG Fiber
+   gateway/controller URL reachable from Glance, then identify the live
+   controller version and supported API authentication mode without printing
+   credentials or private topology.
+2. Create a dedicated Glance read-only UniFi API key and place it in
+   `GLANCE_UNIFI_API_KEY`. Do not reuse Homepage
    credentials or an admin account. The key must not have write/admin privileges.
 3. Verify whether Glance `custom-api` can call one documented endpoint directly
-   with a stable API key/header. If cookie/CSRF login chaining is required,
-   reject direct Glance config and propose a small local adapter as a new task.
+   using `GLANCE_UNIFI_API_HEADER` and `GLANCE_UNIFI_API_PATH`. If cookie/CSRF
+   login chaining is required, reject direct Glance config and propose a small
+   local adapter as a new task.
 4. Freeze the approved fields in `docs/glance-capability-matrix.md` before
    rendering anything.
 5. Implement one compact widget on `compose/monitoring/glance/pages/network.yml`

@@ -53,6 +53,22 @@ Glance-specific AdGuard web account if practical; otherwise this is an
 operator-approved AdGuard credential for aggregate stats only. The widget hides
 top domains and does not render raw DNS queries, clients, or domain lists.
 
+The same file also reserves UniFi variables for task 73:
+
+```text
+GLANCE_UNIFI_URL=
+GLANCE_UNIFI_API_KEY=
+GLANCE_UNIFI_API_HEADER=X-API-Key
+GLANCE_UNIFI_API_PATH=
+```
+
+Use `GLANCE_UNIFI_URL` for the UCG Fiber gateway/controller URL reachable from
+Glance, and `GLANCE_UNIFI_API_KEY` for a dedicated read-only key used only for
+monitoring. Leave `GLANCE_UNIFI_API_PATH` blank until the live controller's safe
+aggregate endpoint is verified. The future widget must not call endpoints that
+return clients, topology, SSIDs, MAC addresses, IP addresses, or raw device
+details.
+
 The optional Beszel integration env file is:
 
 ```text
