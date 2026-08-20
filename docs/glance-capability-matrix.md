@@ -9,7 +9,7 @@ Private rows remain blocked while `dash` is externally reachable.
 |---|---|---|---|---|---|---|---|---|---|
 | Durham weather and forecast | Home | Open-Meteo | Native `weather` | None | Upstream hourly | Public-safe | Low | Ready | Implemented in first Home pass; Fahrenheit; [docs](https://github.com/glanceapp/glance/blob/v0.8.5/docs/configuration.md#weather) |
 | Durham, Nuevo Laredo, San Jose clocks | Home | IANA zones | Native `clock` | None | No request | Public-safe | Negligible | Ready | Implemented in first Home pass |
-| Air quality | Home | Unselected provider | Custom API | None/unknown | 15m | Public-safe | Low | Needs clarification | Select documented source and fallback |
+| Air quality | Home | Open-Meteo Air Quality API | Custom API | None | 30m | Public-safe | Low | Implemented | Durham US AQI plus PM2.5, PM10, and ozone; no account or precise home location |
 | Day, month, year progress | Home | Local time | Local template | None | On page render | Public-safe | Negligible | Needs clarification | Verify safe v0.8.5 template path in task 51 |
 | Month calendar | Home | Local calendar | Native `calendar` | None | Upstream fixed | Public-safe | Negligible | Ready | Implemented; it has no event feed support |
 | Upcoming calendar events | Home | Provider ICS/CalDAV | Reviewed custom API | Read-only feed/account | 15m | Private-personal | Low | Needs credential | Blocked by task 49 and provider audit |

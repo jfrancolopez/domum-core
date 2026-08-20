@@ -235,6 +235,45 @@ body {
   background: linear-gradient(145deg, rgba(94, 201, 255, 0.14), rgba(9, 13, 20, 0.68));
 }
 
+.domum-aqi-card {
+  display: grid;
+  gap: 14px;
+}
+
+.domum-aqi-card strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--domum-text);
+  font-size: 3rem;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.domum-aqi-card span {
+  color: var(--domum-muted);
+  font-size: 0.8rem;
+}
+
+.domum-aqi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.domum-aqi-grid span {
+  padding: 9px;
+  border: 1px solid rgba(94, 201, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(9, 13, 20, 0.54);
+}
+
+.domum-aqi-grid b {
+  display: block;
+  margin-top: 2px;
+  color: var(--domum-text);
+  font-size: 0.95rem;
+}
+
 .domum-wan-card::before {
   content: "";
   position: absolute;

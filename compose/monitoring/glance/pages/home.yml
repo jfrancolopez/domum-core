@@ -48,6 +48,23 @@
           title: Durham weather
           location: Durham, North Carolina, United States
           units: imperial
+        - type: custom-api
+          title: Durham air quality
+          cache: 30m
+          url: https://air-quality-api.open-meteo.com/v1/air-quality?latitude=35.994&longitude=-78.899&current=us_aqi,pm2_5,pm10,ozone&timezone=America%2FNew_York
+          template: |
+            <div class="domum-aqi-card">
+              <div>
+                <div class="domum-kicker">US AQI</div>
+                <strong>{{ .JSON.Int "current.us_aqi" }}</strong>
+                <span>{{ .JSON.String "current.time" }}</span>
+              </div>
+              <div class="domum-aqi-grid">
+                <span>PM2.5 <b>{{ .JSON.Float "current.pm2_5" | printf "%.1f" }}</b></span>
+                <span>PM10 <b>{{ .JSON.Float "current.pm10" | printf "%.1f" }}</b></span>
+                <span>Ozone <b>{{ .JSON.Float "current.ozone" | printf "%.1f" }}</b></span>
+              </div>
+            </div>
 
     - size: full
       widgets:
