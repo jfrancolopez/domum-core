@@ -40,14 +40,14 @@ Private rows remain blocked while `dash` is externally reachable.
 | Sonarr/Radarr releases/queues | Media | Installed app APIs | Reviewed custom API | API keys | 15m | Private-personal | Low | Needs service | Verify installed versions and OpenAPI docs |
 | Immich statistics | Media | Immich API | Reviewed custom API | API key | 24h | Private-personal | Low | Needs service | Verify installation and key scope |
 | Public media discovery | Media | Public RSS and YouTube feeds | Native `rss`/`videos` | None | 45m-1h | Public-safe | Medium | Implemented | Film/TV, books/culture, and selected public video channels; no watch history or personal library data |
-| Steam specials/top sellers | Games | Steam Store endpoint | Reviewed custom API | None | 1h | Public-safe | Medium | Needs clarification | Upstream example exists; Valve API status uncertain |
+| Steam specials | Games | Steam Store `featuredcategories` endpoint | Local custom API template | None | 1h | Public-safe | Medium | Implemented | US-region public specials, bounded to the native collapsible list; no profile, wishlist, friends, or account data |
 | Steam profile/recently played | Games | Steam Web API | Reviewed custom API | API key and ID | 1h/15m | Private-personal | Medium | Needs credential | Verify public profile visibility and API fields |
 | Steam wishlist discounts | Games | Steam API/store | Reviewed custom API | API key and ID | 1h | Private-personal | Low | Needs credential | Verify documented endpoint and privacy |
 | Steam allowlisted friends | Games | Steam Web API | Reviewed custom API | API key, ID, allowlist | 15m | Private-personal | Medium | Needs credential | Never render full friends list |
 | Twitch games/creators | Games/Social | Twitch Helix | Reviewed custom API | Client credentials | 1h | Public-safe | Medium | Needs clarification | Only selected creators/categories |
 | Gaming/community RSS | Games | Public RSS and YouTube feeds | Native `rss`/`videos` | None | 30m-1h | Public-safe | Medium | Implemented | Public gaming headlines, PC/indie feeds, and design/analysis videos; no account data |
 | Curated news | News | Public RSS | Native `rss` | None | 20m-1h | Public-safe | Low | Implemented | World, markets, technology/AI, science, and security feeds |
-| Hacker News/Lobsters | Social | Public RSS bridges | Native `rss` | None | 20m | Public-safe | Low | Implemented | HN frontpage/best and Lobsters feeds |
+| Hacker News/Lobsters | Social | Hacker News and Lobsters public endpoints | Native `hacker-news`/`lobsters` | None | 20m | Public-safe | Low | Implemented | Uses Glance-native widgets with bounded top/hot lists; no RSS bridge or account data |
 | Reddit communities | Social | Reddit RSS | Native `rss` | None | 45m | Public-safe | Low | Implemented | Selected public community feeds; no Reddit account or OAuth |
 | YouTube creators | Social/Media/Technology | YouTube public feeds | Native `videos` | None | 1h | Public-safe | Medium | Implemented | Selected creators, shorts excluded, bounded card count |
 | GitHub repositories/releases | Social/News | GitHub | Native `repository`/`releases` | Optional fine-grained token | 6h | Public-safe | Low | Ready | Token only if rate limits require it |

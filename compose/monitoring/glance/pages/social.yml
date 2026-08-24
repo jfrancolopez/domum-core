@@ -36,19 +36,19 @@
 
         - type: split-column
           widgets:
-            - type: rss
-              title: Hacker News and builders
-              style: detailed-list
+            - type: hacker-news
+              title: Hacker News
               cache: 20m
               limit: 12
               collapse-after: 6
-              feeds:
-                - url: https://hnrss.org/frontpage
-                  title: Hacker News
-                - url: https://hnrss.org/best
-                  title: HN Best
-                - url: https://lobste.rs/rss
-                  title: Lobsters
+              sort-by: top
+
+            - type: lobsters
+              title: Lobsters
+              cache: 20m
+              limit: 12
+              collapse-after: 6
+              sort-by: hot
 
             - type: rss
               title: Home and homelab communities

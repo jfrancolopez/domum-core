@@ -32,6 +32,24 @@
             - UC9PBzalIcEQCsiIkq36PyUA # Digital Foundry
             - UCNvzD7Z-g64bPXxGzaQaa4g # gameranx
 
+        - type: custom-api
+          title: Steam Specials
+          cache: 1h
+          url: https://store.steampowered.com/api/featuredcategories?cc=us
+          template: |
+            <ul class="list list-gap-10 collapsible-container" data-collapse-after="6">
+            {{ range .JSON.Array "specials.items" }}
+              <li>
+                <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ .Int "id" }}/" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                <ul class="list-horizontal-text">
+                  <li>{{ div (.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
+                  {{ $discount := .Int "discount_percent" }}
+                  <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
+                </ul>
+              </li>
+            {{ end }}
+            </ul>
+
         - type: split-column
           widgets:
             - type: rss
