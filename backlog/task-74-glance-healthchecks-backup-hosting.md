@@ -85,6 +85,16 @@ Do this after the current Hosting/Beszel page remains stable for a few days.
 
 - Decision: Healthchecks and backup status belong on Hosting, not Home.
 - Decision: summary-only display is enough for daily use.
+- Decision: use Healthchecks Management API v3 `GET /api/v3/checks/` with a
+  project-scoped read-only API key. The allowed summary fields are check status,
+  last-ping time, next-ping time, and bounded operator-approved check names.
+- Source review: Healthchecks read-only responses omit UUIDs, ping URLs, update
+  URLs, pause/resume URLs, and integration identifiers. Read-only access is
+  therefore compatible with the dashboard privacy boundary; the key still must
+  remain in `/etc/domum-core/secrets/glance.env`.
+- Remaining gate: obtain the live read-only key and identify a safe existing
+  backup-freshness summary source. Do not add a widget that renders only one
+  source or shows a false healthy state when the other is unavailable.
 - Rejected: rendering raw Healthchecks check lists by default because names/UUIDs
   may reveal operational details.
 - Rejected: calling restic from Glance because it is too powerful and slow for a

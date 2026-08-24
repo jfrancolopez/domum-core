@@ -23,7 +23,7 @@ explicitly scoped to their approved fields.
 | Local server stats | Hosting | Glance Agent | Native `server-stats` | New agent | 5m | Private-operational | Medium | Not recommended | New agent conflicts with program boundary |
 | Docker containers | Hosting | Docker API | Native `docker-containers` | Docker socket | 5m | Private-operational | High | Not recommended | Raw socket is prohibited |
 | Backup age/status | Hosting | Existing backup state | Custom API | Unknown | 15m | Private-operational | Low | Needs clarification | No safe exposed source audited |
-| Healthchecks summary | Hosting | Healthchecks | Custom API | Read-only key | 5m | Private-operational | Low | Needs credential | Never expose ping UUIDs |
+| Healthchecks summary | Hosting | Healthchecks Management API v3 `/api/v3/checks/` | Custom API | Project-scoped read-only key | 5m | Private-operational | Low | Needs credential | Read-only responses omit UUIDs and ping URLs; render bounded status/timestamps only; [API](https://healthchecks.io/docs/api/) |
 | Project releases | Hosting/News | GitHub public API | Native `releases` | None/optional token | 6h | Public-safe | Low | Ready | Implemented on core Hosting; release is not update approval |
 | Certificate/domain expiry | Hosting | Unselected source | Custom API | Unknown | 24h | Private-operational | Low | Needs clarification | Do not expose domains beyond approved aliases |
 | Latest Speedtest result | Network | Speedtest Tracker API | Reviewed custom API | `GLANCE_SPEEDTEST_TRACKER_TOKEN` in `glance.env`; `results:read` only | 5m | Private-personal | Low | Implemented | Renders latest download, upload, ping, jitter, packet loss, and timestamp only; [API](https://docs.speedtest-tracker.dev/api/responses/results) |
