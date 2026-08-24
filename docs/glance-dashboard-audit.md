@@ -26,8 +26,8 @@ were inspected for this report.
 - An external fetch identified the running application as Glance `v0.8.5`.
 - The service definition has a Traefik router for `dash.${DOMUM_DOMAIN}`.
   The legacy hostname is no longer resolvable from the Pi.
-- The repository cannot prove an access restriction, authentication policy, or
-  external reachability from the current Traefik labels alone.
+- The repository labels alone cannot prove an access restriction or external
+  reachability; the Pi audit below records the observed trusted and denied paths.
 - Homepage embeds/links Glance and is approved. It is outside the dashboard
   program scope.
 - The service inventory records Glance, Beszel, Healthchecks, Speedtest Tracker,
@@ -89,24 +89,27 @@ were inspected for this report.
   functional from LAN and Tailscale and denied from an external client. DNS for
   the legacy hostname has already been removed, so task 49 must instead confirm
   that no legacy Traefik route remains before documenting retirement.
-- Planned page order is Home, Hosting, Network, Media, Games, News, then Social.
-  Home is the first page after the runtime and visual foundation.
+- Current page order is Home, Hosting, Network, Media, Games, News, Social, then
+  Technology. Home was the first page after the runtime and visual foundation.
 - The visual foundation must compare dense-NOC and media-rich subtle-cyberpunk
   prototypes before the operator selects one.
 - Dynacat is deferred until the Glance program is complete.
 - Use Fahrenheit. Durham is the primary weather location; Laredo, Nuevo Laredo,
   and San Jose initially show clocks only.
-- After private access is proven, show the next seven calendar events with
-  titles on the private dashboard.
-- After private access is proven, public WAN IP, approved internal aliases,
-  device names, media activity, and Steam friends may appear.
-- The first Games scope is Steam basics, wishlist discounts, and an explicit
-  configurable friends allowlist. Do not render the full friends list.
+- After task 75 receives its approved ICS, Home Assistant token, and person
+  allowlist, show a bounded calendar and named presence summary on the private
+  dashboard.
+- WAN identity, internal aliases, device names, media activity, and Steam friends
+  still require separate source and field-policy approval.
+- The current Games scope is public Steam Specials, gaming videos, and selected
+  gaming feeds. Do not render Steam profile, wishlist, play-history, friends, or
+  Twitch data until task 77's inputs are approved.
 - Plex is the primary Media integration. Verify any related media applications
   on the media host before selecting additional sources.
-- News begins with curated infrastructure, self-hosting, Home Assistant,
-  security, Linux, project-release, and AI sources. Reddit is desired after the
-  operator identifies communities. Social remains curated rather than an
+- News uses curated infrastructure, self-hosting, Home Assistant, security,
+  Linux, project-release, and AI sources. Social uses Hacker News, Lobsters,
+  selected public forums, videos, and direct links; Reddit remains deferred after
+  rate-limit/forbidden source tests. Social remains curated rather than an
   unbounded feed.
 - Use bounded thumbnails for Media, Games, and selected feeds. Text remains the
   default for dense operational and news content.
