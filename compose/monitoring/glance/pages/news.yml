@@ -45,8 +45,8 @@
               feeds:
                 - url: https://feeds.a.dj.com/rss/RSSMarketsMain.xml
                   title: WSJ Markets
-                - url: https://www.cnbc.com/id/100003114/device/rss/rss.html
-                  title: CNBC Economy
+                - url: https://www.npr.org/rss/rss.php?id=1017
+                  title: NPR Business
                 - url: https://www.marketwatch.com/rss/topstories
                   title: MarketWatch
 
