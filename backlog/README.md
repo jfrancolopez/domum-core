@@ -137,12 +137,12 @@ fresh AI-agent session and requires approval before the next page is started.
 | 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | ✅ done | medium | medium |
 | 3 | 55 | [Build core Network](task-55-glance-network-core.md) | ✅ code done; Pi data/failure validation and screenshots pending | medium | medium |
 | 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | ✅ AdGuard/UniFi code done; Pi credential/data/failure validation pending | medium | medium |
-| 4 | 57 | [Build core Media](task-57-glance-media-core.md) | blocked by 56 | medium | medium |
-| 4 | 58 | [Add one Media integration family](task-58-glance-media-expansion.md) | blocked by 57 | medium | medium |
-| 5 | 59 | [Build the Games page](task-59-glance-games-page.md) | blocked by 58 | medium | low-med |
-| 6 | 60 | [Build the News page](task-60-glance-news-page.md) | blocked by 59 | medium | low |
-| 6 | 61 | [Build the Social page](task-61-glance-social-page.md) | blocked by 60 | medium | low |
-| 6 | 62 | [Unify visual and responsive design](task-62-glance-visual-polish.md) | blocked by 61 | medium | low |
+| 4 | 57 | [Build core Media](task-57-glance-media-core.md) | public discovery pass exists; playback/library source inventory still required | medium | medium |
+| 4 | 58 | [Add one Media integration family](task-58-glance-media-expansion.md) | deferred until a real Ready media family is approved | medium | medium |
+| 5 | 59 | [Build the Games page](task-59-glance-games-page.md) | public discovery pass done; Steam account/Twitch sources remain opt-in | medium | low-med |
+| 6 | 60 | [Build the News page](task-60-glance-news-page.md) | curated public feed pass done; source and Pi acceptance remain | medium | low |
+| 6 | 61 | [Build the Social page](task-61-glance-social-page.md) | curated public feed pass done; source and Pi acceptance remain | medium | low |
+| 6 | 62 | [Unify visual and responsive design](task-62-glance-visual-polish.md) | CSS/page pass done; screenshots and performance measurements remain | medium | low |
 | 6 | 63 | [Audit sources and privacy](task-63-glance-security-review.md) | blocked by 62 | medium | low-med |
 | 6 | 64 | [Validate failures and performance](task-64-glance-performance.md) | blocked by 63 | medium | low-med |
 | 6 | 65 | [Prove recovery and finish runbooks](task-65-glance-recovery-docs.md) | blocked by 64 | medium | low |
