@@ -1,6 +1,7 @@
 - name: Games
   slug: games
   width: wide
+  show-mobile-header: true
   head-widgets:
     - type: html
       source: |

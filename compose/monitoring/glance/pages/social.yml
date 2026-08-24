@@ -1,6 +1,7 @@
 - name: Social
   slug: social
   width: wide
+  show-mobile-header: true
   head-widgets:
     - type: html
       source: |

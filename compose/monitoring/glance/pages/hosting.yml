@@ -1,6 +1,7 @@
 - name: Hosting
   slug: hosting
   width: wide
+  show-mobile-header: true
   head-widgets:
     - type: html
       source: |

@@ -1,6 +1,7 @@
 - name: Media
   slug: media
   width: wide
+  show-mobile-header: true
   head-widgets:
     - type: html
       source: |
