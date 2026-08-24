@@ -95,6 +95,14 @@
             - glanceapp/glance
             - henrygd/beszel
 
+        - type: repository
+          title: Domum Core activity
+          cache: 6h
+          repository: jfrancolopez/domum-core
+          pull-requests-limit: -1
+          issues-limit: -1
+          commits-limit: 4
+
         - type: bookmarks
           title: Open directly
           groups:
