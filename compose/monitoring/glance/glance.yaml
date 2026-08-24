@@ -35,8 +35,8 @@ pages:
   - $include: pages/home.yml
   - $include: pages/hosting.yml
   - $include: pages/network.yml
-  - $include: pages/technology.yml
   - $include: pages/media.yml
   - $include: pages/games.yml
-  - $include: pages/social.yml
   - $include: pages/news.yml
+  - $include: pages/social.yml
+  - $include: pages/technology.yml
