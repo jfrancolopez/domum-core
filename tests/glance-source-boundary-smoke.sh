@@ -6,6 +6,7 @@ PAGES_DIR="$ROOT_DIR/compose/monitoring/glance/pages"
 GLANCE_COMPOSE="$ROOT_DIR/compose/monitoring/glance.yml"
 ADAPTER_COMPOSE="$ROOT_DIR/compose/monitoring/glance-beszel-adapter.yml"
 BESZEL_COMPOSE="$ROOT_DIR/compose/monitoring/beszel.yml"
+NETWORK_PAGE="$PAGES_DIR/network.yml"
 
 failures=()
 
@@ -45,6 +46,8 @@ require_absent '- domum-proxy' "$ADAPTER_COMPOSE" \
   'Beszel adapter still joins the broad domum-proxy network'
 require_fixed 'glance-beszel-backend' "$BESZEL_COMPOSE" \
   'Beszel is not attached to the private adapter network'
+require_absent 'allow-insecure: true' "$NETWORK_PAGE" \
+  'UniFi custom API has re-enabled insecure TLS'
 
 reserved_vars=(
   GLANCE_HEALTHCHECKS_URL GLANCE_HEALTHCHECKS_API_KEY
