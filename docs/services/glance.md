@@ -86,10 +86,13 @@ selected site's aggregate health endpoint, also including `https://`. It is
 usually `GLANCE_UNIFI_URL` plus a path shaped like
 `/proxy/network/api/s/<site-internal-reference>/stat/health`; keep the concrete
 site reference only in the root-only env file. The Network page renders only
-subsystem status and aggregate counts from that response. The widget allows the
-controller's local TLS certificate because the UCG certificate is not issued for
-the LAN address Glance uses. It must not call endpoints that return clients,
-topology, SSIDs, MAC addresses, IP addresses, or raw device details.
+subsystem status and aggregate counts from that response. The widget requires a
+certificate trusted by Glance; it does not disable TLS verification or fall back
+to cleartext HTTP. If the controller certificate is issued for a different
+hostname, use that trusted hostname in `GLANCE_UNIFI_API_URL` or provide an
+approved CA trust mechanism before enabling the widget. It must not call
+endpoints that return clients, topology, SSIDs, MAC addresses, IP addresses, or
+raw device details.
 
 The same example file also reserves variables for popular but not-yet-consumed
 sources:

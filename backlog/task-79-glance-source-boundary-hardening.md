@@ -14,9 +14,9 @@ AdGuard, UniFi, and Beszel. The task-63 audit found four residual design risks:
 - Glance previously received the complete `/etc/domum-core/secrets/glance.env`,
   including reserved future calendar, Home Assistant, media, Steam, Twitch,
   Spotify, and YouTube credentials if an operator filled them in.
-- The UniFi custom API request uses `allow-insecure: true` because the controller
-  certificate is not valid for the LAN address. The request carries a monitoring
-  API key.
+- The UniFi custom API request previously used `allow-insecure: true` because the
+  controller certificate is not valid for the LAN address. The request carries a
+  monitoring API key.
 - The Beszel adapter is unauthenticated and previously shared the broad
   `domum-proxy` network; it authenticates to Beszel over plain HTTP.
 - RSS image URLs were supplied by external feeds without a repository-controlled
@@ -62,10 +62,11 @@ made narrower.
    variables remain available. Keep future adapters on separate approved secret
    plumbing. Prefer existing Docker secrets or file-backed `readFileFromEnv`
    support over a new dependency.
-2. Verify the live UniFi certificate and endpoint options on the Pi without
-   recording private values. Implement a trusted CA path or approved hostname
-   route, then remove `allow-insecure: true` and test invalid, expired, and valid
-   certificate behavior.
+2. Fail closed in the repository: `allow-insecure` is removed, so Glance will not
+   send the UniFi key until TLS verification succeeds. Verify the live UniFi
+   certificate and endpoint options on the Pi without recording private values.
+   If needed, implement a trusted CA path or approved hostname route and test
+   invalid, expired, and valid certificate behavior.
 3. Done in the repository: Glance, the adapter, and Beszel share the internal
    `glance-beszel-backend` network, while the adapter no longer joins
    `domum-proxy`. Expose `/summary` only to Glance and use HTTPS upstream if the

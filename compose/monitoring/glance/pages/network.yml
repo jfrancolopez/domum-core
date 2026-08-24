@@ -77,7 +77,6 @@
               title: UniFi health
               cache: 5m
               url: ${GLANCE_UNIFI_API_URL}
-              allow-insecure: true
               headers:
                 ${GLANCE_UNIFI_API_HEADER}: ${GLANCE_UNIFI_API_KEY}
               template: |
