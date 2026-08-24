@@ -94,3 +94,22 @@ Medium focused source/privacy review; low-medium privacy risk.
 ## Suggested Order
 
 Phase 6 after visual polish and before task 64 performance/failure validation.
+
+## Progress Record
+
+- Static review completed against the current v0.8.5 page tree and capability
+  matrix without reading live secrets or data directories.
+- Commit `3c0a8e7` added explicit unavailable states for custom API widgets,
+  corrected Speedtest response paths and JSON headers, bounded Steam and UniFi
+  output, added bounded Beszel capacity fields, removed a stale WSJ feed, removed
+  unused Glance AdGuard environment plumbing, and corrected source/documentation
+  assignments.
+- The review found no tracked secret values, unapproved rendered identities,
+  unsupported widget types, arbitrary JavaScript, remote YAML, shell execution,
+  or raw Docker socket use.
+- Residual source-boundary findings are recorded in task 79: future-secret
+  environment isolation, UniFi TLS verification, Beszel adapter network/upstream
+  transport, AdGuard least-privilege verification, and RSS image-origin policy.
+- Task 64 remains blocked until the privacy review and operator approval are
+  complete. Pi-only browser, failure, rendered-HTML, and performance evidence is
+  still required.

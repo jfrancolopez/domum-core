@@ -143,7 +143,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | 6 | 60 | [Build the News page](task-60-glance-news-page.md) | curated public feed pass done; source and Pi acceptance remain | medium | low |
 | 6 | 61 | [Build the Social page](task-61-glance-social-page.md) | curated public feed pass done; source and Pi acceptance remain | medium | low |
 | 6 | 62 | [Unify visual and responsive design](task-62-glance-visual-polish.md) | CSS/page pass done; screenshots and performance measurements remain | medium | low |
-| 6 | 63 | [Audit sources and privacy](task-63-glance-security-review.md) | ready; source/privacy checklist and operator approval remain | medium | low-med |
+| 6 | 63 | [Audit sources and privacy](task-63-glance-security-review.md) | in progress; template/source corrections pushed; task 79 and Pi evidence remain | medium | low-med |
 | 6 | 64 | [Validate failures and performance](task-64-glance-performance.md) | blocked by 63 | medium | low-med |
 | 6 | 65 | [Prove recovery and finish runbooks](task-65-glance-recovery-docs.md) | blocked by 64 | medium | low |
 | optional | 66 | [Evaluate expansion and Dynacat](task-66-glance-future-evaluation.md) | blocked by 65 | medium | none |
