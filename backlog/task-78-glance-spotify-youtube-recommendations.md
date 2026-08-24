@@ -22,8 +22,9 @@ explainable recommendations, and no automatic account actions.
 
 ## Current Behavior
 
-- Social uses only public creator videos, public HN/Lobsters feeds, and public
-  Reddit RSS.
+- Social uses only public creator videos, public HN/Lobsters feeds, and selected
+  public forum RSS feeds. Reddit RSS is not rendered because its public endpoint
+  returned rate-limit/forbidden responses during source smoke testing.
 - Media uses only public discovery feeds and links.
 - `config/glance.env.example` reserves Spotify and YouTube variables, but no
   widget consumes them yet.
