@@ -12,6 +12,42 @@ services:
     environment:
       - TZ=America/New_York
       - DOMUM_DOMAIN=${DOMUM_DOMAIN}
+      # Reserved future integrations stay out of the Glance process even when
+      # an operator has populated the shared env file for a separate adapter.
+      - GLANCE_HEALTHCHECKS_URL=
+      - GLANCE_HEALTHCHECKS_API_KEY=
+      - GLANCE_CALENDAR_ICS_URL=
+      - GLANCE_CALENDAR_LOOKAHEAD_DAYS=
+      - GLANCE_CALENDAR_MAX_EVENTS=
+      - GLANCE_HOMEASSISTANT_URL=
+      - GLANCE_HOMEASSISTANT_TOKEN=
+      - GLANCE_PRESENCE_PERSON_1_NAME=
+      - GLANCE_PRESENCE_PERSON_1_ENTITY=
+      - GLANCE_PRESENCE_PERSON_2_NAME=
+      - GLANCE_PRESENCE_PERSON_2_ENTITY=
+      - GLANCE_PRESENCE_PERSON_3_NAME=
+      - GLANCE_PRESENCE_PERSON_3_ENTITY=
+      - GLANCE_PRESENCE_PERSON_4_NAME=
+      - GLANCE_PRESENCE_PERSON_4_ENTITY=
+      - GLANCE_TAUTULLI_URL=
+      - GLANCE_TAUTULLI_API_KEY=
+      - GLANCE_PLEX_URL=
+      - GLANCE_PLEX_TOKEN=
+      - GLANCE_STEAM_API_KEY=
+      - GLANCE_STEAM_ID64=
+      - GLANCE_STEAM_COUNTRY=
+      - GLANCE_TWITCH_CLIENT_ID=
+      - GLANCE_TWITCH_CLIENT_SECRET=
+      - GLANCE_SPOTIFY_CLIENT_ID=
+      - GLANCE_SPOTIFY_CLIENT_SECRET=
+      - GLANCE_SPOTIFY_REFRESH_TOKEN=
+      - GLANCE_YOUTUBE_CLIENT_ID=
+      - GLANCE_YOUTUBE_CLIENT_SECRET=
+      - GLANCE_YOUTUBE_REFRESH_TOKEN=
+      - GLANCE_YOUTUBE_API_KEY=
+      - GLANCE_GITHUB_TOKEN=
+      - GLANCE_UNIFI_URL=
+      - GLANCE_UNIFI_API_PATH=
     env_file:
       - path: /etc/domum-core/secrets/glance.env
         required: false

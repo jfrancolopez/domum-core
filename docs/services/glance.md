@@ -45,10 +45,11 @@ The optional direct-widget env file is:
 /etc/domum-core/secrets/glance.env
 ```
 
-Use `config/glance.env.example` as the format. It intentionally includes both
-currently consumed variables and reserved variables for approved future widgets.
-Unused variables are harmless, but they are not permission to implement a widget
-without capability-matrix and backlog approval.
+Use `config/glance.env.example` as the format. It documents currently consumed
+variables and reserved names for approved future widgets. Compose explicitly
+clears reserved future variables before starting Glance, so a future adapter must
+have its own approved secret plumbing; these names are not permission to
+implement a widget without capability-matrix and backlog approval.
 
 Create it on the Pi with root-only permissions:
 

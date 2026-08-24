@@ -11,9 +11,9 @@ credentials, or adding broad host access to the dashboard.
 The current Glance pages use reviewed, bounded summaries for Speedtest Tracker,
 AdGuard, UniFi, and Beszel. The task-63 audit found four residual design risks:
 
-- Glance receives the complete `/etc/domum-core/secrets/glance.env`, including
-  reserved future calendar, Home Assistant, media, Steam, Twitch, Spotify, and
-  YouTube credentials if an operator fills them in.
+- Glance previously received the complete `/etc/domum-core/secrets/glance.env`,
+  including reserved future calendar, Home Assistant, media, Steam, Twitch,
+  Spotify, and YouTube credentials if an operator filled them in.
 - The UniFi custom API request uses `allow-insecure: true` because the controller
   certificate is not valid for the LAN address. The request carries a monitoring
   API key.
@@ -28,17 +28,22 @@ made narrower.
 
 ## Current Behavior
 
-- `compose/monitoring/glance.yml` loads all of `glance.env` into Glance.
+- `compose/monitoring/glance.yml` loads `glance.env` as an env source and now
+  clears all reserved future variables before Glance starts.
 - The UniFi widget sends `${GLANCE_UNIFI_API_KEY}` with `allow-insecure: true`.
-- `glance-beszel-adapter` listens on `domum-proxy` without endpoint
-  authentication and reaches `beszel:8090` over HTTP.
-- Native RSS widgets can render feed-provided thumbnails from their source URLs.
+- `glance-beszel-adapter` now listens only on the internal
+  `glance-beszel-backend` network without endpoint authentication and reaches
+  `beszel:8090` over HTTP.
+- Current RSS widgets use text-only `vertical-list`; rich feed thumbnails are not
+  rendered.
 - AdGuard aggregate stats use a username/password web account because a narrower
   account role has not been verified for the installed version.
 
 ## Desired Behavior
 
-- Each container receives only the secrets required for its active source.
+- Each container receives only the secrets required for its active source. Future
+  values in the shared example file must be explicitly cleared or isolated before
+  they reach Glance.
 - UniFi API credentials are sent only over a connection whose certificate is
   verified, or through a separately approved local trust mechanism. Do not solve
   this by silently switching the API key to cleartext HTTP.
@@ -52,10 +57,11 @@ made narrower.
 
 ## Implementation Plan
 
-1. Inventory the exact variables consumed by current Glance widgets versus
-   reserved future variables. Select the smallest secret-plumbing design that
-   does not expose future credentials to Glance. Prefer existing Docker secrets or
-   file-backed `readFileFromEnv` support over a new dependency.
+1. Done in the repository: Compose explicitly clears every reserved future
+   variable before starting Glance, while current Speedtest, AdGuard, and UniFi
+   variables remain available. Keep future adapters on separate approved secret
+   plumbing. Prefer existing Docker secrets or file-backed `readFileFromEnv`
+   support over a new dependency.
 2. Verify the live UniFi certificate and endpoint options on the Pi without
    recording private values. Implement a trusted CA path or approved hostname
    route, then remove `allow-insecure: true` and test invalid, expired, and valid
@@ -147,6 +153,8 @@ image policy are already implemented.
 - Progress: the repository now isolates Glance, the adapter, and Beszel on the
   internal `glance-beszel-backend` network; the adapter no longer joins the broad
   `domum-proxy` network. Pi deployment and caller-boundary evidence remain.
+- Progress: Compose now clears reserved future integration variables after
+  loading `glance.env`, preventing those values from entering the Glance process.
 - Decision: do not expose the host backup heartbeat to Glance; use a reviewed
   summary source or separately approved exporter instead.
 - Decision: all current RSS widgets use text-only `vertical-list` because Glance
