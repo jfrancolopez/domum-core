@@ -14,16 +14,18 @@ templates. It does not support inventing widget types from YAML files. See the
 
 ## Access and Privacy
 
-`dash` is currently externally reachable. Until task 49 proves LAN and
-Tailscale-only access, only public-safe widgets may be rendered. Do not add
-calendar events, WAN IP, internal aliases, device names, media activity, Steam
-identity/friends, or private feed URLs.
+`dash` is intended to be LAN and Tailscale-only. The repository now implements
+the Glance-only Traefik allowlist for the approved LAN CIDR and Tailscale range;
+the audit records successful trusted-client requests and denied external and
+untrusted-container requests. Final browser and performance acceptance remains
+open. Do not add new private-personal integrations until that acceptance is
+closed.
 
-Task 49 has attached the approved Traefik allowlist and passed LAN, Tailscale,
-external mobile-data denial, and untrusted-container checks. Docker
+Task 49 attached the approved Traefik allowlist and its Pi audit passed LAN,
+Tailscale, external mobile-data denial, and untrusted-container checks. Docker
 `userland-proxy=false` is required so Traefik sees real Tailscale client sources.
-Before rendering private widgets, the first implementation task must still
-perform a browser check for the direct dashboard and Homepage embed.
+The remaining task-47 acceptance work is browser coverage, responsive evidence,
+request/byte measurement, and resource measurement for the current pages.
 
 | Level | Meaning | Examples |
 |---|---|---|
@@ -32,15 +34,16 @@ perform a browser check for the direct dashboard and Homepage embed.
 | Private-personal | Reveals household behavior or identity | Calendar titles, WAN IP, media activity, Steam friends |
 | Secret | Authorizes a source or embeds a private URL | API token, password, private ICS URL |
 
-Secrets stay in `/etc/domum-core/secrets`. Task 50 must provide narrowly scoped,
+Secrets stay in `/etc/domum-core/secrets`. Task 50 provides narrowly scoped,
 optional Glance secret plumbing. A value, token-bearing URL, or account ID never
 belongs in Git, page YAML, screenshots, logs, or this documentation.
 
 ### Access Decision Gate
 
-Task 49 must select and present one exact implementation before any proxy,
-authentication, DNS, firewall, or Tailscale change. It must test the trusted
-proxy chain and real client source addresses without committing address values.
+Task 49 selected and implemented one exact Glance-only allowlist. The recorded
+Pi checks cover the trusted proxy chain and real client source addresses without
+committing address values; final browser/performance evidence remains with the
+program acceptance tasks.
 
 | Option | Decision | Reason |
 |---|---|---|
@@ -59,13 +62,14 @@ evidence of an acceptable access boundary.
 
 | Page | Purpose | First approved scope |
 |---|---|---|
-| Home | Time, weather, search, compact daily context | Native clock/weather/search/bookmarks/RSS; calendar events wait for task 49 |
-| Hosting | Accurate host and service summaries | Native monitor and releases; Beszel only after its read API is verified |
-| Network | Internet quality and selected network context | Wait for task 49; Speedtest Tracker is the first candidate |
-| Media | Playback and discovery | Plex-first, after media-host inventory and read API review |
-| Games | Personal Steam information and discovery | Steam specials, profile, recently played, wishlist, allowlisted friends only after review |
-| News | Curated infrastructure, security, self-hosting, Linux, and AI briefing | Native RSS, Hacker News, Lobsters, releases |
-| Social | Small public community/creator set | Reddit, YouTube, GitHub, and public RSS only after source selection |
+| Home | Time, weather, search, compact daily context | Native clock/weather/search/bookmarks/RSS; private calendar and presence wait for task 75 |
+| Hosting | Accurate host and service summaries | Native monitor/releases plus the reviewed Beszel summary adapter; backup and Healthchecks detail wait for task 74 |
+| Network | Internet quality and selected network context | Speedtest Tracker, aggregate AdGuard stats, aggregate UniFi health, and fixed reachability checks; identity/topology remain excluded |
+| Media | Playback and discovery | Public discovery now; Plex/Tautulli waits for task 76 |
+| Games | Public gaming discovery and optional personal Steam information | Steam Specials and public feeds now; profile, recently played, wishlist, friends, and Twitch wait for task 77 |
+| News | Curated infrastructure, security, self-hosting, Linux, and AI briefing | Native RSS, releases, and selected public community signals |
+| Social | Small public community/creator set | Hacker News, Lobsters, selected forums, YouTube, GitHub, and direct links; Reddit remains unresolved |
+| Technology | Public engineering and stack briefing | Native releases, RSS, videos, and bounded Domum Core activity |
 
 Pages remain separate even when related: Hosting owns systems, Network owns
 connectivity, News owns briefing, and Social owns deliberately selected
@@ -107,14 +111,14 @@ or downloaded scripts at runtime.
 |---|---|---|
 | Open-Meteo via native weather | Durham weather in Fahrenheit | None |
 | IANA time zones via native clock | Durham, Nuevo Laredo, San Jose | None |
-| Google calendar/ICS or CalDAV | Seven upcoming titled events | Provider and read-only mechanism unresolved; private-personal |
-| Beszel | Host summary only | API/auth/version must be audited |
-| Speedtest Tracker | Latest result and bounded history | Read-only API token, if its documented API is enabled |
-| AdGuard Home | Aggregate DNS stats | Existing admin credentials must not be reused without explicit approval |
+| Google calendar/ICS or CalDAV | Seven upcoming titled events | Read-only ICS selected; private-personal |
+| Beszel | Host summary only | Reviewed local adapter with dedicated read-only credential |
+| Speedtest Tracker | Latest result and bounded history | Read-only `results:read` API token |
+| AdGuard Home | Aggregate DNS stats | Operator-approved credential for aggregate stats only; top domains and raw queries excluded |
 | Plex/Tautulli | Playback and history | Plex-first; read API/token model must be audited |
 | Sonarr/Radarr/Immich | Releases, queues, library statistics | Installed service and version-matched API required |
-| Steam | Store specials and personal library/profile | Store endpoint needs review; personal data needs API key and private access |
-| GitHub/Reddit/YouTube/RSS | Public news and social content | Token optional only when documented rate limits require one |
+| Steam | Store specials and personal library/profile | Public Specials endpoint implemented; personal data needs API key and private access |
+| GitHub/Reddit/YouTube/RSS | Public news and social content | Selected public sources implemented; Reddit remains deferred after rate-limit/forbidden responses |
 
 Potential future secret names/scopes are inventory only, not creation requests:
 calendar read feed, Steam read key, Plex read token, Tautulli key, Sonarr/Radarr
@@ -129,10 +133,11 @@ approved because their least-privilege model is not yet verified.
 | Speedtest Tracker token | `results:read` only | Operator | Create only for approved Network rows |
 | Reddit/GitHub/Twitch credentials | Minimal public/read-only scope | Operator | Optional; use only for rate-limit or selected-content need |
 
-No existing AdGuard, Tailscale, UniFi, or source-service credential may be
-reused until the operator approves the exact least-privilege approach. For UniFi,
-the approved direction is a dedicated direct API key with read-only monitoring
-scope, pending live endpoint/schema verification before any widget renders it.
+AdGuard aggregate statistics and a dedicated UniFi direct API key have operator
+approval with bounded fields. The UniFi aggregate-health widget is implemented;
+live credential/data/failure validation remains a Pi-only acceptance item. No
+Tailscale device token or source-service credential is authorized beyond the
+specific matrix rows.
 
 ## Cache and Resource Budget
 
@@ -162,17 +167,17 @@ Before a page advances, measure and record:
   Homepage-embedded views where applicable.
 - Secret scan, rendered HTML/log review, image failure behavior, and link check.
 
-Task 50 must add version-matched static/startup validation. Until then, a running
-container is evidence only that its active configuration parsed; it is not proof
-that future include trees or remote widgets work.
+Task 50 added version-matched static/startup validation. A running container is
+still evidence only that its active configuration parsed; it is not proof that
+future include trees or remote widgets work.
 
 ## Failure and Recovery
 
 - Invalid configuration must retain the last known-good config where the running
-  release supports reload; task 50 adds a version-matched validation check before
-  relying on it.
-- The currently restored two-page dashboard is the rollback point until task 51
-  creates the modular foundation.
+  release supports reload; the version-matched validation check runs before
+  relying on a configuration change.
+- The current validated modular dashboard is the rollback point. Revert one
+  approved phase at a time rather than restoring the historical two-page draft.
 - Git recreates all config, templates, assets, and documentation. Only secret
   files require recovery through the existing secret/recovery-pack mechanism.
 - Revert one approved phase at a time, recreate only Glance where possible, and
