@@ -31,9 +31,11 @@ paths, restic repository names, hostnames beyond approved labels, or secrets.
 
 1. Review Healthchecks API support for a read-only project key and identify a
    safe summary endpoint.
-2. Decide whether backup freshness can come from existing generated state/report
-   files or needs a tiny local read-only adapter. Do not parse restic repositories
-   directly from Glance.
+2. The repository review found that `domum-core` writes the last-success
+   heartbeat to `/var/lib/domum-core/backups/last-success`. Treat this as
+   host-only state: do not mount it into Glance or parse restic repositories from
+   the dashboard. Use Healthchecks backup status or a separately approved,
+   narrowly scoped read-only exporter if a local freshness value is required.
 3. Freeze allowed fields in `docs/glance-capability-matrix.md`.
 4. Implement one Hosting widget with conservative cache and safe failures.
 5. Document credential setup in `docs/services/glance.md` and
@@ -85,6 +87,9 @@ Do this after the current Hosting/Beszel page remains stable for a few days.
 
 - Decision: Healthchecks and backup status belong on Hosting, not Home.
 - Decision: summary-only display is enough for daily use.
+- Decision: the existing host heartbeat is not a Glance data source by itself;
+  exposing it requires a separately approved adapter/exporter or a Healthchecks
+  check that already summarizes backup success.
 - Decision: use Healthchecks Management API v3 `GET /api/v3/checks/` with a
   project-scoped read-only API key. The allowed summary fields are check status,
   last-ping time, next-ping time, and bounded operator-approved check names.
