@@ -95,7 +95,7 @@ sources:
 
 | Variables | Intended source | How to get them | Status |
 |---|---|---|---|
-| `GLANCE_HEALTHCHECKS_URL`, `GLANCE_HEALTHCHECKS_API_KEY` | Healthchecks project summary | Healthchecks Project Settings API key; never ping UUIDs | future Hosting task |
+| `GLANCE_HEALTHCHECKS_URL`, `GLANCE_HEALTHCHECKS_API_KEY` | Healthchecks v3 `/api/v3/checks/` project summary | Project Settings read-only API key; never request ping UUIDs or bodies | blocked until key and backup source are approved |
 | `GLANCE_CALENDAR_ICS_URL`, `GLANCE_CALENDAR_LOOKAHEAD_DAYS`, `GLANCE_CALENDAR_MAX_EVENTS` | Private/shared calendar events | read-only secret iCal/ICS URL from the calendar provider | future Home adapter task |
 | `GLANCE_HOMEASSISTANT_URL`, `GLANCE_HOMEASSISTANT_TOKEN`, `GLANCE_PRESENCE_PERSON_*_NAME`, `GLANCE_PRESENCE_PERSON_*_ENTITY` | Named Home presence | Home Assistant long-lived token plus explicit `person.*` entity allowlist | future Home adapter task |
 | `GLANCE_TAUTULLI_URL`, `GLANCE_TAUTULLI_API_KEY` | Plex/Tautulli now-playing/history | Tautulli Settings -> Web Interface/API | future Media task |

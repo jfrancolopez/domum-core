@@ -35,6 +35,7 @@ designed to be explicit and backup-aware.
 ## Services
 
 - [Dashboard architecture](dashboard-architecture.md)
+- [Glance daily-dashboard program](../backlog/glance-dashboard-program.md)
 - [Glance dashboard audit](glance-dashboard-audit.md)
 - [Glance dashboard architecture](glance-dashboard-architecture.md)
 - [Glance capability matrix](glance-capability-matrix.md)
