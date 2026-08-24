@@ -6,6 +6,7 @@ services:
     networks:
       - domum-proxy
       - domum-data
+      - glance-beszel-backend
     environment:
       - APP_URL=https://beszel.${DOMUM_DOMAIN}
     volumes:
@@ -71,3 +72,5 @@ networks:
     external: true
   domum-data:
     external: true
+  glance-beszel-backend:
+    internal: true

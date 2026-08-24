@@ -6,7 +6,7 @@ services:
     container_name: glance-beszel-adapter
     restart: unless-stopped
     networks:
-      - domum-proxy
+      - glance-beszel-backend
     depends_on:
       - beszel
     environment:
@@ -28,5 +28,5 @@ services:
       - core
 
 networks:
-  domum-proxy:
-    external: true
+  glance-beszel-backend:
+    internal: true

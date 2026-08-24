@@ -17,8 +17,8 @@ AdGuard, UniFi, and Beszel. The task-63 audit found four residual design risks:
 - The UniFi custom API request uses `allow-insecure: true` because the controller
   certificate is not valid for the LAN address. The request carries a monitoring
   API key.
-- The Beszel adapter is unauthenticated on the shared `domum-proxy` network and
-  authenticates to Beszel over plain HTTP.
+- The Beszel adapter is unauthenticated and previously shared the broad
+  `domum-proxy` network; it authenticates to Beszel over plain HTTP.
 - RSS image URLs are supplied by external feeds without a repository-controlled
   origin policy.
 
@@ -61,10 +61,11 @@ made narrower.
    recording private values. Implement a trusted CA path or approved hostname
    route, then remove `allow-insecure: true` and test invalid, expired, and valid
    certificate behavior.
-3. Design the smallest adapter network boundary. Keep Beszel and the adapter on
-   a private network, expose `/summary` only to Glance, and use HTTPS upstream if
-   the live Beszel endpoint supports it. Add endpoint authentication only if
-   network isolation alone cannot prove the caller boundary.
+3. Done in the repository: Glance, the adapter, and Beszel share the internal
+   `glance-beszel-backend` network, while the adapter no longer joins
+   `domum-proxy`. Expose `/summary` only to Glance and use HTTPS upstream if the
+   live Beszel endpoint supports it. Add endpoint authentication only if network
+   isolation alone cannot prove the caller boundary.
 4. Verify AdGuard account roles and replace the operator-account fallback if the
    installed version supports a dedicated aggregate/read-only role. Do not print
    or record credentials.
@@ -81,6 +82,7 @@ made narrower.
 
 - `compose/monitoring/glance.yml`
 - `compose/monitoring/glance-beszel-adapter.yml`
+- `compose/monitoring/beszel.yml`
 - `compose/monitoring/glance-beszel-adapter/`
 - `compose/monitoring/glance/pages/network.yml`
 - RSS page files under `compose/monitoring/glance/pages/`
@@ -150,5 +152,7 @@ then adapter networking, AdGuard scope, and RSS image policy.
   API key on the network.
 - Rejected: mounting the host filesystem or Docker socket into Glance to avoid an
   adapter/network decision.
+- Decision: private Compose network isolation is the first adapter boundary; it
+  does not by itself claim that plaintext upstream traffic is acceptable.
 - Rejected: adding a thumbnail proxy or new dependency before proving that a
   no-thumbnail policy is insufficient.

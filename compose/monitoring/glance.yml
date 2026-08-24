@@ -8,6 +8,7 @@ services:
       - /app/config/glance.yaml
     networks:
       - domum-proxy
+      - glance-beszel-backend
     environment:
       - TZ=America/New_York
       - DOMUM_DOMAIN=${DOMUM_DOMAIN}
@@ -32,3 +33,5 @@ services:
 networks:
   domum-proxy:
     external: true
+  glance-beszel-backend:
+    internal: true
