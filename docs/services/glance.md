@@ -68,7 +68,7 @@ Glance-specific AdGuard web account if practical; otherwise this is an
 operator-approved AdGuard credential for aggregate stats only. The widget hides
 top domains and does not render raw DNS queries, clients, or domain lists.
 
-The same file also reserves UniFi variables for task 73:
+The same file supplies the UniFi aggregate-health widget:
 
 ```text
 GLANCE_UNIFI_URL=
@@ -153,9 +153,9 @@ The optional Beszel integration env file is:
 ```
 
 Use `config/glance-beszel.env.example` as the format. The file is loaded only if
-it exists and should be mode `0600`, owner `root:root`. It currently prepares
-credential and two-system metadata for task 54; it does not render Beszel metrics
-until the source review is complete.
+it exists and should be mode `0600`, owner `root:root`. The adapter uses the
+credential and two approved system mappings server-side; Glance receives only the
+sanitized summary response.
 
 Do not create separate `glance_beszel_username` or `glance_beszel_password`
 files. If those files were created from an earlier draft, remove them after the
@@ -170,8 +170,8 @@ container-local values as Raspberry Pi metrics; use Beszel for those values.
 
 ## Private Access Preparation
 
-`GLANCE_PRIVATE_ACCESS=0` leaves the current access policy unchanged. Task 49
-will attach the approved Traefik middleware and then require both:
+The Glance router uses the approved Traefik IP allowlist. Keep the validation
+gate enabled on hosts that run Glance and provide both:
 
 ```bash
 GLANCE_PRIVATE_ACCESS=1
@@ -256,28 +256,13 @@ Private Google Calendar events, WAN identity details, device names, media activi
 Steam data are intentionally absent until their individual widget tasks approve
 credentials and failure behavior.
 
-Beszel-managed external hosts are the selected first external Hosting family, but
-they are not rendered yet. Public source review found authenticated Beszel
-PocketBase collections and a readonly role, but no stable OpenAPI/versioned API
-contract. Task 70 must still verify the live Pi credential model, host aliases,
-system IDs, allowed fields, stale behavior, and failure behavior before task 54
-adds any Glance widget for those hosts.
-
-A Pi test later proved the configured Beszel username/password and two system IDs
-are valid, but Glance `v0.8.5` still cannot render them natively: `custom-api`
-cannot chain a login response token into a second collection request, and Beszel's
-universal token did not authorize the systems collection API.
-
-The normal PocketBase auth token can query the systems collection but expires
-after 7 days, so it is not accepted as a static Glance credential.
-
-The approved bridge direction is a small local read-only adapter, tracked as the
-next implementation task. The adapter uses the existing `glance-beszel.env`
-credential server-side, fetches only the two approved systems, strips fields that
-reveal topology or identifiers, and exposes one internal JSON endpoint for a
-later Glance `custom-api` widget. Do not add Beszel host widgets until that
-adapter is Pi-validated, failure-tested, and documented as `Ready` in the
-capability matrix.
+Beszel-managed external hosts are the selected first external Hosting family.
+Glance uses the internal adapter's `/summary` endpoint because direct
+`custom-api` login chaining is not safe for Beszel `v0.8.5`. The adapter fetches
+only the two configured systems, strips topology and identifier fields, and
+returns bounded status/capacity summaries with fresh, stale, and degraded states.
+The operator has confirmed the production Pi data path; the remaining dashboard
+acceptance work is responsive screenshots and measured resource/request cost.
 
 The adapter service is disabled by default through:
 
@@ -356,9 +341,9 @@ PY
    temporary env file or temporary service override; restore the real
    `/etc/domum-core/secrets/glance-beszel.env` before leaving the host.
 
-7. If success and failure behavior match the task 72 contract, update the
-   capability matrix in Git to move Host summary to `Ready`. Only then start task
-   54 to render the Hosting widget.
+7. If success and failure behavior changes, update the adapter tests and
+   capability matrix together. Do not expose raw Beszel payloads while
+   investigating.
 
 ## Quick Checks
 

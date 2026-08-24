@@ -63,12 +63,11 @@ updates because it is stateful monitoring infrastructure.
 
 ## Glance Source Review
 
-Beszel is the selected first external Hosting source for Glance, but Glance does
-not consume Beszel metrics yet. Public upstream review found authenticated
-PocketBase collections for systems and stats plus a readonly role, but no stable
-OpenAPI or separately versioned Beszel API contract. Do not build a Glance widget
-until the Pi review verifies a dedicated readonly credential or token, approved
-host aliases/system IDs, allowed fields, cache/stale behavior, and failure modes.
+Beszel is the selected first external Hosting source for Glance. Public upstream
+review found authenticated PocketBase collections for systems and stats plus a
+readonly role, but no stable OpenAPI or separately versioned Beszel API contract.
+Glance therefore reads a narrow internal adapter response rather than calling the
+Beszel collections directly.
 
 Do not reuse Homepage's Beszel superuser credentials for Glance unless the
 operator explicitly accepts that risk and no narrower read path exists.
@@ -105,10 +104,11 @@ system IDs, and serves only status, timestamp, and capacity summary fields to
 Glance on an internal Docker network endpoint. The implementation uses a
 repo-local static Go binary so the runtime image contains only the adapter.
 
-This code path still does not make the matrix row `Ready`; the row stays blocked
-until Pi tests cover success, invalid credential, missing system ID, empty list,
-Beszel-down, slow, malformed, stale, and unauthorized cases from a
-Glance-equivalent network path.
+The adapter path is the approved and rendered Hosting source. Its unit tests cover
+success, invalid credentials, missing system IDs, empty/malformed responses,
+unavailability, unauthorized responses, stale cache, and sanitized output. The
+production Pi data path has also been operator-validated; responsive screenshots
+and resource measurements remain separate dashboard acceptance work.
 
 ## Quick Checks
 
