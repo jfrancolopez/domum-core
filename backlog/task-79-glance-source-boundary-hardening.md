@@ -124,9 +124,9 @@ was exposed, stop and ask the operator to rotate it.
 
 Changing secret plumbing or networks can make an otherwise healthy dashboard
 blank. Removing TLS bypass without a verified certificate path can break UniFi
-summaries. Disabling thumbnails changes the visual design but is safer than
-allowing arbitrary browser requests. Network isolation may require coordinated
-Compose changes for Beszel.
+summaries. RSS text-only mode changes the visual design but is safer than
+allowing arbitrary browser requests. Upstream TLS and secret plumbing still
+require coordinated production validation.
 
 ## Complexity
 
@@ -135,8 +135,9 @@ Medium-high.
 ## Suggested Order
 
 Do this after the current task-63 YAML/template corrections and before adding any
-new private-personal integration. Start with secret isolation, then UniFi TLS,
-then adapter networking, AdGuard scope, and RSS image policy.
+new private-personal integration. Remaining order: secret isolation, UniFi TLS,
+upstream adapter transport, then AdGuard scope. Adapter network isolation and RSS
+image policy are already implemented.
 
 ## Decisions and Rejected Alternatives
 
