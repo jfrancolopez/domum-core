@@ -101,7 +101,7 @@ were inspected for this report.
   dashboard.
 - WAN identity, internal aliases, device names, media activity, and Steam friends
   still require separate source and field-policy approval.
-- The current Games scope is public Steam Specials, gaming videos, and selected
+- The current Games scope is public Steam Specials and Top Sellers, gaming videos, and selected
   gaming feeds. Do not render Steam profile, wishlist, play-history, friends, or
   Twitch data until task 77's inputs are approved.
 - Plex is the primary Media integration. Verify any related media applications
@@ -148,7 +148,7 @@ Beszel production data path. Pi-only responsive screenshots, request/byte counts
 and resource measurements remain acceptance work and are not inferred from this
 checkout.
 
-The public-safe dashboard additions include Steam Specials, native Hacker
+The public-safe dashboard additions include Steam Specials/Top Sellers, native Hacker
 News/Lobsters widgets, bounded public repository activity, curated media/news/
 social feeds, and keyboard/reduced-motion accessibility behavior. No credentials,
 private payloads, client identities, raw DNS activity, topology, or account

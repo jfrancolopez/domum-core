@@ -66,7 +66,7 @@ evidence of an acceptable access boundary.
 | Hosting | Accurate host and service summaries | Native monitor/releases plus the reviewed Beszel summary adapter; backup and Healthchecks detail wait for task 74 |
 | Network | Internet quality and selected network context | Speedtest Tracker, aggregate AdGuard stats, aggregate UniFi health, and fixed reachability checks; identity/topology remain excluded |
 | Media | Playback and discovery | Public discovery now; Plex/Tautulli waits for task 76 |
-| Games | Public gaming discovery and optional personal Steam information | Steam Specials and public feeds now; profile, recently played, wishlist, friends, and Twitch wait for task 77 |
+| Games | Public gaming discovery and optional personal Steam information | Steam Specials, Top Sellers, and public feeds now; profile, recently played, wishlist, friends, and Twitch wait for task 77 |
 | News | Curated infrastructure, security, self-hosting, Linux, and AI briefing | Native RSS, releases, and selected public community signals |
 | Social | Small public community/creator set | Hacker News, Lobsters, selected forums, YouTube, GitHub, and direct links; Reddit remains unresolved |
 | Technology | Public engineering and stack briefing | Native releases, RSS, videos, and bounded Domum Core activity |

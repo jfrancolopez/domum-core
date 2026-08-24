@@ -86,7 +86,7 @@ Start with public gaming news/store widgets, then add Steam profile, then Twitch
 ## Decisions and Rejected Alternatives
 
 - Decision: split public gaming discovery from private Steam account data.
-- Decision: public Steam Specials is implemented without credentials; private
+- Decision: public Steam Specials and Top Sellers are implemented without credentials; private
   profile, wishlist, friends, and play-history widgets remain opt-in.
 - Decision: no full friends list by default.
 - Rejected: using personal OAuth tokens for Twitch public summaries.

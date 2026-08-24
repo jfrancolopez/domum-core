@@ -252,7 +252,7 @@ privacy, and failure behavior review.
   rate-limit behavior is unresolved. It uses no social-account credentials.
 - Media: public videos, film/TV RSS, books/culture RSS, and direct discovery or
   streaming links. It uses no watch-history or personal library integrations.
-- Games: public Steam Specials, gaming videos, gaming/PC/indie RSS feeds, and
+- Games: public Steam Specials and Top Sellers, gaming videos, gaming/PC/indie RSS feeds, and
   store/community links. It uses no Steam profile, wishlist, friends, play-history,
   or Twitch API credentials.
 
