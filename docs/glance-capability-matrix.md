@@ -41,7 +41,7 @@ explicitly scoped to their approved fields.
 | Sonarr/Radarr releases/queues | Media | Installed app APIs | Reviewed custom API | API keys | 15m | Private-personal | Low | Needs service | Verify installed versions and OpenAPI docs |
 | Immich statistics | Media | Immich API | Reviewed custom API | API key | 24h | Private-personal | Low | Needs service | Verify installation and key scope |
 | Public media discovery | Media | Public RSS and YouTube feeds | Native `rss`/`videos` | None | 45m-1h | Public-safe | Medium | Implemented | Film/TV, books/culture, and selected public video channels; no watch history or personal library data |
-| Steam specials | Games | Steam Store `featuredcategories` endpoint | Local custom API template | None | 1h | Public-safe | Medium | Implemented | US-region public specials, bounded to the native collapsible list; no profile, wishlist, friends, or account data |
+| Steam specials/top sellers | Games | Steam Store `featuredcategories` endpoint | Local custom API template | None | 1h | Public-safe | Medium | Implemented | US-region public Specials and Top Sellers, bounded to two lists; no profile, wishlist, friends, or account data |
 | Steam profile/recently played | Games | Steam Web API | Reviewed custom API | API key and ID | 1h/15m | Private-personal | Medium | Needs credential | Verify public profile visibility and API fields |
 | Steam wishlist discounts | Games | Steam API/store | Reviewed custom API | API key and ID | 1h | Private-personal | Low | Needs credential | Verify documented endpoint and privacy |
 | Steam allowlisted friends | Games | Steam Web API | Reviewed custom API | API key, ID, allowlist | 15m | Private-personal | Medium | Needs credential | Never render full friends list |

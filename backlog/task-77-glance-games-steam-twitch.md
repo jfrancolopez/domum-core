@@ -13,9 +13,9 @@ signals from private account/profile signals and implement them in that order.
 
 ## Current Behavior
 
-- Games has public gaming videos, gaming/PC/indie RSS feeds, a US-region Steam
-  Specials widget using the public `featuredcategories` endpoint, and direct
-  store/community links.
+- Games has public gaming videos, gaming/PC/indie RSS feeds, bounded US-region
+  Steam Specials and Top Sellers lists using the public `featuredcategories`
+  endpoint, and direct store/community links.
 - `config/glance.env.example` reserves Steam and Twitch variables, but no widget
   consumes them yet.
 
@@ -30,9 +30,9 @@ friends lists and raw profile data must not render.
 
 1. Public, no-credential gaming discovery is done. Keep it as the fallback mode
    for users without account integrations.
-2. Done: Steam Store `featuredcategories?cc=us` provides public Specials data
-   without an API key; the page renders bounded title, price, discount, and
-   store-link fields only.
+2. Done: Steam Store `featuredcategories?cc=us` provides public Specials and Top
+   Sellers data without an API key; the page renders bounded title, price,
+   discount, and store-link fields only.
 3. Generate a Steam Web API key and record only in
    `/etc/domum-core/secrets/glance.env` if private profile widgets are approved.
 4. Register a Twitch developer app and use app client credentials only for public

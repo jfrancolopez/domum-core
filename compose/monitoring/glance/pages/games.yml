@@ -40,20 +40,44 @@
           url: https://store.steampowered.com/api/featuredcategories?cc=us
           template: |
             {{ if eq .Response.StatusCode 200 }}
-            <ul class="list list-gap-10 collapsible-container" data-collapse-after="6">
-            {{ range $index, $item := .JSON.Array "specials.items" }}
-            {{ if lt $index 12 }}
-              <li>
-                <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ $item.Int "id" }}/" target="_blank" rel="noreferrer">{{ $item.String "name" }}</a>
-                <ul class="list-horizontal-text">
-                  <li>{{ div ($item.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
-                  {{ $discount := $item.Int "discount_percent" }}
-                  <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
+            <div class="domum-steam-grid">
+              <section class="domum-steam-section">
+                <h3>Specials</h3>
+                <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                {{ range $index, $item := .JSON.Array "specials.items" }}
+                {{ if lt $index 8 }}
+                  <li>
+                    <a class="size-h4 color-highlight block text-truncate"
+                       href="https://store.steampowered.com/app/{{ $item.Int "id" }}/" target="_blank" rel="noreferrer">{{ $item.String "name" }}</a>
+                    <ul class="list-horizontal-text">
+                      <li>{{ div ($item.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
+                      {{ $discount := $item.Int "discount_percent" }}
+                      <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
+                    </ul>
+                  </li>
+                {{ end }}
+                {{ end }}
                 </ul>
-              </li>
-            {{ end }}
-            {{ end }}
-            </ul>
+              </section>
+              <section class="domum-steam-section">
+                <h3>Top sellers</h3>
+                <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                {{ range $index, $item := .JSON.Array "top_sellers.items" }}
+                {{ if lt $index 8 }}
+                  <li>
+                    <a class="size-h4 color-highlight block text-truncate"
+                       href="https://store.steampowered.com/app/{{ $item.Int "id" }}/" target="_blank" rel="noreferrer">{{ $item.String "name" }}</a>
+                    <ul class="list-horizontal-text">
+                      <li>{{ div ($item.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
+                      {{ $discount := $item.Int "discount_percent" }}
+                      <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
+                    </ul>
+                  </li>
+                {{ end }}
+                {{ end }}
+                </ul>
+              </section>
+            </div>
             {{ else }}
             <div class="domum-state-card"><strong>Steam Specials unavailable</strong><span>{{ .Response.Status }}</span></div>
             {{ end }}
