@@ -129,7 +129,7 @@
               <div class="domum-status-list">
                 <span>Speedtest: latest result</span>
                 <span>AdGuard: aggregate only</span>
-                <span>UniFi: read-only API pending</span>
+                <span>UniFi: aggregate health only</span>
               </div>
             </div>
 

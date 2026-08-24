@@ -3,7 +3,8 @@
 This matrix is the authorization boundary for the dashboard program. It was
 checked against Glance `v0.8.5` and the sanitized task-47 audit. `Ready` means a
 version-compatible mechanism exists, not that it is implemented or live-tested.
-Private rows remain blocked while `dash` is externally reachable.
+Private rows require the accepted LAN/Tailscale-only `dash` boundary and remain
+explicitly scoped to their approved fields.
 
 | Widget | Page | Data source | Native/custom | Credential | Refresh/cache | Privacy | Resource | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
@@ -27,7 +28,7 @@ Private rows remain blocked while `dash` is externally reachable.
 | Certificate/domain expiry | Hosting | Unselected source | Custom API | Unknown | 24h | Private-operational | Low | Needs clarification | Do not expose domains beyond approved aliases |
 | Latest Speedtest result | Network | Speedtest Tracker API | Reviewed custom API | `GLANCE_SPEEDTEST_TRACKER_TOKEN` in `glance.env`; `results:read` only | 5m | Private-personal | Low | Implemented | Renders latest download, upload, ping, jitter, packet loss, and timestamp only; [API](https://docs.speedtest-tracker.dev/api/responses/results) |
 | Speedtest history | Network | Speedtest Tracker API | Reviewed custom API | `results:read` token | 15m | Private-personal | Medium | Needs credential | Use real bounded history only |
-| WAN IP/ISP/location | Network | Unselected documented API | Custom API | None/unknown | 1h | Private-personal | Low | Needs clarification | Explicit operator approval recorded; blocked by task 49 |
+| WAN IP/ISP/location | Network | Unselected documented API | Custom API | None/unknown | 1h | Private-personal | Low | Needs clarification | Public-IP source and exact fields still require a separate operator decision |
 | Gateway/WAN uptime and RX/TX | Network | Gateway API | Custom API | Read-only account | 5m | Private-operational | Low | Needs service | Gateway/API not audited |
 | Local service latency | Network | Fixed HTTP monitor set | Native `monitor` | None | 1m | Private-operational | Low | Implemented | Compact reachability only; no internal addresses or one-off latency colors |
 | AdGuard aggregate DNS stats | Network | AdGuard Home | Native `dns-stats` | `GLANCE_ADGUARD_USERNAME`/`GLANCE_ADGUARD_PASSWORD` in `glance.env` | 5m | Private-personal | Low | Implemented | Secondary deep Network source selected by operator; top domains hidden; aggregate stats only |
