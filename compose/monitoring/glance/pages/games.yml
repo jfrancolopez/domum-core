@@ -35,6 +35,7 @@
 
         - type: custom-api
           title: Steam Specials
+          title-url: https://store.steampowered.com/specials/
           cache: 1h
           url: https://store.steampowered.com/api/featuredcategories?cc=us
           template: |

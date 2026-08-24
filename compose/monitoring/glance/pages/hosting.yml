@@ -91,6 +91,7 @@
 
         - type: custom-api
           title: Beszel fleet
+          title-url: https://beszel.${DOMUM_DOMAIN}
           cache: 5m
           url: http://glance-beszel-adapter:8080/summary
           template: |
