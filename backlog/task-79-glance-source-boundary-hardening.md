@@ -144,8 +144,15 @@ then adapter networking, AdGuard scope, and RSS image policy.
 
 - Decision: keep current aggregate fields and source limits while hardening the
   transport and credential boundaries.
+- Progress: the repository now isolates Glance, the adapter, and Beszel on the
+  internal `glance-beszel-backend` network; the adapter no longer joins the broad
+  `domum-proxy` network. Pi deployment and caller-boundary evidence remain.
 - Decision: do not expose the host backup heartbeat to Glance; use a reviewed
   summary source or separately approved exporter instead.
+- Open decision: Glance v0.8.5 cannot restrict RSS image origins. Switching all
+  rich RSS widgets to text-only `vertical-list` is the safe default but changes
+  the visual design; retain rich cards only after the operator accepts their
+  external image requests or approves a future image proxy.
 - Rejected: retaining `allow-insecure: true` as a permanent exception because the
   request carries a credential.
 - Rejected: switching UniFi to cleartext HTTP as a shortcut because it exposes the
