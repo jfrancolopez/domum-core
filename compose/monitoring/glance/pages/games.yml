@@ -60,8 +60,8 @@
               limit: 12
               collapse-after: 6
               feeds:
-                - url: https://feeds.ign.com/ign/games-all
-                  title: IGN Games
+                - url: https://www.gamespot.com/feeds/mashup/
+                  title: GameSpot
                 - url: https://www.polygon.com/rss/index.xml
                   title: Polygon
                 - url: https://www.eurogamer.net/feed
