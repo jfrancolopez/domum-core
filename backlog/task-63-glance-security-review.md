@@ -107,10 +107,10 @@ Phase 6 after visual polish and before task 64 performance/failure validation.
 - The review found no tracked secret values, unapproved rendered identities,
   unsupported widget types, arbitrary JavaScript, remote YAML, shell execution,
   or raw Docker socket use.
-- Residual source-boundary findings are recorded in task 79: future-secret
-  environment isolation, UniFi TLS verification, Beszel adapter upstream
-  transport, and AdGuard least-privilege verification. Current RSS widgets were
-  switched to text-only style as the safe image-origin policy.
+- Residual source-boundary findings are recorded in task 79: UniFi TLS
+  verification, Beszel adapter upstream transport, and AdGuard least-privilege
+  verification. Reserved future variables are now cleared before Glance starts,
+  and current RSS widgets use text-only style as the safe image-origin policy.
 - Task 64 remains blocked until the privacy review and operator approval are
   complete. Pi-only browser, failure, rendered-HTML, and performance evidence is
   still required.
