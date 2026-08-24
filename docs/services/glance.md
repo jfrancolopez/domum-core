@@ -239,9 +239,8 @@ privacy, and failure behavior review.
   reachability checks for approved network-adjacent services. It intentionally
   omits WAN IP, gateway topology, raw DNS activity, UniFi client/device details,
   Tailscale device names, and internal addresses.
-- Technology: public engineering videos, Hacker News, Lobsters, self-hosting,
-  infrastructure, security, AI feeds, stack releases, bounded Domum Core activity,
-  and watch/read bookmarks.
+- Technology: public engineering videos, self-hosting, infrastructure, security,
+  AI feeds, stack releases, bounded Domum Core activity, and watch/read bookmarks.
 - News: curated RSS sections for top stories, markets, technology/AI, science,
   and security.
 - Social: public creator videos, Hacker News/Lobsters, selected Reddit RSS feeds,

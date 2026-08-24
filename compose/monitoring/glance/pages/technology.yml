@@ -35,24 +35,6 @@
 
         - type: split-column
           widgets:
-            - type: hacker-news
-              title: Hacker News
-              limit: 12
-              collapse-after: 6
-              sort-by: top
-
-            - type: lobsters
-              title: Lobsters
-              limit: 12
-              collapse-after: 6
-              tags:
-                - linux
-                - security
-                - go
-                - ai
-
-        - type: split-column
-          widgets:
             - type: rss
               title: Self-hosting and infrastructure
               style: detailed-list
