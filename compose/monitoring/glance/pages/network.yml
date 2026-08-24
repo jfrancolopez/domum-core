@@ -74,7 +74,7 @@
               url: ${GLANCE_UNIFI_API_URL}
               allow-insecure: true
               headers:
-                X-API-Key: ${GLANCE_UNIFI_API_KEY}
+                ${GLANCE_UNIFI_API_HEADER}: ${GLANCE_UNIFI_API_KEY}
               template: |
                 <div class="domum-unifi-grid">
                 {{ range .JSON.Array "data" }}
