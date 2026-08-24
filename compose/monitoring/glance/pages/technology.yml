@@ -37,7 +37,7 @@
           widgets:
             - type: rss
               title: Self-hosting and infrastructure
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 12
               collapse-after: 6
@@ -51,7 +51,7 @@
 
             - type: rss
               title: Security and AI
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 12
               collapse-after: 6

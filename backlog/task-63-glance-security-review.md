@@ -108,8 +108,9 @@ Phase 6 after visual polish and before task 64 performance/failure validation.
   unsupported widget types, arbitrary JavaScript, remote YAML, shell execution,
   or raw Docker socket use.
 - Residual source-boundary findings are recorded in task 79: future-secret
-  environment isolation, UniFi TLS verification, Beszel adapter network/upstream
-  transport, AdGuard least-privilege verification, and RSS image-origin policy.
+  environment isolation, UniFi TLS verification, Beszel adapter upstream
+  transport, and AdGuard least-privilege verification. Current RSS widgets were
+  switched to text-only style as the safe image-origin policy.
 - Task 64 remains blocked until the privacy review and operator approval are
   complete. Pi-only browser, failure, rendered-HTML, and performance evidence is
   still required.

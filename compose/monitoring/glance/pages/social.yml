@@ -53,7 +53,7 @@
 
             - type: rss
               title: Home and homelab forums
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 12
               collapse-after: 6

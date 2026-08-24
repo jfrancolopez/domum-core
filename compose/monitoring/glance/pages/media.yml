@@ -37,7 +37,7 @@
           widgets:
             - type: rss
               title: Film and TV
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 12
               collapse-after: 6
@@ -51,7 +51,7 @@
 
             - type: rss
               title: Books and culture
-              style: detailed-list
+              style: vertical-list
               cache: 1h
               limit: 12
               collapse-after: 6

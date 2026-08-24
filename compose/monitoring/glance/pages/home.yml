@@ -145,7 +145,7 @@
             - gethomepage/homepage
         - type: rss
           title: Home and technology signals
-          style: detailed-list
+          style: vertical-list
           limit: 12
           collapse-after: 6
           feeds:

@@ -62,7 +62,7 @@
           widgets:
             - type: rss
               title: Gaming headlines
-              style: detailed-list
+              style: vertical-list
               cache: 30m
               limit: 12
               collapse-after: 6
@@ -76,7 +76,7 @@
 
             - type: rss
               title: PC and indie watch
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 12
               collapse-after: 6

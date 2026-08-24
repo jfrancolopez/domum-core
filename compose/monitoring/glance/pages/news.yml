@@ -24,7 +24,7 @@
           widgets:
             - type: rss
               title: Top stories
-              style: detailed-list
+              style: vertical-list
               cache: 20m
               limit: 12
               collapse-after: 6
@@ -38,7 +38,7 @@
 
             - type: rss
               title: Business and markets
-              style: detailed-list
+              style: vertical-list
               cache: 30m
               limit: 10
               collapse-after: 5
@@ -52,7 +52,7 @@
           widgets:
             - type: rss
               title: Technology and AI
-              style: detailed-list
+              style: vertical-list
               cache: 30m
               limit: 12
               collapse-after: 6
@@ -66,7 +66,7 @@
 
             - type: rss
               title: Science and space
-              style: detailed-list
+              style: vertical-list
               cache: 45m
               limit: 10
               collapse-after: 5

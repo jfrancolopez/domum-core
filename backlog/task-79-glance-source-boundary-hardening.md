@@ -19,8 +19,8 @@ AdGuard, UniFi, and Beszel. The task-63 audit found four residual design risks:
   API key.
 - The Beszel adapter is unauthenticated and previously shared the broad
   `domum-proxy` network; it authenticates to Beszel over plain HTTP.
-- RSS image URLs are supplied by external feeds without a repository-controlled
-  origin policy.
+- RSS image URLs were supplied by external feeds without a repository-controlled
+  origin policy; current RSS widgets now use text-only `vertical-list`.
 
 These are boundary issues, not reasons to add more dashboard data. The current
 public-safe and aggregate widgets must remain stable while the boundaries are
@@ -45,9 +45,8 @@ made narrower.
 - The Beszel adapter is reachable only by Glance and its Beszel dependency, with
   a narrowly scoped authenticated or network-isolated endpoint and encrypted
   upstream transport where supported.
-- Feed images are disabled, self-hosted, or restricted to an explicitly reviewed
-  origin policy; a compromised feed must not make the browser request arbitrary
-  image hosts by default.
+- Feed images are disabled for current RSS widgets; a compromised feed cannot make
+  the browser request arbitrary image hosts through those widgets by default.
 - AdGuard access uses a dedicated least-privilege account or an approved
   aggregate-only API mechanism.
 
@@ -69,9 +68,8 @@ made narrower.
 4. Verify AdGuard account roles and replace the operator-account fallback if the
    installed version supports a dedicated aggregate/read-only role. Do not print
    or record credentials.
-5. Decide whether the accepted RSS policy is no thumbnails or an explicit static
-   allowlist. Prefer no thumbnails if Glance v0.8.5 cannot enforce an origin
-   allowlist without a new proxy.
+5. Done: switched all current RSS widgets to text-only `vertical-list`. A future
+   image proxy or reviewed origin allowlist requires a separate task.
 6. Add failure tests and sanitized documentation for each boundary, including
    unauthorized requests, certificate failures, missing secrets, and changed feed
    image origins.
@@ -149,10 +147,10 @@ then adapter networking, AdGuard scope, and RSS image policy.
   `domum-proxy` network. Pi deployment and caller-boundary evidence remain.
 - Decision: do not expose the host backup heartbeat to Glance; use a reviewed
   summary source or separately approved exporter instead.
-- Open decision: Glance v0.8.5 cannot restrict RSS image origins. Switching all
-  rich RSS widgets to text-only `vertical-list` is the safe default but changes
-  the visual design; retain rich cards only after the operator accepts their
-  external image requests or approves a future image proxy.
+- Decision: all current RSS widgets use text-only `vertical-list` because Glance
+  v0.8.5 cannot restrict rich-widget image origins. A future image proxy requires
+  separate approval; no external thumbnail requests are part of the current RSS
+  policy.
 - Rejected: retaining `allow-insecure: true` as a permanent exception because the
   request carries a credential.
 - Rejected: switching UniFi to cleartext HTTP as a shortcut because it exposes the
