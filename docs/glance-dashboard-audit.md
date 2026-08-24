@@ -111,7 +111,11 @@ were inspected for this report.
 - Use bounded thumbnails for Media, Games, and selected feeds. Text remains the
   default for dense operational and news content.
 
-## Existing Worktree Risk
+## Historical Audit-Time Worktree Risk
+
+The following findings describe the checkout at the time of the initial audit on
+2026-08-11, before the later foundation and page commits. They are retained as
+historical context, not as a description of the current Git state.
 
 The Glance-related worktree contains uncommitted implementation and
 documentation changes that are outside the completed program sequence. They
@@ -126,6 +130,26 @@ uncommitted implementation changes later. Preserve them unchanged during task
 One prior committed Network implementation also requires a separate review. It
 is not authorized for reversion by this audit and must not be deployed as proof
 of a private Network dashboard.
+
+## Subsequent Repository State
+
+The later Glance implementation is now committed and pushed. The current tracked
+configuration has a validated `v0.8.5` include tree with Home, Hosting, Network,
+Media, Games, News, Social, and the retained Technology page. Current pages use
+only native widgets or reviewed local `custom-api` templates; private account
+integrations remain absent unless their matrix row is explicitly approved.
+
+The Beszel adapter, Speedtest Tracker summary, aggregate AdGuard stats, and
+aggregate UniFi health path are implemented. The operator has confirmed the
+Beszel production data path. Pi-only responsive screenshots, request/byte counts,
+and resource measurements remain acceptance work and are not inferred from this
+checkout.
+
+The public-safe dashboard additions include Steam Specials, native Hacker
+News/Lobsters widgets, bounded public repository activity, curated media/news/
+social feeds, and keyboard/reduced-motion accessibility behavior. No credentials,
+private payloads, client identities, raw DNS activity, topology, or account
+history are tracked.
 
 ## Pi-Only Evidence Required
 

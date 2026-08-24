@@ -124,19 +124,19 @@ fresh AI-agent session and requires approval before the next page is started.
 
 | Phase | # | Task | Status | Complexity | Risk |
 |---|---:|---|---|---|---|
-| 0 | 47 | [Audit live Glance and data sources](task-47-glance-live-audit.md) | planned | medium | low |
-| 0 | 67 | [Remove unsafe uncommitted Glance implementation](task-67-glance-remediate-unsafe-worktree.md) | blocked by 47 acceptance | small | low |
-| 0 | 48 | [Define architecture, privacy, and capability matrix](task-48-glance-architecture-matrix.md) | blocked by 47 | medium | none |
-| 0 | 68 | [Remediate committed unsafe Network draft](task-68-glance-remediate-committed-network-draft.md) | blocked by 48 acceptance | small | low |
-| 0 | 69 | [Add private CIDR plumbing for Glance access policy](task-69-glance-private-cidr-plumbing.md) | blocked by 48 approval | small | low |
-| 1 | 49 | [Enforce the private access boundary](task-49-glance-private-access.md) | blocked by 48 | medium | medium |
+| 0 | 47 | [Audit live Glance and data sources](task-47-glance-live-audit.md) | ✅ report captured; final responsive/performance evidence pending | medium | low |
+| 0 | 67 | [Remove unsafe uncommitted Glance implementation](task-67-glance-remediate-unsafe-worktree.md) | ✅ no uncommitted Glance draft remains in current checkout | small | low |
+| 0 | 48 | [Define architecture, privacy, and capability matrix](task-48-glance-architecture-matrix.md) | ✅ architecture and matrix documented; per-source gates remain | medium | none |
+| 0 | 68 | [Remediate committed unsafe Network draft](task-68-glance-remediate-committed-network-draft.md) | ✅ replaced by validated v0.8.5 Network configuration | small | low |
+| 0 | 69 | [Add private CIDR plumbing for Glance access policy](task-69-glance-private-cidr-plumbing.md) | ✅ code done; Pi boundary evidence recorded in audit | small | low |
+| 1 | 49 | [Enforce the private access boundary](task-49-glance-private-access.md) | ✅ policy and Pi path tests recorded; final browser/performance evidence pending | medium | medium |
 | 1 | 50 | [Pin, validate, and plumb secrets](task-50-glance-runtime-foundation.md) | ✅ code done 2026-08-12; gitleaks unavailable locally | medium | low-med |
 | 1 | 51 | [Build the modular visual foundation](task-51-glance-foundation.md) | ✅ foundation done 2026-08-12; visual prototype selection deferred to polish | medium | low |
 | 2 | 52 | [Build the Home page](task-52-glance-home-page.md) | ✅ first native pass done 2026-08-12; private calendar deferred | medium | low |
 | 3 | 53 | [Build core Hosting](task-53-glance-hosting-core.md) | ✅ core native pass done 2026-08-12; Beszel/backup/Healthchecks detail deferred | medium | low-med |
 | 3 | 54 | [Add one external Hosting source](task-54-glance-hosting-external.md) | ✅ done | medium | medium |
 | 3 | 55 | [Build core Network](task-55-glance-network-core.md) | ✅ code done; Pi data/failure validation and screenshots pending | medium | medium |
-| 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | ✅ AdGuard secondary code done; Pi credential/data/failure validation pending; UniFi primary blocked in task 73 | medium | medium |
+| 3 | 56 | [Add one deep Network source](task-56-glance-network-services.md) | ✅ AdGuard/UniFi code done; Pi credential/data/failure validation pending | medium | medium |
 | 4 | 57 | [Build core Media](task-57-glance-media-core.md) | blocked by 56 | medium | medium |
 | 4 | 58 | [Add one Media integration family](task-58-glance-media-expansion.md) | blocked by 57 | medium | medium |
 | 5 | 59 | [Build the Games page](task-59-glance-games-page.md) | blocked by 58 | medium | low-med |
