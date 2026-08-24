@@ -46,8 +46,8 @@
                   title: Roger Ebert
                 - url: https://www.indiewire.com/feed/
                   title: IndieWire
-                - url: https://www.vulture.com/rss/index.xml
-                  title: Vulture
+                - url: https://www.hollywoodreporter.com/feed/
+                  title: Hollywood Reporter
 
             - type: rss
               title: Books and culture

@@ -47,8 +47,8 @@
                   title: WSJ Markets
                 - url: https://www.cnbc.com/id/100003114/device/rss/rss.html
                   title: CNBC Economy
-                - url: https://www.ft.com/rss/home/us
-                  title: Financial Times
+                - url: https://www.marketwatch.com/rss/topstories
+                  title: MarketWatch
 
         - type: split-column
           widgets:
@@ -75,8 +75,8 @@
               feeds:
                 - url: https://www.nasa.gov/rss/dyn/breaking_news.rss
                   title: NASA
-                - url: https://www.scientificamerican.com/feed/
-                  title: Scientific American
+                - url: https://www.nature.com/nature.rss
+                  title: Nature
                 - url: https://www.quantamagazine.org/feed/
                   title: Quanta
 
