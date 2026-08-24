@@ -37,6 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: tests/catalog-consistency-smoke.sh
+      - run: tests/glance-source-boundary-smoke.sh
 
   adapter-tests:
     name: adapter-tests

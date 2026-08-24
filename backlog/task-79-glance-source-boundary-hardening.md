@@ -90,6 +90,7 @@ made narrower.
 - `docs/glance-capability-matrix.md`
 - `docs/glance-dashboard-audit.md`
 - `backlog/README.md`
+- `tests/glance-source-boundary-smoke.sh`
 
 ## Testing Plan
 
