@@ -14,7 +14,7 @@
           <div class="domum-hero-badges">
             <span>YouTube</span>
             <span>Hacker News</span>
-            <span>Reddit RSS</span>
+            <span>Community RSS</span>
           </div>
         </section>
   columns:
@@ -52,18 +52,18 @@
               sort-by: hot
 
             - type: rss
-              title: Home and homelab communities
+              title: Home and homelab forums
               style: detailed-list
               cache: 45m
               limit: 12
               collapse-after: 6
               feeds:
-                - url: https://www.reddit.com/r/homeassistant/.rss
-                  title: r/homeassistant
-                - url: https://www.reddit.com/r/selfhosted/.rss
-                  title: r/selfhosted
-                - url: https://www.reddit.com/r/homelab/.rss
-                  title: r/homelab
+                - url: https://community.home-assistant.io/latest.rss
+                  title: Home Assistant Community
+                - url: https://forum.level1techs.com/latest.rss
+                  title: Level1Techs
+                - url: https://forum.proxmox.com/forums/-/index.rss
+                  title: Proxmox Forum
 
     - size: small
       widgets:
@@ -89,10 +89,12 @@
                   url: https://news.ycombinator.com/
                 - title: Lobsters
                   url: https://lobste.rs/
-                - title: r/homeassistant
-                  url: https://www.reddit.com/r/homeassistant/
-                - title: r/selfhosted
-                  url: https://www.reddit.com/r/selfhosted/
+                - title: Home Assistant Community
+                  url: https://community.home-assistant.io/
+                - title: Level1Techs
+                  url: https://forum.level1techs.com/
+                - title: Proxmox Forum
+                  url: https://forum.proxmox.com/
             - title: Video
               links:
                 - title: YouTube subscriptions

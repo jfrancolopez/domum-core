@@ -243,8 +243,9 @@ privacy, and failure behavior review.
   AI feeds, stack releases, bounded Domum Core activity, and watch/read bookmarks.
 - News: curated RSS sections for top stories, markets, technology/AI, science,
   and security.
-- Social: public creator videos, Hacker News/Lobsters, selected Reddit RSS feeds,
-  and direct community links. It uses no social-account credentials.
+- Social: public creator videos, Hacker News/Lobsters, selected forum RSS feeds,
+  and direct community links. Reddit RSS is intentionally not rendered while its
+  rate-limit behavior is unresolved. It uses no social-account credentials.
 - Media: public videos, film/TV RSS, books/culture RSS, and direct discovery or
   streaming links. It uses no watch-history or personal library integrations.
 - Games: public Steam Specials, gaming videos, gaming/PC/indie RSS feeds, and
