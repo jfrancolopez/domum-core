@@ -15,8 +15,6 @@ services:
     env_file:
       - path: /etc/domum-core/secrets/glance.env
         required: false
-      - path: /etc/domum-core/secrets/glance-beszel.env
-        required: false
     volumes:
       - /opt/domum-core/compose/monitoring/glance:/app/config:ro
     labels:

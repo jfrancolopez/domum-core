@@ -16,9 +16,9 @@ authorize the systems collection, and a normal PocketBase auth token expires in 
 days. Task 71 selected a local adapter/exporter as the safe bridge.
 
 The existing credential source is `/etc/domum-core/secrets/glance-beszel.env`,
-loaded by Glance today and formatted by `config/glance-beszel.env.example`. Keep
-that file as the only credential source unless this task proves a concrete reason
-to change it and updates the docs.
+loaded only by the adapter and formatted by `config/glance-beszel.env.example`.
+Keep that file as the only credential source unless this task proves a concrete
+reason to change it and updates the docs.
 
 ## Why This Exists
 

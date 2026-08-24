@@ -152,10 +152,10 @@ The optional Beszel integration env file is:
 /etc/domum-core/secrets/glance-beszel.env
 ```
 
-Use `config/glance-beszel.env.example` as the format. The file is loaded only if
-it exists and should be mode `0600`, owner `root:root`. The adapter uses the
-credential and two approved system mappings server-side; Glance receives only the
-sanitized summary response.
+Use `config/glance-beszel.env.example` as the format. The file is loaded only by
+the optional adapter, if it exists, and should be mode `0600`, owner `root:root`.
+The adapter uses the credential and two approved system mappings server-side;
+Glance receives only the sanitized summary response.
 
 Do not create separate `glance_beszel_username` or `glance_beszel_password`
 files. If those files were created from an earlier draft, remove them after the
