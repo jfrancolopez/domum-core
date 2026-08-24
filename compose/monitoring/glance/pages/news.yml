@@ -43,8 +43,6 @@
               limit: 10
               collapse-after: 5
               feeds:
-                - url: https://feeds.a.dj.com/rss/RSSMarketsMain.xml
-                  title: WSJ Markets
                 - url: https://www.npr.org/rss/rss.php?id=1017
                   title: NPR Business
                 - url: https://www.marketwatch.com/rss/topstories

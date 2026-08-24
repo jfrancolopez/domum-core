@@ -95,19 +95,31 @@
           cache: 5m
           url: http://glance-beszel-adapter:8080/summary
           template: |
+            {{ if eq .Response.StatusCode 200 }}
+            <div class="domum-fleet-summary"><span>Fleet {{ .JSON.String "status" }}</span><span>Cache {{ .JSON.String "cache" }}</span></div>
             <div class="domum-fleet-grid">
-            {{ range .JSON.Array "systems" }}
+            {{ range $system := .JSON.Array "systems" }}
               <div class="domum-host-card">
                 <div class="domum-host-topline">
-                  <div class="domum-host-name">{{ .String "label" }}</div>
-                  <div class="domum-host-status domum-host-status-{{ .String "status" }}">{{ .String "status" }}</div>
+                  <div class="domum-host-name">{{ $system.String "label" }}</div>
+                  <div class="domum-host-status domum-host-status-{{ $system.String "status" }}">{{ $system.String "status" }}</div>
                 </div>
                 <div class="domum-host-meta">
-                  {{ if .Bool "stale" }}Stale data; check Beszel.{{ else }}Fresh summary from Beszel.{{ end }}
+                  {{ if $system.Bool "stale" }}Stale data; check Beszel.{{ else }}Fresh summary from Beszel.{{ end }}
+                  {{ if $system.String "updated_at" }} Updated {{ $system.String "updated_at" }}.{{ end }}
                 </div>
+                {{ if $system.Exists "metrics.cpu_percent" }}
+                <div class="domum-host-meta">
+                  CPU {{ $system.Float "metrics.cpu_percent" | printf "%.0f" }}%
+                  {{ if $system.Exists "metrics.memory_percent" }} / Memory {{ $system.Float "metrics.memory_percent" | printf "%.0f" }}%{{ end }}
+                </div>
+                {{ end }}
               </div>
             {{ end }}
             </div>
+            {{ else }}
+            <div class="domum-state-card"><strong>Beszel summary unavailable</strong><span>{{ .Response.Status }}</span></div>
+            {{ end }}
 
         - type: monitor
           title: Automation dependencies

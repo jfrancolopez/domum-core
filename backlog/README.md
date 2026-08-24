@@ -156,6 +156,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | next | 76 | [Add Plex/Tautulli media intelligence to Glance Media](task-76-glance-media-plex-tautulli.md) | proposed; needs Tautulli/Plex source and field-policy decisions | medium | medium |
 | next | 77 | [Add Steam and Twitch sources to Glance Games](task-77-glance-games-steam-twitch.md) | public discovery and Steam Specials done; Steam/Twitch credentials and private account fields still pending | medium | medium |
 | next | 78 | [Add Spotify and YouTube learning recommendations to Glance](task-78-glance-spotify-youtube-recommendations.md) | proposed; needs OAuth scope and local-recommendation decisions | med-large | medium |
+| next | 79 | [Harden Glance source and secret boundaries](task-79-glance-source-boundary-hardening.md) | task-63 residuals: secret isolation, UniFi TLS, adapter network, AdGuard scope, and RSS image policy | medium-high | high |
 
 ## Audit conclusions worth remembering (2026-07-09)
 

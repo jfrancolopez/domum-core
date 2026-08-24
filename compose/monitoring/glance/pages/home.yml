@@ -54,6 +54,7 @@
           cache: 30m
           url: https://air-quality-api.open-meteo.com/v1/air-quality?latitude=35.994&longitude=-78.899&current=us_aqi,pm2_5,pm10,ozone&timezone=America%2FNew_York
           template: |
+            {{ if eq .Response.StatusCode 200 }}
             <div class="domum-aqi-card">
               <div>
                 <div class="domum-kicker">US AQI</div>
@@ -66,6 +67,9 @@
                 <span>Ozone <b>{{ .JSON.Float "current.ozone" | printf "%.1f" }}</b></span>
               </div>
             </div>
+            {{ else }}
+            <div class="domum-state-card"><strong>Air quality unavailable</strong><span>{{ .Response.Status }}</span></div>
+            {{ end }}
 
     - size: full
       widgets:
@@ -81,8 +85,8 @@
                 <span>Check WAN speed, DNS filtering, and edge reachability.</span>
               </a>
               <a class="domum-attention-card" href="https://dash.${DOMUM_DOMAIN}/hosting" target="_self">
-                <strong>Hosting</strong>
-                <span>See infrastructure health, backups, monitors, and fleet status.</span>
+               <strong>Hosting</strong>
+                <span>See infrastructure health, monitors, and fleet status.</span>
               </a>
             </div>
 

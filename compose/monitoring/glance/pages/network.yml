@@ -28,7 +28,9 @@
           url: http://speedtest-tracker/api/v1/results/latest
           headers:
             Authorization: Bearer ${GLANCE_SPEEDTEST_TRACKER_TOKEN}
+            Accept: application/json
           template: |
+            {{ if eq .Response.StatusCode 200 }}
             <div class="domum-wan-card">
               <div class="domum-wan-topline">
                 <div>
@@ -56,15 +58,18 @@
                 </div>
                 <div class="domum-metric-card">
                   <span>Jitter</span>
-                  <strong>{{ .JSON.Float "data.data.ping.jitter" | printf "%.1f" }} ms</strong>
+                  <strong>{{ .JSON.Float "data.ping.jitter" | printf "%.1f" }} ms</strong>
                   <small>stability</small>
                 </div>
               </div>
               <div class="domum-wan-footer">
-                <span>Packet loss: {{ .JSON.Int "data.data.packetLoss" }}%</span>
+                <span>Packet loss: {{ .JSON.Float "data.packetLoss" | printf "%.1f" }}%</span>
                 <span>Measured: {{ .JSON.String "data.created_at" }}</span>
               </div>
             </div>
+            {{ else }}
+            <div class="domum-state-card"><strong>Speedtest unavailable</strong><span>{{ .Response.Status }}</span></div>
+            {{ end }}
 
         - type: split-column
           widgets:
@@ -76,21 +81,27 @@
               headers:
                 ${GLANCE_UNIFI_API_HEADER}: ${GLANCE_UNIFI_API_KEY}
               template: |
+                {{ if eq .Response.StatusCode 200 }}
                 <div class="domum-unifi-grid">
-                {{ range .JSON.Array "data" }}
-                  <div class="domum-unifi-card domum-unifi-card-{{ .String "status" }}">
+                {{ range $index, $subsystem := .JSON.Array "data" }}
+                {{ if lt $index 6 }}
+                  <div class="domum-unifi-card domum-unifi-card-{{ $subsystem.String "status" }}">
                     <div class="domum-unifi-topline">
-                      <strong>{{ .String "subsystem" }}</strong>
-                      <span>{{ .String "status" }}</span>
+                      <strong>{{ $subsystem.String "subsystem" }}</strong>
+                      <span>{{ $subsystem.String "status" }}</span>
                     </div>
                     <div class="domum-unifi-counts">
-                      <span>Users <b>{{ .Int "num_user" }}</b></span>
-                      <span>APs <b>{{ .Int "num_ap" }}</b></span>
-                      <span>Down <b>{{ .Int "num_disconnected" }}</b></span>
+                      <span>Users <b>{{ $subsystem.Int "num_user" }}</b></span>
+                      <span>APs <b>{{ $subsystem.Int "num_ap" }}</b></span>
+                      <span>Down <b>{{ $subsystem.Int "num_disconnected" }}</b></span>
                     </div>
                   </div>
                 {{ end }}
+                {{ end }}
                 </div>
+                {{ else }}
+                <div class="domum-state-card"><strong>UniFi unavailable</strong><span>{{ .Response.Status }}</span></div>
+                {{ end }}
 
             - type: monitor
               title: Edge reachability
@@ -105,7 +116,7 @@
                   url: https://dns.${DOMUM_DOMAIN}
                   check-url: https://dns.${DOMUM_DOMAIN}
                   icon: si:adguard
-                - title: Traefik edge
+                - title: Glance service
                   url: https://dash.${DOMUM_DOMAIN}
                   check-url: http://glance:8080
                   icon: si:traefikproxy

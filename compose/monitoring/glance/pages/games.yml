@@ -39,18 +39,24 @@
           cache: 1h
           url: https://store.steampowered.com/api/featuredcategories?cc=us
           template: |
+            {{ if eq .Response.StatusCode 200 }}
             <ul class="list list-gap-10 collapsible-container" data-collapse-after="6">
-            {{ range .JSON.Array "specials.items" }}
+            {{ range $index, $item := .JSON.Array "specials.items" }}
+            {{ if lt $index 12 }}
               <li>
-                <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ .Int "id" }}/" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ $item.Int "id" }}/" target="_blank" rel="noreferrer">{{ $item.String "name" }}</a>
                 <ul class="list-horizontal-text">
-                  <li>{{ div (.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
-                  {{ $discount := .Int "discount_percent" }}
+                  <li>{{ div ($item.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
+                  {{ $discount := $item.Int "discount_percent" }}
                   <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
                 </ul>
               </li>
             {{ end }}
+            {{ end }}
             </ul>
+            {{ else }}
+            <div class="domum-state-card"><strong>Steam Specials unavailable</strong><span>{{ .Response.Status }}</span></div>
+            {{ end }}
 
         - type: split-column
           widgets:
