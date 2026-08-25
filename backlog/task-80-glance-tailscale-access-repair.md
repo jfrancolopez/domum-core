@@ -47,14 +47,16 @@ document and left any file with additional valid settings unchanged, even when
 3. Done in `bin/domum-core`: add an independent checkup warning/action for the
    userland-proxy requirement and detect when `daemon.json` is newer than the
    running Docker daemon.
-4. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
+4. Done in `bin/domum-core`: check the running Glance labels for the Tailscale
+   range and private middleware without printing the configured LAN CIDR.
+5. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
    maintenance window if the setting is missing/true. Re-test Tailscale, LAN, and
    external Glance paths.
-5. Test the dashboard hostname both normally and with a temporary client-side
+6. Test the dashboard hostname both normally and with a temporary client-side
    `curl --resolve` mapping to the Pi's Tailscale IP. If only the mapped request
    succeeds, use approved split DNS or equivalent routing; do not widen the
    allowlist.
-6. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
+7. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
    49 status only after the real Tailscale request returns HTTP 200.
 
 ## Affected Files

@@ -95,6 +95,28 @@ docker_daemon_restart_needed() {
   (( daemon_mtime > active_epoch ))
 }
 
+checkup_glance_access_policy() {
+  [[ "${ENABLE_GLANCE:-0}" == "1" ]] || return 0
+
+  local labels
+  labels="$(docker inspect --format '{{json .Config.Labels}}' glance 2>/dev/null || true)"
+  if [[ -z "$labels" ]]; then
+    checkup_add warning "Glance container labels are unavailable; live Traefik access policy cannot be checked."
+    checkup_add action "sudo domum-core apply"
+    return 0
+  fi
+
+  if [[ "$labels" != *"100.64.0.0/10"* ]]; then
+    checkup_add warning "Running Glance labels do not include the Tailscale CGNAT allowlist."
+    checkup_add action "sudo domum-core apply"
+  elif [[ "$labels" != *"glance-private@docker"* ]]; then
+    checkup_add warning "Running Glance labels do not attach the private Traefik middleware."
+    checkup_add action "sudo domum-core apply"
+  else
+    checkup_add healthy "Running Glance labels include the private Tailscale access policy."
+  fi
+}
+
 uppercase_token() {
   printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
 }
@@ -3516,6 +3538,9 @@ run_checkup() {
     checkup_add warning "Docker daemon config does not set userland proxy disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
     checkup_add action "sudo domum-core init"
   fi
+
+  # --- Glance access policy ---
+  checkup_glance_access_policy
 
   # --- host packages needed for backup/recovery diagnostics ---
   local missing_pkg=() pkg
