@@ -191,7 +191,21 @@ denial, and the Homepage embed after every access-policy change.
 Docker must keep `userland-proxy=false` in `/etc/docker/daemon.json`; otherwise
 Traefik can see Docker's proxy/NAT source instead of the real Tailscale client
 and deny valid tailnet traffic. `domum-core init` converges that daemon setting
-for rebuilds, but changing it on a live host requires a Docker restart.
+for rebuilds, but changing it on a live host requires a Docker restart. A client
+being connected to Tailscale does not guarantee that public DNS traffic uses the
+tailnet: test the Glance hostname against the Pi's Tailscale address from the
+client without committing that address anywhere:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  --resolve dash.${DOMUM_DOMAIN}:443:<pi-tailscale-ip> \
+  https://dash.${DOMUM_DOMAIN}/
+```
+
+If this returns `200` while the normal hostname returns `403`, use approved
+Tailscale split DNS or an equivalent route so the browser reaches the Pi over
+the tailnet. Do not widen the Traefik allowlist to compensate for public-DNS
+routing.
 
 ## Data and Backups
 

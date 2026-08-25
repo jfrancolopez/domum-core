@@ -24,6 +24,9 @@ document and left any file with additional valid settings unchanged, even when
   not independently report the userland-proxy requirement.
 - The Glance Traefik allowlist itself correctly includes the configured LAN CIDR
   and `100.64.0.0/10`.
+- A Tailscale client can still receive `403` if the dashboard hostname resolves
+  to the public/WAN address instead of the Pi's Tailscale address. Tailscale
+  connectivity alone does not force public DNS traffic onto the tailnet.
 
 ## Desired Behavior
 
@@ -45,7 +48,11 @@ document and left any file with additional valid settings unchanged, even when
 4. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
    maintenance window if the setting is missing/true. Re-test Tailscale, LAN, and
    external Glance paths.
-5. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
+5. Test the dashboard hostname both normally and with a temporary client-side
+   `curl --resolve` mapping to the Pi's Tailscale IP. If only the mapped request
+   succeeds, use approved split DNS or equivalent routing; do not widen the
+   allowlist.
+6. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
    49 status only after the real Tailscale request returns HTTP 200.
 
 ## Affected Files
@@ -83,7 +90,8 @@ previous daemon setting.
 
 Docker restart interrupts all containers. A malformed daemon file must not be
 rewritten automatically. A Tailscale request can remain denied if the router's
-observed source is not the expected CGNAT range or if another proxy path is used.
+observed source is not the expected CGNAT range, if public DNS bypasses the
+tailnet, or if another proxy path is used.
 
 ## Complexity
 
