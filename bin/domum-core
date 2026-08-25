@@ -98,22 +98,44 @@ docker_daemon_restart_needed() {
 checkup_glance_access_policy() {
   [[ "${ENABLE_GLANCE:-0}" == "1" ]] || return 0
 
-  local labels
+  local labels created
   labels="$(docker inspect --format '{{json .Config.Labels}}' glance 2>/dev/null || true)"
+  created="$(docker inspect --format '{{.Created}}' glance 2>/dev/null || true)"
   if [[ -z "$labels" ]]; then
     checkup_add warning "Glance container labels are unavailable; live Traefik access policy cannot be checked."
     checkup_add action "sudo domum-core apply"
     return 0
   fi
 
-  if [[ "$labels" != *"100.64.0.0/10"* ]]; then
-    checkup_add warning "Running Glance labels do not include the Tailscale CGNAT allowlist."
+  # Extract the live sourcerange from the container labels.
+  local live_sourcerange=""
+  live_sourcerange="$(printf '%s' "$labels" | sed -n 's/.*"traefik\.http\.middlewares\.glance-private\.ipallowlist\.sourcerange":"\([^"]*\)".*/\1/p')"
+
+  if [[ -z "$live_sourcerange" ]]; then
+    checkup_add warning "Running Glance labels are missing the ipallowlist sourcerange."
+    checkup_add action "sudo domum-core apply"
+  elif [[ "$live_sourcerange" != *"100.64.0.0/10"* ]]; then
+    checkup_add warning "Running Glance labels do not include the Tailscale CGNAT allowlist (have: $live_sourcerange)."
+    checkup_add action "sudo domum-core apply"
+  elif [[ "$live_sourcerange" == ,* ]]; then
+    checkup_add warning "Running Glance sourcerange has a leading comma from an empty LAN CIDR: $live_sourcerange."
     checkup_add action "sudo domum-core apply"
   elif [[ "$labels" != *"glance-private@docker"* ]]; then
     checkup_add warning "Running Glance labels do not attach the private Traefik middleware."
     checkup_add action "sudo domum-core apply"
   else
     checkup_add healthy "Running Glance labels include the private Tailscale access policy."
+  fi
+
+  # Warn if the container was created before the repo was last updated.
+  if [[ -n "$created" ]]; then
+    local repo_mtime container_epoch
+    repo_mtime="$(stat -c '%Y' "$DOMUM_DIR/compose/monitoring/glance.yml" 2>/dev/null || true)"
+    container_epoch="$(date -d "$created" +%s 2>/dev/null || true)"
+    if [[ "$repo_mtime" =~ ^[0-9]+$ && "$container_epoch" =~ ^[0-9]+$ ]] && (( repo_mtime > container_epoch )); then
+      checkup_add warning "Glance container was created before the latest compose changes; labels may be stale."
+      checkup_add action "sudo domum-core apply"
+    fi
   fi
 }
 

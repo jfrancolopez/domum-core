@@ -28,6 +28,12 @@ document and left any file with additional valid settings unchanged, even when
 - A Tailscale client can still receive `403` if the dashboard hostname resolves
   to the public/WAN address instead of the Pi's Tailscale address. Tailscale
   connectivity alone does not force public DNS traffic onto the tailnet.
+- `domum-core update` only pulls code and does NOT recreate containers. Running
+  `systemctl restart docker` restarts existing containers with their current
+  labels. For updated compose labels (Tailscale range, middleware, networks) to
+  take effect, the container must be recreated via `domum-core apply`.
+- If `DOMUM_GLANCE_LAN_CIDR` is empty, the sourcerange could produce a leading
+  comma (`100.64.0.0/10`) that breaks Traefik ipallowlist parsing.
 
 ## Desired Behavior
 
@@ -48,20 +54,27 @@ document and left any file with additional valid settings unchanged, even when
    userland-proxy requirement and detect when `daemon.json` is newer than the
    running Docker daemon.
 4. Done in `bin/domum-core`: check the running Glance labels for the Tailscale
-   range and private middleware without printing the configured LAN CIDR.
-5. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
-   maintenance window if the setting is missing/true. Re-test Tailscale, LAN, and
+   range, sourcerange format, and private middleware without printing the
+   configured LAN CIDR. Also warn when the container predates compose file changes.
+5. Done in `compose/monitoring/glance.yml`: guard sourcerange with
+   `${DOMUM_GLANCE_LAN_CIDR:+${DOMUM_GLANCE_LAN_CIDR},}` so an empty CIDR
+   produces no leading comma.
+6. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
+   maintenance window if the setting is missing/true. Then run `sudo domum-core
+   apply` to recreate the Glance container with the latest labels. `update` +
+   `restart docker` alone is NOT sufficient. Re-test Tailscale, LAN, and
    external Glance paths.
-6. Test the dashboard hostname both normally and with a temporary client-side
+7. Test the dashboard hostname both normally and with a temporary client-side
    `curl --resolve` mapping to the Pi's Tailscale IP. If only the mapped request
    succeeds, use approved split DNS or equivalent routing; do not widen the
    allowlist.
-7. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
+8. Record sanitized results in `docs/glance-dashboard-audit.md` and update task
    49 status only after the real Tailscale request returns HTTP 200.
 
 ## Affected Files
 
 - `bin/domum-core`
+- `compose/monitoring/glance.yml`
 - `docs/services/glance.md`
 - `docs/glance-dashboard-audit.md`
 - `backlog/README.md`
@@ -93,9 +106,10 @@ previous daemon setting.
 ## Risks
 
 Docker restart interrupts all containers. A malformed daemon file must not be
-rewritten automatically. A Tailscale request can remain denied if the router's
-observed source is not the expected CGNAT range, if public DNS bypasses the
-tailnet, or if another proxy path is used.
+rewritten automatically. `domum-core update` does not recreate containers, so
+stale labels persist until `domum-core apply` runs. A Tailscale request can
+remain denied if the router's observed source is not the expected CGNAT range,
+if public DNS bypasses the tailnet, or if another proxy path is used.
 
 ## Complexity
 

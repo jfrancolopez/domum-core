@@ -60,7 +60,7 @@ services:
       - traefik.http.routers.glance.entrypoints=websecure
       - traefik.http.routers.glance.tls=true
       - traefik.http.routers.glance.tls.certresolver=cf
-      - traefik.http.middlewares.glance-private.ipallowlist.sourcerange=${DOMUM_GLANCE_LAN_CIDR},100.64.0.0/10
+      - traefik.http.middlewares.glance-private.ipallowlist.sourcerange=${DOMUM_GLANCE_LAN_CIDR:+${DOMUM_GLANCE_LAN_CIDR},}100.64.0.0/10
       - traefik.http.routers.glance.middlewares=glance-private@docker,glanceEmbedHeaders@file
       - traefik.http.services.glance.loadbalancer.server.port=8080
     profiles:
