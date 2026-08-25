@@ -74,6 +74,13 @@ docker_daemon_json_matches() {
   return "$rc"
 }
 
+docker_daemon_userland_proxy_disabled() {
+  cmd_exists jq || return 1
+  [[ -f /etc/docker/daemon.json ]] || return 1
+  jq -e 'type == "object" and .["userland-proxy"] == false' \
+    /etc/docker/daemon.json >/dev/null 2>&1
+}
+
 uppercase_token() {
   printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
 }
@@ -730,6 +737,34 @@ ensure_docker_log_limits() {
       fi
     fi
     return 0
+  fi
+
+  if ! docker_daemon_userland_proxy_disabled; then
+    if ! cmd_exists jq || ! jq -e 'type == "object"' "$daemon_json" >/dev/null 2>&1; then
+      warn "$daemon_json is not valid JSON; cannot enforce userland-proxy=false safely."
+    else
+      tmp="$(mktemp)"
+      if jq '. + {"userland-proxy": false}' "$daemon_json" > "$tmp"; then
+        if confirm "Set userland-proxy=false in $daemon_json while preserving existing settings"; then
+          install -m 0644 "$tmp" "$daemon_json"
+          log "Set Docker userland-proxy=false while preserving existing daemon settings."
+          if cmd_exists systemctl && systemctl is-active --quiet docker; then
+            warn "Docker must restart for userland-proxy=false to take effect; this restarts containers."
+            if confirm "Restart Docker now"; then
+              systemctl restart docker
+            else
+              warn "Docker restart skipped; run: sudo systemctl restart docker"
+            fi
+          fi
+        else
+          warn "Docker daemon file unchanged; Tailscale Glance access may remain denied."
+        fi
+        rm -f "$tmp"
+      else
+        rm -f "$tmp"
+        warn "Could not update $daemon_json; userland-proxy remains unchanged."
+      fi
+    fi
   fi
 
   if docker_daemon_json_matches; then
@@ -3456,6 +3491,12 @@ run_checkup() {
     checkup_add healthy "Docker daemon log limits configured."
   else
     checkup_add warning "Docker daemon log limits are missing or differ from domum-core defaults (run: sudo domum-core init)."
+    checkup_add action "sudo domum-core init"
+  fi
+  if docker_daemon_userland_proxy_disabled; then
+    checkup_add healthy "Docker userland proxy disabled for real client source addresses."
+  else
+    checkup_add warning "Docker userland proxy is not disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
     checkup_add action "sudo domum-core init"
   fi
 
