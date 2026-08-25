@@ -81,6 +81,20 @@ docker_daemon_userland_proxy_disabled() {
     /etc/docker/daemon.json >/dev/null 2>&1
 }
 
+docker_daemon_restart_needed() {
+  cmd_exists systemctl || return 1
+  [[ -f /etc/docker/daemon.json ]] || return 1
+
+  local active_enter daemon_mtime active_epoch
+  active_enter="$(systemctl show docker --property=ActiveEnterTimestamp --value 2>/dev/null || true)"
+  [[ -n "$active_enter" && "$active_enter" != "n/a" ]] || return 1
+  active_epoch="$(date -d "$active_enter" +%s 2>/dev/null || true)"
+  [[ "$active_epoch" =~ ^[0-9]+$ ]] || return 1
+  daemon_mtime="$(stat -c '%Y' /etc/docker/daemon.json 2>/dev/null || true)"
+  [[ "$daemon_mtime" =~ ^[0-9]+$ ]] || return 1
+  (( daemon_mtime > active_epoch ))
+}
+
 uppercase_token() {
   printf '%s' "$1" | tr '[:lower:]-' '[:upper:]_' | tr -c 'A-Z0-9_' '_'
 }
@@ -3493,10 +3507,13 @@ run_checkup() {
     checkup_add warning "Docker daemon log limits are missing or differ from domum-core defaults (run: sudo domum-core init)."
     checkup_add action "sudo domum-core init"
   fi
-  if docker_daemon_userland_proxy_disabled; then
-    checkup_add healthy "Docker userland proxy disabled for real client source addresses."
+  if docker_daemon_restart_needed; then
+    checkup_add warning "Docker daemon.json changed after Docker started; restart Docker before relying on userland-proxy settings."
+    checkup_add action "sudo systemctl restart docker"
+  elif docker_daemon_userland_proxy_disabled; then
+    checkup_add healthy "Docker daemon config sets userland proxy disabled for real client source addresses."
   else
-    checkup_add warning "Docker userland proxy is not disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
+    checkup_add warning "Docker daemon config does not set userland proxy disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
     checkup_add action "sudo domum-core init"
   fi
 

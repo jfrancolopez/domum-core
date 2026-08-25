@@ -18,10 +18,11 @@ document and left any file with additional valid settings unchanged, even when
 ## Current Behavior
 
 - `domum-core init` creates the exact daemon file when absent.
-- If a valid daemon file contains extra operator settings, init warns and leaves
-  it unchanged, which can leave `userland-proxy` enabled.
+- If a valid daemon file contains extra operator settings, init now offers to
+  preserve them while setting `userland-proxy=false`.
 - `domum-core checkup` reports only the exact log-limit document status and does
-  not independently report the userland-proxy requirement.
+  not independently report whether the running Docker daemon has reloaded the
+  userland-proxy requirement.
 - The Glance Traefik allowlist itself correctly includes the configured LAN CIDR
   and `100.64.0.0/10`.
 - A Tailscale client can still receive `403` if the dashboard hostname resolves
@@ -44,7 +45,8 @@ document and left any file with additional valid settings unchanged, even when
 2. Done in `bin/domum-core`: prompt before restarting Docker after a live setting
    change and report the manual restart command when declined.
 3. Done in `bin/domum-core`: add an independent checkup warning/action for the
-   userland-proxy requirement.
+   userland-proxy requirement and detect when `daemon.json` is newer than the
+   running Docker daemon.
 4. On the Pi, run read-only inspection first, then `sudo domum-core init` during a
    maintenance window if the setting is missing/true. Re-test Tailscale, LAN, and
    external Glance paths.
