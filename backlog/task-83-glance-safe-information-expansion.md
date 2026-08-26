@@ -44,7 +44,8 @@ the existing sanitized Beszel adapter fields are not all rendered.
    present, with no new adapter fields or host mounts.
 4. Update the capability matrix and service documentation.
 5. Validate Glance config, Compose, all smoke tests, and gitleaks.
-6. Deploy through update/apply and remove unwanted sources after real use.
+6. Deploy through update/apply, restart Glance when its bind-mounted config
+   changes, and remove unwanted sources after real use.
 
 ## Affected Files
 
@@ -63,6 +64,7 @@ the existing sanitized Beszel adapter fields are not all rendered.
   production Compose topology without printing private addresses.
 - Confirm the adapter output remains sanitized and that absent metrics render no
   false values.
+- Confirm the running Glance process is restarted after page-file changes.
 - Perform browser/mobile review on the Pi and remove noisy sources afterward.
 
 ## Rollback

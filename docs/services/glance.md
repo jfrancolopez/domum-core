@@ -372,4 +372,7 @@ If the page does not load:
 
 - Confirm the service is enabled with `sudo domum-core configure`.
 - Re-apply the stack with `sudo domum-core apply`.
+- Restart Glance after editing files under `compose/monitoring/glance/`; those
+  files are a read-only bind mount and Compose may leave the running process in
+  place: `sudo docker restart glance`.
 - Run `sudo domum-core checkup`.
