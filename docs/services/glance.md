@@ -188,10 +188,12 @@ malformed CIDRs when private access is enabled. When enabled, Traefik permits
 only that LAN CIDR and Tailscale's CGNAT range. Test LAN, Tailscale, external
 denial, and the Homepage embed after every access-policy change.
 
-Docker must keep `userland-proxy=false` in `/etc/docker/daemon.json`; otherwise
-Traefik can see Docker's proxy/NAT source instead of the real Tailscale client
-and deny valid tailnet traffic. `domum-core init` converges that daemon setting
-for rebuilds, but changing it on a live host requires a Docker restart. A client
+Domum-core keeps Docker `userland-proxy=false` as a conservative source-address
+policy. The production failure was traced more specifically to Tailscale
+subnet-route SNAT: Docker DNAT turns published-port traffic into forwarded
+traffic, then Tailscale's postrouting masquerade replaces the client address
+before Traefik applies the allowlist. `domum-core init` disables that SNAT only
+after confirming this node advertises no routes and offers no exit node. A client
 being connected to Tailscale does not guarantee that public DNS traffic uses the
 tailnet: test the Glance hostname against the Pi's Tailscale address from the
 client without committing that address anywhere:

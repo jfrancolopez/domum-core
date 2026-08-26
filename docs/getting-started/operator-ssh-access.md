@@ -113,7 +113,7 @@ If that works, remote maintenance is ready.
 
 `ssh jfranco@100.x.y.z` is still normal OpenSSH when Tailscale SSH is disabled.
 That is the default for domum-core: `TAILSCALE_SSH=0` and
-`sudo tailscale up --accept-dns=false --ssh=false`.
+`sudo tailscale up --accept-dns=false --ssh=false --snat-subnet-routes=false`.
 
 In that mode, Tailscale provides the network path only. The Linux host still
 checks `/home/jfranco/.ssh/authorized_keys`.

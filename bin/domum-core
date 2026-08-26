@@ -47,6 +47,24 @@ need_root() {
 
 cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 
+tailscale_subnet_snat_disabled() {
+  cmd_exists tailscale && cmd_exists jq || return 1
+  tailscale debug prefs 2>/dev/null \
+    | jq -e 'type == "object" and .NoSNAT == true' >/dev/null 2>&1
+}
+
+tailscale_host_only_role() {
+  cmd_exists tailscale && cmd_exists jq || return 1
+
+  local prefs status
+  prefs="$(tailscale debug prefs 2>/dev/null)" || return 1
+  status="$(tailscale status --json 2>/dev/null)" || return 1
+  jq -e 'type == "object" and ((.AdvertiseRoutes // []) | length == 0)' \
+    >/dev/null 2>&1 <<< "$prefs" \
+    && jq -e 'type == "object" and .Self.ExitNodeOption == false' \
+      >/dev/null 2>&1 <<< "$status"
+}
+
 package_installed() {
   dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'
 }
@@ -74,68 +92,94 @@ docker_daemon_json_matches() {
   return "$rc"
 }
 
-docker_daemon_userland_proxy_disabled() {
+docker_daemon_userland_proxy_disabled_in() {
+  local daemon_json="$1"
   cmd_exists jq || return 1
-  [[ -f /etc/docker/daemon.json ]] || return 1
+  [[ -f "$daemon_json" ]] || return 1
   jq -e 'type == "object" and .["userland-proxy"] == false' \
-    /etc/docker/daemon.json >/dev/null 2>&1
+    "$daemon_json" >/dev/null 2>&1
+}
+
+docker_daemon_userland_proxy_disabled() {
+  docker_daemon_userland_proxy_disabled_in /etc/docker/daemon.json
 }
 
 docker_daemon_restart_needed() {
-  cmd_exists systemctl || return 1
-  [[ -f /etc/docker/daemon.json ]] || return 1
+  cmd_exists systemctl || return 2
+  [[ -f /etc/docker/daemon.json ]] || return 2
 
   local active_enter daemon_mtime active_epoch
   active_enter="$(systemctl show docker --property=ActiveEnterTimestamp --value 2>/dev/null || true)"
-  [[ -n "$active_enter" && "$active_enter" != "n/a" ]] || return 1
-  active_epoch="$(date -d "$active_enter" +%s 2>/dev/null || true)"
-  [[ "$active_epoch" =~ ^[0-9]+$ ]] || return 1
-  daemon_mtime="$(stat -c '%Y' /etc/docker/daemon.json 2>/dev/null || true)"
-  [[ "$daemon_mtime" =~ ^[0-9]+$ ]] || return 1
+  [[ -n "$active_enter" && "$active_enter" != "n/a" ]] || return 2
+  active_epoch="$(date -d "$active_enter" +%s%N 2>/dev/null || true)"
+  [[ "$active_epoch" =~ ^[0-9]+$ ]] || return 2
+  daemon_mtime="$(stat -c '%y' /etc/docker/daemon.json 2>/dev/null || true)"
+  daemon_mtime="$(date -d "$daemon_mtime" +%s%N 2>/dev/null || true)"
+  [[ "$daemon_mtime" =~ ^[0-9]+$ ]] || return 2
   (( daemon_mtime > active_epoch ))
+}
+
+install_preserving_mode_owner() {
+  local source="$1" destination="$2" metadata mode owner group destination_dir staged
+  metadata="$(stat -c '%a %u %g' "$destination" 2>/dev/null)" || return 1
+  read -r mode owner group <<< "$metadata"
+  destination_dir="$(dirname "$destination")"
+  staged="$(mktemp "$destination_dir/.domum-core-daemon.XXXXXX")" || return 1
+  if ! install -o "$owner" -g "$group" -m "$mode" "$source" "$staged"; then
+    rm -f "$staged"
+    return 1
+  fi
+  if ! mv -f "$staged" "$destination"; then
+    rm -f "$staged"
+    return 1
+  fi
 }
 
 checkup_glance_access_policy() {
   [[ "${ENABLE_GLANCE:-0}" == "1" ]] || return 0
 
-  local labels created
-  labels="$(docker inspect --format '{{json .Config.Labels}}' glance 2>/dev/null || true)"
-  created="$(docker inspect --format '{{.Created}}' glance 2>/dev/null || true)"
-  if [[ -z "$labels" ]]; then
+  local container_id live_sourcerange live_middlewares expected_sourcerange issues=0
+  container_id="$(docker inspect --format '{{.Id}}' glance 2>/dev/null || true)"
+  if [[ -z "$container_id" ]]; then
     checkup_add warning "Glance container labels are unavailable; live Traefik access policy cannot be checked."
     checkup_add action "sudo domum-core apply"
     return 0
   fi
 
-  # Extract the live sourcerange from the container labels.
-  local live_sourcerange=""
-  live_sourcerange="$(printf '%s' "$labels" | sed -n 's/.*"traefik\.http\.middlewares\.glance-private\.ipallowlist\.sourcerange":"\([^"]*\)".*/\1/p')"
+  live_sourcerange="$(docker inspect --format '{{index .Config.Labels "traefik.http.middlewares.glance-private.ipallowlist.sourcerange"}}' glance 2>/dev/null || true)"
+  live_middlewares="$(docker inspect --format '{{index .Config.Labels "traefik.http.routers.glance.middlewares"}}' glance 2>/dev/null || true)"
+  expected_sourcerange="${DOMUM_GLANCE_LAN_CIDR:+${DOMUM_GLANCE_LAN_CIDR},}100.64.0.0/10"
 
-  if [[ -z "$live_sourcerange" ]]; then
-    checkup_add warning "Running Glance labels are missing the ipallowlist sourcerange."
-    checkup_add action "sudo domum-core apply"
-  elif [[ "$live_sourcerange" != *"100.64.0.0/10"* ]]; then
-    checkup_add warning "Running Glance labels do not include the Tailscale CGNAT allowlist (have: $live_sourcerange)."
-    checkup_add action "sudo domum-core apply"
-  elif [[ "$live_sourcerange" == ,* ]]; then
-    checkup_add warning "Running Glance sourcerange has a leading comma from an empty LAN CIDR: $live_sourcerange."
-    checkup_add action "sudo domum-core apply"
-  elif [[ "$labels" != *"glance-private@docker"* ]]; then
-    checkup_add warning "Running Glance labels do not attach the private Traefik middleware."
+  if [[ "$live_sourcerange" != "$expected_sourcerange" ]]; then
+    checkup_add warning "Running Glance sourcerange does not match the configured private access policy."
+    issues=1
+  fi
+  if [[ "$live_middlewares" != "glance-private@docker,glanceEmbedHeaders@file" ]]; then
+    checkup_add warning "Running Glance router middleware chain does not match the configured private access policy."
+    issues=1
+  fi
+  if (( issues == 1 )); then
     checkup_add action "sudo domum-core apply"
   else
-    checkup_add healthy "Running Glance labels include the private Tailscale access policy."
+    checkup_add healthy "Running Glance labels match the configured private Tailscale access policy."
   fi
+}
 
-  # Warn if the container was created before the repo was last updated.
-  if [[ -n "$created" ]]; then
-    local repo_mtime container_epoch
-    repo_mtime="$(stat -c '%Y' "$DOMUM_DIR/compose/monitoring/glance.yml" 2>/dev/null || true)"
-    container_epoch="$(date -d "$created" +%s 2>/dev/null || true)"
-    if [[ "$repo_mtime" =~ ^[0-9]+$ && "$container_epoch" =~ ^[0-9]+$ ]] && (( repo_mtime > container_epoch )); then
-      checkup_add warning "Glance container was created before the latest compose changes; labels may be stale."
-      checkup_add action "sudo domum-core apply"
+checkup_docker_userland_proxy() {
+  if docker_daemon_userland_proxy_disabled; then
+    local docker_restart_status=0
+    docker_daemon_restart_needed || docker_restart_status=$?
+    if (( docker_restart_status == 0 )); then
+      checkup_add warning "Valid Docker daemon config changed after Docker started; restart Docker before relying on userland-proxy settings."
+      checkup_add action "sudo systemctl restart docker"
+    elif (( docker_restart_status == 2 )); then
+      checkup_add warning "Docker daemon config sets userland proxy disabled, but checkup could not determine whether the running daemon loaded it."
+    else
+      checkup_add healthy "On-disk Docker daemon config sets userland proxy disabled; no newer config change was detected."
     fi
+  else
+    checkup_add warning "Docker daemon config does not set userland proxy disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
+    checkup_add action "sudo domum-core init"
   fi
 }
 
@@ -747,6 +791,7 @@ install_tailscale_host() {
   local tailscale_up_cmd="sudo tailscale up"
   [[ "${TAILSCALE_ACCEPT_DNS:-0}" == "1" ]] || tailscale_up_cmd+=" --accept-dns=false"
   [[ "${TAILSCALE_SSH:-0}" == "1" ]] || tailscale_up_cmd+=" --ssh=false"
+  tailscale_up_cmd+=" --snat-subnet-routes=false"
 
   if ! tailscale status >/dev/null 2>&1; then
     log "Tailscale installed; authenticate with: $tailscale_up_cmd"
@@ -761,6 +806,13 @@ install_tailscale_host() {
   if [[ "${TAILSCALE_SSH:-0}" != "1" ]]; then
     tailscale set --ssh=false >/dev/null \
       || warn "Could not set Tailscale ssh=false; run: sudo tailscale set --ssh=false"
+  fi
+
+  if ! tailscale_host_only_role; then
+    warn "Could not confirm Tailscale is host-only; leaving subnet-route SNAT unchanged."
+  elif ! tailscale_subnet_snat_disabled; then
+    tailscale set --snat-subnet-routes=false >/dev/null \
+      || warn "Could not disable Tailscale subnet-route SNAT; run: sudo tailscale set --snat-subnet-routes=false"
   fi
 }
 
@@ -804,15 +856,20 @@ ensure_docker_log_limits() {
       tmp="$(mktemp)"
       if jq '. + {"userland-proxy": false}' "$daemon_json" > "$tmp"; then
         if confirm "Set userland-proxy=false in $daemon_json while preserving existing settings"; then
-          install -m 0644 "$tmp" "$daemon_json"
-          log "Set Docker userland-proxy=false while preserving existing daemon settings."
-          if cmd_exists systemctl && systemctl is-active --quiet docker; then
-            warn "Docker must restart for userland-proxy=false to take effect; this restarts containers."
-            if confirm "Restart Docker now"; then
-              systemctl restart docker
+          if install_preserving_mode_owner "$tmp" "$daemon_json"; then
+            log "Set Docker userland-proxy=false while preserving existing daemon settings, mode, and ownership."
+            if cmd_exists systemctl && systemctl is-active --quiet docker; then
+              warn "Docker must restart for userland-proxy=false to take effect; this restarts containers."
+              if confirm "Restart Docker now"; then
+                systemctl restart docker
+              else
+                warn "Docker restart skipped; run: sudo systemctl restart docker"
+              fi
             else
-              warn "Docker restart skipped; run: sudo systemctl restart docker"
+              warn "Docker is not active; userland-proxy=false will apply at its next start."
             fi
+          else
+            warn "Could not preserve metadata while updating $daemon_json; file left unchanged."
           fi
         else
           warn "Docker daemon file unchanged; Tailscale Glance access may remain denied."
@@ -3551,15 +3608,7 @@ run_checkup() {
     checkup_add warning "Docker daemon log limits are missing or differ from domum-core defaults (run: sudo domum-core init)."
     checkup_add action "sudo domum-core init"
   fi
-  if docker_daemon_restart_needed; then
-    checkup_add warning "Docker daemon.json changed after Docker started; restart Docker before relying on userland-proxy settings."
-    checkup_add action "sudo systemctl restart docker"
-  elif docker_daemon_userland_proxy_disabled; then
-    checkup_add healthy "Docker daemon config sets userland proxy disabled for real client source addresses."
-  else
-    checkup_add warning "Docker daemon config does not set userland proxy disabled; Tailscale Glance access may be denied (run: sudo domum-core init)."
-    checkup_add action "sudo domum-core init"
-  fi
+  checkup_docker_userland_proxy
 
   # --- Glance access policy ---
   checkup_glance_access_policy
@@ -3827,6 +3876,7 @@ run_checkup() {
     local tailscale_up_cmd="sudo tailscale up"
     [[ "${TAILSCALE_ACCEPT_DNS:-0}" == "1" ]] || tailscale_up_cmd+=" --accept-dns=false"
     [[ "${TAILSCALE_SSH:-0}" == "1" ]] || tailscale_up_cmd+=" --ssh=false"
+    tailscale_up_cmd+=" --snat-subnet-routes=false"
     if ! cmd_exists tailscale; then
       checkup_add warning "Tailscale is enabled but the host tailscale CLI is missing."
       checkup_add action "sudo domum-core init"
@@ -3835,6 +3885,14 @@ run_checkup() {
       checkup_add action "sudo systemctl enable --now tailscaled"
     elif tailscale status >/dev/null 2>&1; then
       checkup_add healthy "Tailscale is up."
+      if ! tailscale_host_only_role; then
+        checkup_add warning "Tailscale advertises routes, offers an exit node, or its routing role could not be verified; domum-core will not change subnet-route SNAT."
+      elif tailscale_subnet_snat_disabled; then
+        checkup_add healthy "Tailscale subnet-route SNAT is disabled, preserving client addresses through Docker forwarding."
+      else
+        checkup_add warning "Tailscale subnet-route SNAT can hide client addresses from Docker-hosted access policies."
+        checkup_add action "sudo tailscale set --snat-subnet-routes=false"
+      fi
     else
       checkup_add warning "Tailscale is enabled but not connected."
       checkup_add action "$tailscale_up_cmd"
@@ -5052,4 +5110,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi

@@ -157,7 +157,9 @@ fresh AI-agent session and requires approval before the next page is started.
 | next | 77 | [Add Steam and Twitch sources to Glance Games](task-77-glance-games-steam-twitch.md) | public discovery and Steam Specials/Top Sellers done; Steam/Twitch credentials and private account fields still pending | medium | medium |
 | next | 78 | [Add Spotify and YouTube learning recommendations to Glance](task-78-glance-spotify-youtube-recommendations.md) | proposed; needs OAuth scope and local-recommendation decisions | med-large | medium |
 | next | 79 | [Harden Glance source and secret boundaries](task-79-glance-source-boundary-hardening.md) | in progress; reserved secrets cleared, Beszel network isolated, RSS text-only; UniFi TLS, upstream transport, and AdGuard scope remain | medium-high | high |
-| next | 80 | [Repair Tailscale Glance access convergence](task-80-glance-tailscale-access-repair.md) | code fix ready; Pi daemon setting/restart and real path validation required | small-med | high |
+| next | 80 | [Repair Tailscale Glance access convergence](task-80-glance-tailscale-access-repair.md) | Docker convergence done; root cause corrected and continued in task 82 | small-med | high |
+| next | 81 | [Harden Glance access repair diagnostics](task-81-harden-glance-access-repair.md) | follow-up review recorded; implementation was reset before commit | small-med | high |
+| next | 82 | [Preserve Tailscale client source through Docker](task-82-preserve-tailscale-client-source.md) | root cause confirmed on Pi; repository fix and live approval pending | small-med | high |
 
 ## Audit conclusions worth remembering (2026-07-09)
 

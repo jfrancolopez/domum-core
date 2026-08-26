@@ -182,7 +182,7 @@ sudo domum-core checkup
 > backed up. They are re-issuable, so the omission is designed loss, not a
 > hole. If `ENABLE_TAILSCALE=1`, `sudo domum-core init` installs and enables the
 > host `tailscaled` service. Re-authenticate after rebuild with
-> `sudo tailscale up --accept-dns=false --ssh=false` or with an ephemeral auth
+> `sudo tailscale up --accept-dns=false --ssh=false --snat-subnet-routes=false` or with an ephemeral auth
 > key. Keep `accept-dns=false` so LAN HTTPS and certificate renewal do not
 > depend on Tailscale DNS. Keep `ssh=false` unless Tailscale SSH is intentionally
 > enabled in `config/domum.conf`.

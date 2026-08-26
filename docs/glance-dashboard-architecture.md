@@ -21,11 +21,13 @@ untrusted-container requests. Final browser and performance acceptance remains
 open. Do not add new private-personal integrations until that acceptance is
 closed.
 
-Task 49 attached the approved Traefik allowlist and its Pi audit passed LAN,
-Tailscale, external mobile-data denial, and untrusted-container checks. Docker
-`userland-proxy=false` is required so Traefik sees real Tailscale client sources.
-The remaining task-47 acceptance work is browser coverage, responsive evidence,
-request/byte measurement, and resource measurement for the current pages.
+Task 49 attached the approved Traefik allowlist. A later Pi revalidation found
+that Docker DNAT makes Tailscale traffic a forwarded path and Tailscale's
+postrouting SNAT can replace the client address before Traefik sees it. The repo
+keeps Docker `userland-proxy=false` as conservative policy; the demonstrated
+requirement for this host-only remote-access design is Tailscale
+`--snat-subnet-routes=false`. Task 82 must pass current LAN, Tailscale, external,
+and untrusted-container tests before the boundary is treated as accepted again.
 
 | Level | Meaning | Examples |
 |---|---|---|

@@ -3,8 +3,8 @@
 ## Objective
 
 Ensure the repository's host initialization and checkup logic keeps Docker's
-`userland-proxy=false` requirement true when the Glance Traefik allowlist must see
-real Tailscale client addresses.
+`userland-proxy=false` requirement true while diagnosing why the Glance Traefik
+allowlist cannot see real Tailscale client addresses.
 
 ## Background
 
@@ -14,6 +14,11 @@ expected to remain trusted. The Glance middleware allows the Tailscale CGNAT ran
 current `bin/domum-core` compared `/etc/docker/daemon.json` to an exact small JSON
 document and left any file with additional valid settings unchanged, even when
 `userland-proxy` was missing or true.
+
+Subsequent production revalidation proved that premise was incomplete. With
+Docker converged and no `docker-proxy` process, Tailscale's postrouting SNAT still
+masqueraded Docker-DNAT traffic. Task 82 owns that corrected root cause and the
+remaining repair.
 
 ## Current Behavior
 

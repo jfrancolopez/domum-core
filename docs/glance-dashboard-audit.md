@@ -67,12 +67,14 @@ were inspected for this report.
   affect the direct LAN request result; no forwarded-header trust was configured.
 - A genuine external non-tailnet mobile-data test returned Forbidden, as
   expected.
-- A Tailscale Mac client initially received Forbidden because Docker's userland
-  proxy hid the real tailnet source from Traefik. Disabling Docker
-  `userland-proxy`, restarting Docker, and re-applying the stack restored
-  Tailscale client access. The Glance allowlist remained the private LAN CIDR
-  plus Tailscale CGNAT range; no temporary host-specific `/32` allowlist was
-  retained.
+- A Tailscale Mac client initially received Forbidden. Disabling Docker
+  `userland-proxy`, restarting Docker, and re-applying the stack coincided with a
+  successful test, but that diagnosis was incomplete. A 2026-08-26 recurrence
+  with Docker already converged showed Tailscale's marked forwarded-traffic
+  postrouting rule masquerading Docker-DNAT traffic before it reached Traefik.
+  Task 82 records the corrected root cause and requires fresh acceptance. The
+  Glance allowlist remains the private LAN CIDR plus Tailscale CGNAT range; no
+  Docker gateway or temporary host-specific `/32` is trusted.
 - Host-local curl tests from the Pi are not accepted as LAN/Tailscale evidence
   because they can traverse local Docker/NAT paths that do not match real client
   source addresses.
