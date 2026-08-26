@@ -1062,6 +1062,7 @@ export_env_for_compose() {
   export TRAEFIK_IMAGE="${TRAEFIK_IMAGE:-traefik:v3}"
   export HOMEASSISTANT_IMAGE="${HOMEASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
   export MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:12.2}"
+  export GLANCE_IMAGE="${GLANCE_IMAGE:-glanceapp/glance:v0.8.5}"
 
   # Optional-service interpolation (safe defaults; compose has its own too).
   export VAULTWARDEN_DOMAIN="${VAULTWARDEN_DOMAIN:-vault.${DOMUM_DOMAIN}}"

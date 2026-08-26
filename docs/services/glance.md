@@ -249,10 +249,11 @@ privacy, and failure behavior review.
   direct container port, because AdGuard's internal web port can move after first
   setup while Traefik owns the stable browser route.
 - Hosting: native service monitors for core infrastructure and automation
-  dependencies, specialist investigation links, and public releases for installed
-  hosting components. It intentionally does not show host metrics, backup state,
-  Healthchecks details, certificates, or container lists until those sources are
-  separately approved.
+  dependencies, enabled application/operations UIs, specialist investigation
+  links, and public releases for installed hosting components. It shows only
+  bounded Beszel metrics already sanitized by the local adapter. It intentionally
+  does not show backup state, Healthchecks details, certificates, Docker socket
+  data, or container lists until those sources are separately approved.
 - Network: branded command-page treatment with Speedtest Tracker's latest result
   rendered as human-readable WAN pulse metrics, aggregate AdGuard DNS stats with
   top domains hidden, aggregate UniFi subsystem health/counts, plus compact

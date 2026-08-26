@@ -108,13 +108,20 @@
                   {{ if $system.Bool "stale" }}Stale data; check Beszel.{{ else }}Fresh summary from Beszel.{{ end }}
                   {{ if $system.String "updated_at" }} Updated {{ $system.String "updated_at" }}.{{ end }}
                 </div>
-                {{ if $system.Exists "metrics.cpu_percent" }}
-                <div class="domum-host-meta">
-                  CPU {{ $system.Float "metrics.cpu_percent" | printf "%.0f" }}%
-                  {{ if $system.Exists "metrics.memory_percent" }} / Memory {{ $system.Float "metrics.memory_percent" | printf "%.0f" }}%{{ end }}
-                </div>
-                {{ end }}
-              </div>
+                 {{ if $system.Exists "metrics.cpu_percent" }}
+                 <div class="domum-host-meta">
+                   CPU {{ $system.Float "metrics.cpu_percent" | printf "%.0f" }}%
+                   {{ if $system.Exists "metrics.memory_percent" }} / Memory {{ $system.Float "metrics.memory_percent" | printf "%.0f" }}%{{ end }}
+                 </div>
+                 {{ end }}
+                 {{ if $system.Exists "metrics.load_1" }}
+                 <div class="domum-host-meta">
+                   Load {{ $system.Float "metrics.load_1" | printf "%.2f" }}
+                   {{ if $system.Exists "metrics.disk_percent" }} / Disk {{ $system.Float "metrics.disk_percent" | printf "%.0f" }}%{{ end }}
+                   {{ if $system.Exists "metrics.temperature_c" }} / Temp {{ $system.Float "metrics.temperature_c" | printf "%.1f" }} C{{ end }}
+                 </div>
+                 {{ end }}
+               </div>
             {{ end }}
             </div>
             {{ else }}
@@ -138,6 +145,84 @@
               url: https://esphome.${DOMUM_DOMAIN}
               check-url: http://esphome:6052
               icon: si:esphome
+
+        - type: split-column
+          widgets:
+            - type: monitor
+              title: Automation UIs
+              style: compact
+              cache: 1m
+              sites:
+                - title: Music Assistant
+                  url: https://ma.${DOMUM_DOMAIN}
+                  check-url: http://musicassistant:8095
+                  icon: si:musicassistant
+                - title: Z-Wave JS UI
+                  url: https://zwave.${DOMUM_DOMAIN}
+                  check-url: http://zwave-js-ui:8091
+                  icon: si:zwave
+                - title: Home Assistant
+                  url: https://ha.${DOMUM_DOMAIN}
+                  check-url: http://homeassistant:8123
+                  icon: si:homeassistant
+                - title: Zigbee2MQTT
+                  url: https://z2m.${DOMUM_DOMAIN}
+                  check-url: http://zigbee2mqtt:8080
+                  icon: si:zigbee
+
+            - type: monitor
+              title: Productivity UIs
+              style: compact
+              cache: 1m
+              sites:
+                - title: Actual Budget
+                  url: https://budget.${DOMUM_DOMAIN}
+                  check-url: http://actual-budget:5006
+                  icon: si:actualbudget
+                - title: Karakeep
+                  url: https://karakeep.${DOMUM_DOMAIN}
+                  check-url: http://karakeep:3000
+                  icon: si:karakeep
+                - title: Memos
+                  url: https://memos.${DOMUM_DOMAIN}
+                  check-url: http://memos:5230
+                  icon: si:memos
+                - title: FreshRSS
+                  url: https://rss.${DOMUM_DOMAIN}
+                  check-url: http://freshrss:80
+                  icon: si:freshrss
+                - title: Stirling PDF
+                  url: https://pdf.${DOMUM_DOMAIN}
+                  check-url: http://stirling-pdf:8080
+                  icon: si:stirlingpdf
+                - title: IT-Tools
+                  url: https://tools.${DOMUM_DOMAIN}
+                  check-url: http://it-tools:80
+                  icon: si:ittools
+
+        - type: split-column
+          widgets:
+            - type: monitor
+              title: Operations UIs
+              style: compact
+              cache: 1m
+              sites:
+                - title: Dozzle
+                  url: https://logs.${DOMUM_DOMAIN}
+                  check-url: http://dozzle:8080
+                  icon: si:dozzle
+                - title: ntfy
+                  url: https://ntfy.${DOMUM_DOMAIN}
+                  check-url: http://ntfy:80
+                  icon: si:ntfy
+                - title: Vaultwarden
+                  url: https://vault.${DOMUM_DOMAIN}
+                  check-url: http://vaultwarden:80
+                  icon: si:vaultwarden
+                - title: AdGuard Home
+                  url: https://dns.${DOMUM_DOMAIN}
+                  check-url: https://dns.${DOMUM_DOMAIN}
+                  icon: si:adguard
 
         - type: releases
           title: Hosting software releases

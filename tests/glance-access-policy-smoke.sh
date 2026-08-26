@@ -41,6 +41,10 @@ if install_preserving_mode_owner "$tmp_dir/missing-source" "$tmp_dir/destination
 fi
 [[ "$(<"$tmp_dir/destination")" == "new" ]] || fail 'failed replacement changed destination content'
 
+unset GLANCE_IMAGE
+export_env_for_compose
+[[ "$GLANCE_IMAGE" == "glanceapp/glance:v0.8.5" ]] || fail 'Glance image default was not exported to Compose'
+
 LIVE_CONTAINER_ID="test-container"
 LIVE_SOURCERANGE=""
 LIVE_MIDDLEWARES=""

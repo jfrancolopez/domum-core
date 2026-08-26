@@ -160,6 +160,7 @@ fresh AI-agent session and requires approval before the next page is started.
 | next | 80 | [Repair Tailscale Glance access convergence](task-80-glance-tailscale-access-repair.md) | Docker convergence done; root cause corrected and continued in task 82 | small-med | high |
 | next | 81 | [Harden Glance access repair diagnostics](task-81-harden-glance-access-repair.md) | follow-up review recorded; implementation was reset before commit | small-med | high |
 | next | 82 | [Preserve Tailscale client source through Docker](task-82-preserve-tailscale-client-source.md) | root cause confirmed on Pi; repository fix and live approval pending | small-med | high |
+| next | 83 | [Expand Glance with safe available information](task-83-glance-safe-information-expansion.md) | operational expansion in progress; credential-backed personal sources remain opt-in | small | medium |
 
 ## Audit conclusions worth remembering (2026-07-09)
 
